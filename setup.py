@@ -54,6 +54,11 @@ setup(
         'docs': docs_commands.BuildDocs,
         'apidocs': docs_commands.ApiDocs,
     },
+    entry_points={
+        'console_scripts': [
+            'msl-network = msl.network.cli:main',
+        ],
+    },
     packages=find_packages(include=('msl*',)),
     include_package_data=True,
 )
