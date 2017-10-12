@@ -1,11 +1,18 @@
 """
-Main entry point to the network manager via the command-line interface (CLI).
+Main entry point to the asynchronous network manager via the command-line interface (CLI).
 """
 import sys
 
 from . import __version__
 
 PARSER = None
+
+DESCRIPTION = """An asynchronous network manager.
+
+The manager allows for multiple clients, servers and other managers to connect
+to it and links a clients request to the appropriate server/manager to handle 
+the request and then sends the response back to the client.
+"""
 
 
 def configure_parser():
@@ -18,12 +25,11 @@ def configure_parser():
         return PARSER
 
     from .cli_argparse import ArgumentParser
+    from .cli_certgen import add_parser_certgen
     from .cli_keygen import add_parser_keygen
     from .cli_start import add_parser_start
 
-    PARSER = ArgumentParser(description='An asynchronous network manager.\n\n'
-                                        'The manager allows for multiple clients and servers to connect to it\n'
-                                        'and links a client to the appropriate server to handle the request.')
+    PARSER = ArgumentParser(description=DESCRIPTION)
 
     PARSER.add_argument(
         '-V', '--version',
@@ -40,6 +46,7 @@ def configure_parser():
     # http://stackoverflow.com/a/18283730/1599393
     command_parser.required = True
 
+    add_parser_certgen(command_parser)
     add_parser_keygen(command_parser)
     add_parser_start(command_parser)
 
@@ -48,7 +55,7 @@ def configure_parser():
 
 def main(*args):
     """
-    Main entry point to start an asynchronous management server.
+    Main entry point to the asynchronous network manager.
     """
     parser = configure_parser()
     if not args:
