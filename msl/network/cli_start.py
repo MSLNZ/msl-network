@@ -2,13 +2,14 @@
 Command line interface for the ``start`` command.
 """
 import os
-import ssl
-import socket
-import asyncio
+import sys
 import logging
+from datetime import datetime
 
-from . import crypto, constants, manager
-
+from . import crypto
+from .manager import start_manager
+from .utils import ensure_root_path
+from .constants import HOME_DIR, PORT
 
 HELP = 'Start the asynchronous network manager.'
 
@@ -46,7 +47,7 @@ def add_parser_start(parser):
     )
     p.add_argument(
         '--port',
-        default=constants.PORT,
+        default=PORT,
         help='The port number to use for the network manager.\n'
              'Default is %(default)s.'
     )
@@ -77,6 +78,12 @@ def add_parser_start(parser):
         nargs='+',
         help='The password (passphrase) to use to decrypt the private key.'
     )
+    p.add_argument(
+        '--debug',
+        action='store_true',
+        default=False,
+        help='Enable DEBUG logging messages.'
+    )
     p.set_defaults(func=execute)
 
 
@@ -84,17 +91,22 @@ def execute(args):
     """Executes the ``start`` command."""
 
     # set up logging
-    log = logging.getLogger('main')
+    now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    path = os.path.join(HOME_DIR, 'logs', 'manager-{}.log'.format(now))
+    ensure_root_path(path)
     logging.basicConfig(
-        level=logging.DEBUG if os.environ.get('MSL_NETWORK_DEBUG', False) else logging.INFO,
-        format='%(asctime)s [%(levelname)s] -- %(name)s -- %(message)s',
-    )
+        level=logging.DEBUG if args.debug else logging.INFO,
+        format='%(asctime)s [%(levelname)-8s] %(name)s - %(message)s',
+        handlers=[
+            logging.FileHandler(path),
+            logging.StreamHandler(sys.stdout)
+        ])
 
     # get the port number
     try:
         port = int(args.port)
     except ValueError:
-        print('The --port value must be in integer')
+        print('The --port value must be an integer')
         return
 
     # get the password that is required for clients, servers and other network managers to connect
@@ -103,42 +115,20 @@ def execute(args):
     # get the password to decrypt the private key
     key_password = None if args.key_password is None else ' '.join(args.key_password)
 
-    # get the certificate and the private key
-    certfile, keyfile = args.cert, args.key
-    if certfile is None and keyfile is None:
-        keyfile = crypto.get_default_key_path()
-        if not os.path.isfile(keyfile):
-            crypto.generate_key(keyfile, password=key_password)
-        certfile = crypto.get_default_cert_path()
-        if not os.path.isfile(certfile):
-            crypto.generate_certificate(certfile, key_path=keyfile, key_password=key_password)
-    elif certfile is None and keyfile is not None:
-        # create (or overwrite) the default certificate
-        certfile = crypto.generate_certificate(None, key_path=keyfile, key_password=key_password)
-    elif certfile is not None and keyfile is None:
+    # get the path to the certificate and to the private key
+    cert, key = args.cert, args.key
+    if cert is None and key is None:
+        key = crypto.get_default_key_path()
+        if not os.path.isfile(key):
+            crypto.generate_key(key, password=key_password)
+        cert = crypto.get_default_cert_path()
+        if not os.path.isfile(cert):
+            crypto.generate_certificate(cert, key_path=key, key_password=key_password)
+    elif cert is None and key is not None:
+        # create (or overwrite) the default certificate to match the key
+        cert = crypto.generate_certificate(None, key_path=key, key_password=key_password)
+    elif cert is not None and key is None:
         pass  # assume that the certificate file also contains the private key
 
-    # create the SSL context
-    context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
-    context.load_cert_chain(certfile=certfile, keyfile=keyfile, password=key_password)
-
-    # create the network manager
-    mgr = manager.Manager(password)
-
-    # create the event loop
-    loop = asyncio.get_event_loop()
-    server = loop.run_until_complete(
-        asyncio.start_server(mgr.new_connection, port=port, ssl=context, loop=loop)
-    )
-
-    log.info('network manager is running on {}:{} using {}'.format(socket.gethostname(), port, context.protocol.name))
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        log.info('CTRL+C keyboard interrupt received')
-        pass
-
-    log.info('shutting down the network manager...')
-    server.close()
-    loop.run_until_complete(server.wait_closed())
-    loop.close()
+    # start the network manager
+    start_manager(password, port, cert, key, key_password, args.debug)
