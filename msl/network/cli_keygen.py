@@ -1,21 +1,23 @@
 """
 Command line interface for the ``keygen`` command.
 """
+from .crypto import generate_key
 
 HELP = 'Generate a private key that can be used to digitally sign a certificate.'
 
 DESCRIPTION = HELP + """
-
-See also: msl-network certgen
 """
 
-EXAMPLE = """
+EPILOG = """
 Examples:
     # create a default private key (RSA, 2048-bit, unencrypted)
     msl-network keygen 
 
-    # create a 4096-bit, encrypted private key using the DSA algorithm
-    msl-network keygen dsa --size 4096 --password WhatEVER you wAnt! 
+    # create a 3072-bit, encrypted private key using the DSA algorithm
+    msl-network keygen dsa --size 3072 --password WhatEVER you wAnt!
+
+See Also: 
+    msl-network certgen
 """
 
 
@@ -25,7 +27,7 @@ def add_parser_keygen(parser):
         'keygen',
         help=HELP,
         description=DESCRIPTION,
-        epilog=EXAMPLE,
+        epilog=EPILOG,
     )
     p.add_argument(
         'algorithm',
@@ -51,12 +53,31 @@ def add_parser_keygen(parser):
         '--size',
         default=2048,
         help='The size (number of bits) of the key. Only used if the\n'
-             'encryption algorithm is "rsa" or "dsa". Recommended to be\n'
-             'either 2048 or 4096. Default is %(default)s.'
+             'encryption algorithm is RSA or DSA. Default is %(default)s.'
+    )
+    p.add_argument(
+        '--curve',
+        default='SECP384R1',
+        help='The name of the elliptic curve to use. Only used if the\n'
+             'encryption algorithm is ECC. Default is %(default)s.'
     )
     p.set_defaults(func=execute)
 
 
 def execute(args):
     """Executes the ``keygen`` command."""
-    print('TODO: create the keygen module', args)
+    try:
+        size = int(args.size)
+    except ValueError:
+        print('The --size value must be an integer')
+        return
+
+    path = generate_key(
+        args.path,
+        algorithm=args.algorithm,
+        password=args.password,
+        size=size,
+        curve=args.curve
+    )
+    print('Created private {} key {}'.format(args.algorithm.upper(), path))
+
