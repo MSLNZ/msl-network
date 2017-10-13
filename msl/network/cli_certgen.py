@@ -72,10 +72,12 @@ def execute(args):
         print('The --years-valid value must be an integer')
         return
 
+    password = None if args.key_password is None else ' '.join(args.key_password)
+
     path = generate_certificate(
         args.path,
         key_path=args.key_path,
-        key_password=args.key_password,
+        key_password=password,
         algorithm=args.algorithm,
         years_valid=years
     )

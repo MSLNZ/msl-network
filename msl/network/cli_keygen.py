@@ -72,10 +72,12 @@ def execute(args):
         print('The --size value must be an integer')
         return
 
+    password = None if args.password is None else ' '.join(args.password)
+
     path = generate_key(
         args.path,
         algorithm=args.algorithm,
-        password=args.password,
+        password=password,
         size=size,
         curve=args.curve
     )
