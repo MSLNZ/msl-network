@@ -4,19 +4,20 @@ Functions to create a self-signed certificate for the secure SSL/TLS protocol.
 import os
 import ssl
 import socket
-import datetime
 import logging
 import inspect
+import datetime
 
 from cryptography import x509
 from cryptography.x509.oid import NameOID
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import dsa
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.backends import default_backend
 
+from .utils import ensure_root_path
 from .constants import KEY_DIR, CERT_DIR
 
 log = logging.getLogger(__name__)
@@ -69,7 +70,7 @@ def generate_key(path, algorithm='RSA', password=None, size=2048, curve='SECP384
 
     if path is None:
         path = get_default_key_path()
-    _ensure_root_path(path)
+    ensure_root_path(path)
 
     if password is None:
         encryption = serialization.NoEncryption()
@@ -83,7 +84,7 @@ def generate_key(path, algorithm='RSA', password=None, size=2048, curve='SECP384
             encryption_algorithm=encryption
         ))
 
-    log.debug('created private {} key {}'.format(algorithm_u, path))
+    log.debug('create private {} key {}'.format(algorithm_u, path))
     return path
 
 
@@ -159,7 +160,7 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
 
     if path is None:
         path = get_default_cert_path()
-    _ensure_root_path(path)
+    ensure_root_path(path)
 
     name = x509.Name([
         x509.NameAttribute(NameOID.COUNTRY_NAME, 'NZ'),
@@ -184,12 +185,12 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
     with open(path, 'wb') as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
-    log.debug('created a self-signed certificate ' + path)
+    log.debug('create self-signed certificate ' + path)
     return path
 
 
 def load_certificate(path):
-    """Load a X.509 certificate from a file.
+    """Load a PEM certificate from a file.
 
     Parameters
     ----------
@@ -199,7 +200,7 @@ def load_certificate(path):
     Returns
     -------
     :class:`~cryptography.x509.Certificate`
-        The X.509 certificate.
+        The PEM certificate.
     """
     with open(path, 'rb') as f:
         data = f.read()
@@ -232,7 +233,7 @@ def save_remote_certificate(host, port, path):
 
     if path is None:
         path = os.path.join(CERT_DIR, '{}.crt'.format(host))
-    _ensure_root_path(path)
+    ensure_root_path(path)
 
     with open(path, 'wb') as f:
         f.write(cert.encode())
@@ -249,10 +250,3 @@ def get_default_cert_path():
 def get_default_key_path():
     """:obj:`str`: Returns the default key path."""
     return os.path.join(KEY_DIR, socket.gethostname() + '.key')
-
-
-def _ensure_root_path(path):
-    """Ensure that the root directory for the file path exists."""
-    root = os.path.dirname(path)
-    if not os.path.isdir(root):
-        os.makedirs(root)
