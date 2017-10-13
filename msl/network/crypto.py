@@ -68,7 +68,7 @@ def generate_key(path, algorithm='RSA', password=None, size=2048, curve='SECP384
         raise ValueError('The encryption algorithm must be RSA, DSA or ECC. Got ' + algorithm_u)
 
     if path is None:
-        path = os.path.join(KEY_DIR, socket.gethostname() + '.key')
+        path = get_default_key_path()
     _ensure_root_path(path)
 
     if password is None:
@@ -83,7 +83,7 @@ def generate_key(path, algorithm='RSA', password=None, size=2048, curve='SECP384
             encryption_algorithm=encryption
         ))
 
-    log.info('created private {} key {}'.format(algorithm_u, path))
+    log.debug('created private {} key {}'.format(algorithm_u, path))
     return path
 
 
@@ -152,11 +152,13 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
         raise ValueError(msg) from None
 
     if key_path is None:
-        key_path = generate_key(None)
+        key_path = get_default_key_path()
+        if not os.path.isfile(key_path):
+            generate_key(key_path)
     key = load_key(key_path, key_password)
 
     if path is None:
-        path = os.path.join(CERT_DIR, socket.gethostname() + '.crt')
+        path = get_default_cert_path()
     _ensure_root_path(path)
 
     name = x509.Name([
@@ -182,7 +184,7 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
     with open(path, 'wb') as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
-    log.info('created a self-signed certificate ' + path)
+    log.debug('created a self-signed certificate ' + path)
     return path
 
 
@@ -201,7 +203,7 @@ def load_certificate(path):
     """
     with open(path, 'rb') as f:
         data = f.read()
-    log.info('load certificate ' + path)
+    log.debug('load certificate ' + path)
     return x509.load_pem_x509_certificate(data, default_backend())
 
 
@@ -235,7 +237,18 @@ def save_remote_certificate(host, port, path):
     with open(path, 'wb') as f:
         f.write(cert.encode())
 
+    log.info('got certificate from {}:{}'.format(host, port))
     return cert
+
+
+def get_default_cert_path():
+    """:obj:`str`: Returns the default certificate path."""
+    return os.path.join(CERT_DIR, socket.gethostname() + '.crt')
+
+
+def get_default_key_path():
+    """:obj:`str`: Returns the default key path."""
+    return os.path.join(KEY_DIR, socket.gethostname() + '.key')
 
 
 def _ensure_root_path(path):
