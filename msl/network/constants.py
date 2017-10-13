@@ -9,7 +9,7 @@ PORT = 1875
 HOME_DIR = os.path.join(os.path.expanduser('~'), '.msl')
 """:obj:`str`: The default $HOME directory."""
 
-CERT_DIR = os.path.join(HOME_DIR, 'certificates')
+CERT_DIR = os.path.join(HOME_DIR, 'certs')
 """:obj:`str`: The default directory to save PEM certificates."""
 
 KEY_DIR = os.path.join(HOME_DIR, 'keys')
