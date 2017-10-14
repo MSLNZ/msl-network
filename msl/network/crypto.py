@@ -2,6 +2,7 @@
 Functions to create a self-signed certificate for the secure SSL/TLS protocol.
 """
 import os
+import re
 import ssl
 import socket
 import logging
@@ -116,20 +117,23 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
     Parameters
     ----------
     path : :obj:`str`, optional
-        The path to where to save the certificate. Example, ``path/to/store/certificate.pem``.
+        The path to where to save the certificate. Example,
+        ``path/to/store/certificate.pem``.
     key_path : :obj:`str`, optional
-        The path to where the private key is saved which will be used to digitally sign the
-        certificate. If :obj:`None` then automatically generates a new private key (overwriting
-        the default private key if one already exists).
+        The path to where the private key is saved which will be used to
+        digitally sign the certificate. If :obj:`None` then automatically
+        generates a new private key (overwriting the default private key
+        if one already exists).
     key_password : :obj:`str`, optional
         The password to use to decrypt the private key.
     algorithm : :obj:`str`, optional
         The hash algorithm to use. Default is ``SHA256``. See
         `this <https://cryptography.io/en/latest/hazmat/primitives/cryptographic-hashes/#cryptographic-hash-algorithms>`_
         link for example hash-algorithm names.
-
-    years_valid : :obj:`int`, optional
-        The number of years that the certificate is valid for. Default is ``100`` years.
+    years_valid : :obj:`float`, optional
+        The number of years that the certificate is valid for. If you want to
+        specify that the certificate is valid for 3 months then set `years_valid`
+        to be ``0.25``. Default is ``100`` years.
 
     Returns
     -------
@@ -172,13 +176,20 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
 
     now = datetime.datetime.utcnow()
 
+    years_valid = max(0, years_valid)
+    years = int(years_valid)
+    days = int((years_valid - years) * 365)
+    expires = now.replace(year=now.year + years)
+    if days > 0:
+        expires += datetime.timedelta(days=days)
+
     cert = x509.CertificateBuilder()
     cert = cert.subject_name(name)
     cert = cert.issuer_name(name)  # subject_name == issuer_name for a self-signed certificate
     cert = cert.public_key(key.public_key())
     cert = cert.serial_number(x509.random_serial_number())
     cert = cert.not_valid_before(now)
-    cert = cert.not_valid_after(now.replace(year=now.year + years_valid))
+    cert = cert.not_valid_after(expires)
     cert = cert.add_extension(x509.SubjectAlternativeName([x509.DNSName('localhost')]), critical=False)
     cert = cert.sign(key, hash_class, default_backend())
 
@@ -250,3 +261,127 @@ def get_default_cert_path():
 def get_default_key_path():
     """:obj:`str`: Returns the default key path."""
     return os.path.join(KEY_DIR, socket.gethostname() + '.key')
+
+
+def get_fingerprint(cert, algorithm=hashes.SHA1):
+    """Get the fingerprint of the certificate.
+
+    Parameters
+    ----------
+    cert : :class:`~cryptography.x509.Certificate`
+        The PEM certificate.
+    algorithm : :class:`~cryptography.hazmat.primitives.hashes.HashAlgorithm`
+        The hash algorithm.
+
+    Returns
+    -------
+    :obj:`str`
+        The fingerprint as a colon-separated hex string.
+    """
+    s = cert.fingerprint(algorithm()).hex()
+    return ':'.join(s[i:i+2] for i in range(0, len(s), 2))
+
+
+def get_details(cert):
+    """Get the details of the certificate.
+
+    Parameters
+    ----------
+    cert : :class:`~cryptography.x509.Certificate`
+        The certificate.
+
+    Returns
+    -------
+    :obj:`str`
+        The details about the certificate.
+    """
+    def to_hex_string(val):
+        # create a colon-separated hex string
+        if isinstance(val, bytes):
+            val = val.hex()
+        elif isinstance(val, int):
+            val = str(hex(val))[2:]
+            if len(val) % 2 == 1:
+                val = '0'+val
+        return ':'.join(val[i:i+2] for i in range(0, len(val), 2))
+
+    def name_oid(value):
+        s = ''
+        for name in vars(NameOID):
+            if name.startswith('_'):
+                continue
+            attrib = value.get_attributes_for_oid(getattr(NameOID, name))
+            if attrib:
+                s += ('  {}: {}\n'.format(name.replace('_', ' ').lower().title(), attrib[0].value))
+        return s
+
+    def justify(hex_string):
+        h = hex_string
+        n = 75
+        return '    ' + '    \n    '.join(h[i:i+n] for i in range(0, len(h), n)) + '\n'
+
+    def oid_to_dict(oid):
+        match = re.search(r'oid=(.+), name=(.+)\)', str(oid))
+        return {'oid': match.group(1), 'name': match.group(2)}
+
+    details = ''
+    details += 'Version: {}\n'.format(cert.version.name)
+
+    details += 'Serial Number: {}\n'.format(to_hex_string(cert.serial_number))
+
+    details += 'Issuer:\n'
+    details += name_oid(cert.issuer)
+
+    details += 'Validity:\n'
+    details += '  Not Before: {}\n'.format(cert.not_valid_before.strftime('%d %B %Y %H:%M:%S GMT'))
+    details += '  Not After : {}\n'.format(cert.not_valid_after.strftime('%d %B %Y %H:%M:%S GMT'))
+
+    details += 'Subject:\n'
+    details += name_oid(cert.subject)
+
+    details += 'Subject Public Key Info:\n'
+    key = cert.public_key()
+    if issubclass(key.__class__, ec.EllipticCurvePublicKey):
+        details += '  Encryption: Elliptic Curve\n'
+        details += '  Curve: {}\n'.format(key.curve.name)
+        details += '  Key Size: {}\n'.format(key.key_size)
+        details += '  Key:\n'
+        k = '04:' + to_hex_string(key.public_numbers().x) + ':' + to_hex_string(key.public_numbers().y)
+        details += justify(k)
+    elif issubclass(key.__class__, rsa.RSAPublicKey):
+        details += '  Encryption: RSA\n'
+        details += '  Exponent: {}\n'.format(key.public_numbers().e)
+        details += '  Key Size: {}\n'.format(key.key_size)
+        details += '  Key:\n'
+        details += justify('00:' + to_hex_string(key.public_numbers().n))
+    elif issubclass(key.__class__, dsa.DSAPublicKey):
+        details += '  Encryption: DSA\n'
+        details += '  Key Size: {}\n'.format(key.key_size)
+        details += '  Y:\n'
+        details += justify(to_hex_string(key.public_numbers().y))
+        details += '  P:\n'
+        details += justify(to_hex_string(key.public_numbers().parameter_numbers.p))
+        details += '  Q:\n'
+        details += justify(to_hex_string(key.public_numbers().parameter_numbers.q))
+        details += '  G:\n'
+        details += justify(to_hex_string(key.public_numbers().parameter_numbers.g))
+    else:
+        raise NotImplementedError('Unsupported public key {}'.format(key.__class__.__name__))
+
+    details += 'Extensions:\n'
+    for ext in cert.extensions:
+        details += '  ' + str(ext.value).replace('<', '').replace('>', '') + ':\n'
+        details += '    Critical: {}\n'.format(ext.critical)
+        d = oid_to_dict(ext.oid)
+        details += '    OID: {}\n'.format(d['oid'])
+
+    details += 'Signature Algorithm:\n'
+    d = oid_to_dict(cert.signature_algorithm_oid)
+    details += '  OID: {}\n'.format(d['oid'])
+    details += '  Name: {}\n'.format(d['name'])
+    details += '  Value:\n'
+    details += justify(to_hex_string(cert.signature))
+
+    details += 'Fingerprint (SHA1):\n  {}'.format(to_hex_string(cert.fingerprint(hashes.SHA1())))
+
+    return details
