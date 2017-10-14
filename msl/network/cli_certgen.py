@@ -1,7 +1,7 @@
 """
 Command line interface for the ``certgen`` command.
 """
-from .crypto import generate_certificate
+from . import crypto
 
 HELP = 'Generate a self-signed certificate to use for the SSL/TLS protocol.'
 
@@ -58,8 +58,15 @@ def add_parser_certgen(parser):
     p.add_argument(
         '--years-valid',
         default=100,
-        help='The number of years that the certificate is valid for.\n'
-             'Default is %(default)s years.'
+        help='The number of years that the certificate is valid for\n'
+             '(e.g., a value of 0.25 would mean that the certificate\n'
+             'is valid for 3 months). Default is %(default)s years.'
+    )
+    p.add_argument(
+        '--hide-details',
+        action='store_true',
+        default=False,
+        help='Do not display the certificate details.'
     )
     p.set_defaults(func=execute)
 
@@ -67,19 +74,22 @@ def add_parser_certgen(parser):
 def execute(args):
     """Executes the ``certgen`` command."""
     try:
-        years = int(args.years_valid)
+        years = float(args.years_valid)
     except ValueError:
-        print('The --years-valid value must be an integer')
+        print('The --years-valid value must be a decimal number')
         return
 
     password = None if args.key_password is None else ' '.join(args.key_password)
 
-    path = generate_certificate(
+    path = crypto.generate_certificate(
         args.path,
         key_path=args.key_path,
         key_password=password,
         algorithm=args.algorithm,
         years_valid=years
     )
-    print('Created the self-signed certificate ' + path)
 
+    print('Created the self-signed certificate ' + path)
+    if not args.hide_details:
+        print('')
+        print(crypto.get_details(crypto.load_certificate(path)))
