@@ -17,5 +17,5 @@ def ensure_root_path(file_path):
         exists creating the intermediate directories if necessary.
     """
     root = os.path.dirname(file_path)
-    if not os.path.isdir(root):
+    if root and not os.path.isdir(root):
         os.makedirs(root)
