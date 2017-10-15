@@ -3,22 +3,29 @@ Command line interface for the ``certgen`` command.
 """
 from . import crypto
 
-HELP = 'Generate a self-signed certificate to use for the SSL/TLS protocol.'
+HELP = 'Generate a self-signed PEM certificate.'
 
 DESCRIPTION = HELP + """
+
+The certgen command is similar to the openssl command to generate a 
+self-signed certificate from a pre-existing private key
+
+  openssl req -key private.key -new -x509 -days 365 -out certificate.crt  
 """
 
 EPILOG = """
 Examples:
-    # create a default certificate using a default private key
-    msl-network certgen 
+  # create a default certificate using a default private key
+  # and save it to the default directory
+  msl-network certgen 
 
-    # create a certificate using the specified key and 
-    # save the certificate to the specified file
-    msl-network certgen --key-path /path/to/key.pem /path/to/cert.pem
+  # create a certificate using the specified key and 
+  # save the certificate to the specified file
+  msl-network certgen --key-path /path/to/key.pem /path/to/cert.pem
 
 See Also: 
-    msl-network keygen  
+  msl-network keygen
+  msl-network certdump  
 """
 
 
@@ -63,10 +70,10 @@ def add_parser_certgen(parser):
              'is valid for 3 months). Default is %(default)s years.'
     )
     p.add_argument(
-        '--hide-details',
+        '--show',
         action='store_true',
         default=False,
-        help='Do not display the certificate details.'
+        help='Display the details of the newly-created certificate.'
     )
     p.set_defaults(func=execute)
 
@@ -90,6 +97,6 @@ def execute(args):
     )
 
     print('Created the self-signed certificate ' + path)
-    if not args.hide_details:
+    if args.show:
         print('')
         print(crypto.get_details(crypto.load_certificate(path)))
