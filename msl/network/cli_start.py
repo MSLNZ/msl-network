@@ -18,22 +18,22 @@ DESCRIPTION = HELP + """
 
 EPILOG = """
 Examples:
-    # start the network manager using the default settings
-    msl-network start
+  # start the network manager using the default settings
+  msl-network start
 
-    # start the network manager on port 8326
-    msl-network start --port 8326
+  # start the network manager on port 8326
+  msl-network start --port 8326
     
-    # require a password for clients, servers and other network managers 
-    # to be able to connect to this network manager
-    msl-network start --password abc 123
+  # require a password for clients, servers and other network managers 
+  # to be able to connect to this network manager
+  msl-network start --password abc 123
 
-    # use a specific certificate and key for the secure SSL/TLS protocol 
-    msl-network start --cert path/to/cert.pem --key path/to/key.pem
+  # use a specific certificate and key for the secure SSL/TLS protocol 
+  msl-network start --cert path/to/cert.pem --key path/to/key.pem
     
 See Also:
-    msl-network keygen
-    msl-network certgen
+  msl-network keygen
+  msl-network certgen
 """
 
 
@@ -76,7 +76,8 @@ def add_parser_start(parser):
     p.add_argument(
         '--key-password',
         nargs='+',
-        help='The password (passphrase) to use to decrypt the private key.'
+        help='The password (passphrase) to use to decrypt the private key.\n'
+             'Only required if the key file is encrypted.'
     )
     p.add_argument(
         '--debug',

@@ -3,21 +3,26 @@ Command line interface for the ``keygen`` command.
 """
 from .crypto import generate_key
 
-HELP = 'Generate a private key that can be used to digitally sign a certificate.'
+HELP = 'Generate a private key to digitally sign a certificate.'
 
 DESCRIPTION = HELP + """
+
+The keygen command is similar to the openssl command
+
+  openssl req -newkey rsa:2048 -nodes -keyout key.pem  
 """
 
 EPILOG = """
 Examples:
-    # create a default private key (RSA, 2048-bit, unencrypted)
-    msl-network keygen 
+  # create a default private key (RSA, 2048-bit, unencrypted)
+  # and save it to the default directory
+  msl-network keygen 
 
-    # create a 3072-bit, encrypted private key using the DSA algorithm
-    msl-network keygen dsa --size 3072 --password WhatEVER you wAnt!
+  # create a 3072-bit, encrypted private key using the DSA algorithm
+  msl-network keygen dsa --size 3072 --password WhatEVER you wAnt!
 
 See Also: 
-    msl-network certgen
+  msl-network certgen
 """
 
 
@@ -81,5 +86,6 @@ def execute(args):
         size=size,
         curve=args.curve
     )
+
     print('Created private {} key {}'.format(args.algorithm.upper(), path))
 
