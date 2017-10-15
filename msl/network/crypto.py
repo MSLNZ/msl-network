@@ -62,7 +62,7 @@ def generate_key(path, algorithm='RSA', password=None, size=2048, curve='SECP384
             curve_class = ec._CURVE_TYPES[curve.lower()]  # yeah, access the private variable...
         except KeyError:
             names = [key.upper() for key in ec._CURVE_TYPES]
-            msg = 'Unknown curve name "{}". Allowed names are {}'.format(
+            msg = 'Unknown curve name {}. Allowed names are {}'.format(
                 curve.upper(), ', '.join(sorted(names)))
             raise ValueError(msg) from None
         key = ec.generate_private_key(curve_class, default_backend())
@@ -153,7 +153,7 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
         hash_class = hash_map[algorithm.upper()]()
     except KeyError:
         allowed = ', '.join(hash_map.keys())
-        msg = 'Invalid hash algorithm "{}". Allowed algorithms are {}'.format(algorithm.upper(), allowed)
+        msg = 'Invalid hash algorithm {}. Allowed algorithms are {}'.format(algorithm.upper(), allowed)
         raise ValueError(msg) from None
 
     if key_path is None:
@@ -172,6 +172,7 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
         x509.NameAttribute(NameOID.LOCALITY_NAME, 'Lower Hutt'),
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, 'Measurement Standards Laboratory of New Zealand'),
         x509.NameAttribute(NameOID.COMMON_NAME, socket.gethostname()),
+        x509.NameAttribute(NameOID.EMAIL_ADDRESS, 'info@measurement.govt.nz'),
     ])
 
     now = datetime.datetime.utcnow()
@@ -346,14 +347,13 @@ def get_details(cert):
         details += '  Curve: {}\n'.format(key.curve.name)
         details += '  Key Size: {}\n'.format(key.key_size)
         details += '  Key:\n'
-        k = '04:' + to_hex_string(key.public_numbers().x) + ':' + to_hex_string(key.public_numbers().y)
-        details += justify(k)
+        details += justify(to_hex_string(key.public_numbers().encode_point()))
     elif issubclass(key.__class__, rsa.RSAPublicKey):
         details += '  Encryption: RSA\n'
         details += '  Exponent: {}\n'.format(key.public_numbers().e)
         details += '  Key Size: {}\n'.format(key.key_size)
         details += '  Key:\n'
-        details += justify('00:' + to_hex_string(key.public_numbers().n))
+        details += justify(to_hex_string(key.public_numbers().n))
     elif issubclass(key.__class__, dsa.DSAPublicKey):
         details += '  Encryption: DSA\n'
         details += '  Key Size: {}\n'.format(key.key_size)
@@ -368,12 +368,13 @@ def get_details(cert):
     else:
         raise NotImplementedError('Unsupported public key {}'.format(key.__class__.__name__))
 
-    details += 'Extensions:\n'
-    for ext in cert.extensions:
-        details += '  ' + str(ext.value).replace('<', '').replace('>', '') + ':\n'
-        details += '    Critical: {}\n'.format(ext.critical)
-        d = oid_to_dict(ext.oid)
-        details += '    OID: {}\n'.format(d['oid'])
+    if cert.extensions:
+        details += 'Extensions:\n'
+        for ext in cert.extensions:
+            details += '  ' + str(ext.value).replace('<', '').replace('>', '') + ':\n'
+            details += '    Critical: {}\n'.format(ext.critical)
+            d = oid_to_dict(ext.oid)
+            details += '    OID: {}\n'.format(d['oid'])
 
     details += 'Signature Algorithm:\n'
     d = oid_to_dict(cert.signature_algorithm_oid)

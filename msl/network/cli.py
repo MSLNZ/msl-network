@@ -28,6 +28,7 @@ def configure_parser():
     from .cli_certgen import add_parser_certgen
     from .cli_keygen import add_parser_keygen
     from .cli_start import add_parser_start
+    from .cli_certdump import add_parser_certdump
 
     PARSER = ArgumentParser(description=DESCRIPTION)
 
@@ -47,6 +48,7 @@ def configure_parser():
     command_parser.required = True
 
     add_parser_certgen(command_parser)
+    add_parser_certdump(command_parser)
     add_parser_keygen(command_parser)
     add_parser_start(command_parser)
 
