@@ -7,6 +7,10 @@ import json
 import socket
 import asyncio
 import logging
+from datetime import datetime
+
+from .constants import HOME_DIR
+from .database import Database
 
 log = logging.getLogger(__name__)
 
@@ -23,6 +27,9 @@ class Manager(object):
             network manager to be able to connect to this network manager.'
         """
         self.password = password
+
+        self.db = Database(os.path.join(HOME_DIR, 'manager.db'))
+        self.db.create_table('connections', [['date', 'TEXT'], ['address', 'TEXT'], ['action', 'TEXT']])
 
         self.clients = {}  # the clients that are connected
         self.services = {}  # the services that are connected
@@ -45,7 +52,9 @@ class Manager(object):
         writer : :class:`asyncio.StreamWriter`
             The stream writer.
         """
-        log.info('new connection from {}'.format(writer.get_extra_info('peername')))
+        address = '{}:{}'.format(*writer.get_extra_info('peername'))
+        log.info('new connection from {}'.format(address))
+        self.db.write('INSERT INTO connections VALUES(NULL, ?, ?, ?)', (datetime.now(), address, 'connection request'))
 
         if self.password is not None:
             if not await self.check_password(reader, writer):
@@ -58,18 +67,18 @@ class Manager(object):
         await self.handle_requests(reader, writer)
 
         await writer.drain()
-        log.info('connection from {} is closed'.format(writer.get_extra_info('peername')))
+        log.info('connection from {} is closed'.format(address))
 
     async def check_password(self, reader, writer):
-        peer_name = writer.get_extra_info('peername')
-        log.info('requesting password from {}'.format(peer_name))
+        address = '{}:{}'.format(*writer.get_extra_info('peername'))
+        log.info('requesting password from {}'.format(address))
         writer.write(b'__password__')
         password = await reader.readline()
         if self.password == password.decode().strip():
-            log.info('correct password received from {}'.format(peer_name))
+            log.info('correct password received from {}'.format(address))
             return True
         writer.write(b'Sorry, wrong password.')
-        log.info('incorrect password received from {}, closing connection'.format(peer_name))
+        log.info('incorrect password received from {}, closing connection'.format(address))
         writer.close()
         return False
 
