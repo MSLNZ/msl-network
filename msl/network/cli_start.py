@@ -11,7 +11,7 @@ from .manager import start_manager
 from .utils import ensure_root_path
 from .constants import HOME_DIR, PORT
 
-HELP = 'Start the asynchronous network manager.'
+HELP = 'Start an asynchronous network manager using the TLS protocol.'
 
 DESCRIPTION = HELP + """
 """
@@ -97,7 +97,7 @@ def execute(args):
     ensure_root_path(path)
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
-        format='%(asctime)s [%(levelname)-8s] %(name)s - %(message)s',
+        format='%(asctime)s [%(levelname)-5s] %(name)s - %(message)s',
         handlers=[
             logging.FileHandler(path),
             logging.StreamHandler(sys.stdout)
