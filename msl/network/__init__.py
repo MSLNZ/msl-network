@@ -1,5 +1,7 @@
 from collections import namedtuple
 
+from .database import Database
+
 __author__ = 'Joseph Borbely'
 __copyright__ = '\xa9 2017, ' + __author__
 __version__ = '0.1.0'
