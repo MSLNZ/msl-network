@@ -25,7 +25,7 @@ class Manager(object):
         self.password = password
 
         self.clients = {}  # the clients that are connected
-        self.servers = {}  # the servers that are connected
+        self.services = {}  # the services that are connected
         self.managers = {}  # the other network managers that are connected
 
     async def new_connection(self, reader, writer):

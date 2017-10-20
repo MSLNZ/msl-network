@@ -9,9 +9,9 @@ PARSER = None
 
 DESCRIPTION = """An asynchronous network manager.
 
-The manager allows for multiple clients, servers and other managers to connect
-to it and links a clients request to the appropriate server/manager to handle 
-the request and then sends the response back to the client.
+The network manager allows for multiple clients, services and other managers to 
+connect to it and transfers a clients request to the appropriate service/manager 
+to handle the request and then sends the response back to the client.
 """
 
 
@@ -59,9 +59,11 @@ def main(*args):
     """
     Main entry point to the asynchronous network manager.
     """
-    parser = configure_parser()
     if not args:
         args = sys.argv[1:]
+        if not args:
+            args = ['--help']
+    parser = configure_parser()
     args = parser.parse_args(args)
     sys.exit(args.func(args))
 
