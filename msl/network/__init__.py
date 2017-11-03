@@ -1,6 +1,12 @@
+"""
+An asynchronous network manager.
+"""
 from collections import namedtuple
 
-from .database import Database
+from .client import Client
+from .service import Service
+from .connection import connect
+from .database import ConnectionsDatabase, AuthenticateDatabase
 
 __author__ = 'Joseph Borbely'
 __copyright__ = '\xa9 2017, ' + __author__

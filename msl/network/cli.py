@@ -9,9 +9,9 @@ PARSER = None
 
 DESCRIPTION = """An asynchronous network manager.
 
-The network manager allows for multiple clients, services and other managers to 
-connect to it and transfers a clients request to the appropriate service/manager 
-to handle the request and then sends the response back to the client.
+The network manager allows for multiple clients and services to connect to 
+it and transfers a clients request to the appropriate service to handle 
+the request and then sends the response back to the client.
 """
 
 
@@ -29,6 +29,7 @@ def configure_parser():
     from .cli_keygen import add_parser_keygen
     from .cli_start import add_parser_start
     from .cli_certdump import add_parser_certdump
+    from .cli_auth import add_parser_auth
 
     PARSER = ArgumentParser(description=DESCRIPTION)
 
@@ -51,6 +52,7 @@ def configure_parser():
     add_parser_certdump(command_parser)
     add_parser_keygen(command_parser)
     add_parser_start(command_parser)
+    add_parser_auth(command_parser)
 
     return PARSER
 

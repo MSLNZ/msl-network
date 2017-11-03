@@ -9,7 +9,8 @@ from datetime import datetime
 from . import crypto
 from .manager import start_manager
 from .utils import ensure_root_path
-from .constants import HOME_DIR, PORT
+from .database import AuthenticateDatabase
+from .constants import HOME_DIR, PORT, DATABASE_PATH
 
 HELP = 'Start an asynchronous network manager using the TLS protocol.'
 
@@ -24,9 +25,9 @@ Examples:
   # start the network manager on port 8326
   msl-network start --port 8326
     
-  # require a password for clients, servers and other network managers 
-  # to be able to connect to this network manager
-  msl-network start --password abc 123
+  # require an authentication passphrase for clients or services 
+  # to be able to connect to the network manager 
+  msl-network start --auth abc 123
 
   # use a specific certificate and key for the secure SSL/TLS protocol 
   msl-network start --cert path/to/cert.pem --key path/to/key.pem
@@ -34,6 +35,7 @@ Examples:
 See Also:
   msl-network keygen
   msl-network certgen
+  msl-network auth
 """
 
 
@@ -52,11 +54,16 @@ def add_parser_start(parser):
              'Default is %(default)s.'
     )
     p.add_argument(
-        '--password',
+        '--auth',
         nargs='+',
-        help='The password (passphrase) that is required for a client,\n'
-             'server or another network manager to be able to connect\n'
-             'to this network manager. Default is None (no password).'
+        help='The authenticate method that is required for a client\n'
+             'or service to be able to connect to the network manager.\n'
+             'The value can either be any password or the text "hostname".\n'
+             'If a password then spaces are permitted. If the text is\n'
+             '"hostname" then only connections from devices that are in\n'
+             'the "authenticate" table in the specified database will be\n'
+             'allowed to connect to the manager. Default is None\n'
+             '(i.e., no authentication is required for a device to connect).'
     )
     p.add_argument(
         '--cert',
@@ -80,6 +87,13 @@ def add_parser_start(parser):
              'Only required if the key file is encrypted.'
     )
     p.add_argument(
+        '--database',
+        help='The path to the database to log network connections and to\n'
+             'use for the authentication method (only used if the value\n'
+             'of --auth is "hostname"). If omitted then a default database\n'
+             'is loaded.'
+    )
+    p.add_argument(
         '--debug',
         action='store_true',
         default=False,
@@ -91,17 +105,23 @@ def add_parser_start(parser):
 def execute(args):
     """Executes the ``start`` command."""
 
-    # set up logging
+    # set up logging -- FileHandler and StreamHandler
     now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     path = os.path.join(HOME_DIR, 'logs', 'manager-{}.log'.format(now))
     ensure_root_path(path)
+
+    # the root logger is a FileHandler and it will always log at the debug level
     logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
-        format='%(asctime)s [%(levelname)-5s] %(name)s - %(message)s',
-        handlers=[
-            logging.FileHandler(path),
-            logging.StreamHandler(sys.stdout)
-        ])
+        level=logging.DEBUG,
+        format='%(asctime)s [%(levelname)-8s] %(name)s - %(message)s',
+        filename=path,
+    )
+
+    # the StreamHandler log level can be decided from the command line
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.DEBUG if args.debug else logging.INFO)
+    sh.setFormatter(logging.Formatter('%(asctime)s [%(levelname)-5s] %(name)s - %(message)s'))
+    logging.getLogger().addHandler(sh)
 
     # get the port number
     try:
@@ -109,9 +129,6 @@ def execute(args):
     except ValueError:
         print('The --port value must be an integer')
         return
-
-    # get the password that is required for clients, servers and other network managers to connect
-    password = None if args.password is None else ' '.join(args.password)
 
     # get the password to decrypt the private key
     key_password = None if args.key_password is None else ' '.join(args.key_password)
@@ -131,5 +148,26 @@ def execute(args):
     elif cert is not None and key is None:
         pass  # assume that the certificate file also contains the private key
 
+    # get the path to the database file
+    if args.database is not None and os.path.isfile(args.database):
+        database = args.database
+    else:
+        database = DATABASE_PATH
+
+    # get the authentication that is required for clients and services to connect to the manager
+    if not args.auth:
+        auth = None
+    elif args.auth[0].startswith('hostname'):
+        # then the authentication is based on a list of trusted hostname's
+        auth = AuthenticateDatabase(database).hostnames()
+        if not auth:
+            print('The authentication table has no hostname\'s\n')
+            print('Example, to add "localhost" as a trusted hostname, run:\n')
+            print('  msl-network auth add localhost')
+            return
+    else:
+        # then the authentication is a passphrase.
+        auth = ' '.join(args.auth)
+
     # start the network manager
-    start_manager(password, port, cert, key, key_password, args.debug)
+    start_manager(auth, port, cert, key, key_password, database, args.debug)

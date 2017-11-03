@@ -3,8 +3,6 @@ Functions to create a self-signed certificate for the secure SSL/TLS protocol.
 """
 import os
 import re
-import ssl
-import socket
 import logging
 import inspect
 import datetime
@@ -19,7 +17,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import dsa
 
 from .utils import ensure_root_path
-from .constants import KEY_DIR, CERT_DIR
+from .constants import KEY_DIR, CERT_DIR, HOSTNAME
 
 log = logging.getLogger(__name__)
 
@@ -171,7 +169,7 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
         x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, 'Wellington'),
         x509.NameAttribute(NameOID.LOCALITY_NAME, 'Lower Hutt'),
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, 'Measurement Standards Laboratory of New Zealand'),
-        x509.NameAttribute(NameOID.COMMON_NAME, socket.gethostname()),
+        x509.NameAttribute(NameOID.COMMON_NAME, HOSTNAME),
         x509.NameAttribute(NameOID.EMAIL_ADDRESS, 'info@measurement.govt.nz'),
     ])
 
@@ -201,67 +199,44 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
     return path
 
 
-def load_certificate(path):
-    """Load a PEM certificate from a file.
+def load_certificate(cert):
+    """Load a PEM certificate.
 
     Parameters
     ----------
-    path : :obj:`str`
-        The path to the certificate file.
+    cert : :obj:`str` or :obj:`bytes`
+        If :obj:`str` then the path to the certificate file.
+        If :obj:`bytes` then the raw certificate data.
 
     Returns
     -------
     :class:`~cryptography.x509.Certificate`
         The PEM certificate.
+
+    Raises
+    ------
+    TypeError
+        If `cert` is not of type :obj:`str` or :obj:`bytes`.
     """
-    with open(path, 'rb') as f:
-        data = f.read()
-    log.debug('load certificate ' + path)
+    if isinstance(cert, str):
+        with open(cert, 'rb') as f:
+            data = f.read()
+        log.debug('load certificate ' + cert)
+    elif isinstance(cert, bytes):
+        data = cert
+    else:
+        raise TypeError('The "cert" parameter must be a string or bytes')
     return x509.load_pem_x509_certificate(data, default_backend())
-
-
-def save_remote_certificate(host, port, path):
-    """Save a remote certificate to a file.
-
-    Parameters
-    ----------
-    host : :obj:`str`
-        The name of the host.
-    port : :obj:`int`
-        The port number on the host.
-    path : :obj:`str`
-        The path to where to save the certificate. Example, ``path/to/store/certificate.pem``.
-
-    Returns
-    -------
-    :obj:`str`
-        The certificate data as a PEM-encoded string.
-    """
-    try:
-        cert = ssl.get_server_certificate((host, port))
-    except ssl.SSLError as e:
-        log.error('cannot get certificate from {}:{}. {}'.format(host, port, e))
-        return
-
-    if path is None:
-        path = os.path.join(CERT_DIR, '{}.crt'.format(host))
-    ensure_root_path(path)
-
-    with open(path, 'wb') as f:
-        f.write(cert.encode())
-
-    log.info('got certificate from {}:{}'.format(host, port))
-    return cert
 
 
 def get_default_cert_path():
     """:obj:`str`: Returns the default certificate path."""
-    return os.path.join(CERT_DIR, socket.gethostname() + '.crt')
+    return os.path.join(CERT_DIR, HOSTNAME + '.crt')
 
 
 def get_default_key_path():
     """:obj:`str`: Returns the default key path."""
-    return os.path.join(KEY_DIR, socket.gethostname() + '.key')
+    return os.path.join(KEY_DIR, HOSTNAME + '.key')
 
 
 def get_fingerprint(cert, algorithm=hashes.SHA1):
@@ -279,8 +254,8 @@ def get_fingerprint(cert, algorithm=hashes.SHA1):
     :obj:`str`
         The fingerprint as a colon-separated hex string.
     """
-    s = cert.fingerprint(algorithm()).hex()
-    return ':'.join(s[i:i+2] for i in range(0, len(s), 2))
+    fingerprint = cert.fingerprint(algorithm()).hex()
+    return ':'.join(fingerprint[i:i+2] for i in range(0, len(fingerprint), 2))
 
 
 def get_details(cert):
@@ -345,7 +320,7 @@ def get_details(cert):
     if issubclass(key.__class__, ec.EllipticCurvePublicKey):
         details += '  Encryption: Elliptic Curve\n'
         details += '  Curve: {}\n'.format(key.curve.name)
-        details += '  Key Size: {}\n'.format(key.key_size)
+        details += '  Key Size: {}\n'.format(key.curve.key_size)
         details += '  Key:\n'
         details += justify(to_hex_string(key.public_numbers().encode_point()))
     elif issubclass(key.__class__, rsa.RSAPublicKey):
@@ -383,6 +358,6 @@ def get_details(cert):
     details += '  Value:\n'
     details += justify(to_hex_string(cert.signature))
 
-    details += 'Fingerprint (SHA1):\n  {}'.format(to_hex_string(cert.fingerprint(hashes.SHA1())))
+    details += 'Fingerprint (SHA1):\n  {}'.format(get_fingerprint(cert))
 
     return details
