@@ -1,3 +1,6 @@
+"""
+Databases that are used by the Network :class:`~msl.network.manager.Manager`.
+"""
 import os
 import sqlite3
 import logging
@@ -26,9 +29,9 @@ class Database(object):
         if database == ':memory:':
             log.debug('creating a database in RAM')
         elif not os.path.isfile(database):
-            log.debug('creating a new database: ' + database)
+            log.debug('creating a new database ' + database)
         else:
-            log.debug('opening: ' + database)
+            log.debug('opening ' + database)
 
         self._connection = sqlite3.connect(database, **kwargs)
         self._connection.row_factory = sqlite3.Row
@@ -62,7 +65,7 @@ class Database(object):
         if self._connection is not None:
             self._connection.close()
             self._connection = None
-            log.debug('closed: ' + self._path)
+            log.debug('closed ' + self._path)
 
     def execute(self, sql, parameters=None):
         """Wrapper around :meth:`sqlite3.Cursor.execute`.
@@ -78,7 +81,7 @@ class Database(object):
             log.debug(sql)
             self._cursor.execute(sql)
         else:
-            log.debug('{} {!r}'.format(sql, parameters))
+            log.debug(f'{sql} {parameters}')
             self._cursor.execute(sql, parameters)
 
     def tables(self):
@@ -145,8 +148,18 @@ class Database(object):
 class ConnectionsDatabase(Database):
 
     NAME = 'connections'
+    """:obj:`str`: The name of the table in the database."""
 
     def __init__(self, database, **kwargs):
+        """Database for devices that have connected to the Network
+        :class:`~msl.network.manager.Manager`.
+
+        Parameters
+        ----------
+        database : :obj:`str`
+            The path to the database file, or ``':memory:'`` to open a
+            connection to a database that resides in RAM instead of on disk.
+        """
         super().__init__(database, **kwargs)
         self.execute('CREATE TABLE IF NOT EXISTS %s ('
                      'pid INTEGER PRIMARY KEY AUTOINCREMENT, '
@@ -172,11 +185,25 @@ class ConnectionsDatabase(Database):
 class AuthenticateDatabase(Database):
 
     NAME = 'authenticate'
+    """:obj:`str`: The name of the table in the database."""
 
     def __init__(self, database, **kwargs):
+        """Database for trusted hostname's that are allowed to connect
+        to the Network :class:`~msl.network.manager.Manager`.
+
+        Parameters
+        ----------
+        database : :obj:`str`
+            The path to the database file, or ``':memory:'`` to open a
+            connection to a database that resides in RAM instead of on disk.
+        """
         super().__init__(database, **kwargs)
         self.execute('CREATE TABLE IF NOT EXISTS %s (hostname TEXT, UNIQUE(hostname));' % self.NAME)
         self.connection.commit()
+
+        if not self.hostnames():
+            for hostname in ['localhost', '127.0.0.1', '::1']:
+                self.insert(hostname)
 
     def insert(self, hostname):
         """Insert the hostname (only if it does not already exist in the table)."""

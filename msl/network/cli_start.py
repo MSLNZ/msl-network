@@ -6,8 +6,7 @@ import sys
 import logging
 from datetime import datetime
 
-from . import crypto
-from .manager import start_manager
+from . import crypto, manager
 from .utils import ensure_root_path
 from .database import AuthenticateDatabase
 from .constants import HOME_DIR, PORT, DATABASE_PATH
@@ -154,20 +153,15 @@ def execute(args):
     else:
         database = DATABASE_PATH
 
-    # get the authentication that is required for clients and services to connect to the manager
     if not args.auth:
+        # then no authentication is required for Clients or Services to connect to the Manager
         auth = None
     elif args.auth[0].startswith('hostname'):
-        # then the authentication is based on a list of trusted hostname's
+        # then the authentication is based on a list of trusted hosts
         auth = AuthenticateDatabase(database).hostnames()
-        if not auth:
-            print('The authentication table has no hostname\'s\n')
-            print('Example, to add "localhost" as a trusted hostname, run:\n')
-            print('  msl-network auth add localhost')
-            return
     else:
-        # then the authentication is a passphrase.
+        # then the authentication is a pass phrase.
         auth = ' '.join(args.auth)
 
     # start the network manager
-    start_manager(auth, port, cert, key, key_password, database, args.debug)
+    manager.start(auth, port, cert, key, key_password, database, args.debug)

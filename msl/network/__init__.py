@@ -1,11 +1,10 @@
 """
-An asynchronous network manager.
+Asynchronous network I/O.
 """
 from collections import namedtuple
 
-from .client import Client
+from .client import connect
 from .service import Service
-from .connection import connect
 from .database import ConnectionsDatabase, AuthenticateDatabase
 
 __author__ = 'Joseph Borbely'

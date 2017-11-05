@@ -1,10 +1,11 @@
 """
 Command line interface for the ``auth`` command.
 """
+from .utils import ensure_root_path
 from .constants import DATABASE_PATH
 from .database import AuthenticateDatabase
 
-HELP = 'Insert/delete hostname(s) into/from an authentication table in a database.'
+HELP = 'Add/remove hostname(s) into/from an authentication table in a database.'
 
 DESCRIPTION = HELP + """
 
@@ -15,14 +16,17 @@ and therefore the device can connect to the network manager.
 EPILOG = """
 Examples:
   
-  # insert 'localhost' to the list of trusted devices that can connect to the network manager  
-  msl-network auth insert localhost
+  # add '192.168.1.100' to the list of trusted devices that can connect to the network manager  
+  msl-network auth add 192.168.1.100
 
-  # delete 'localhost' and '127.0.0.1' from the list of trusted devices
-  msl-network auth delete localhost 127.0.0.1
+  # remove '192.168.1.100' and '192.168.1.110' from the list of trusted devices
+  msl-network auth remove 192.168.1.100 192.168.1.110
 
-  # insert 'localhost' to a specific database 
-  msl-network auth insert localhost --path path/to/database.db 
+  # add '192.168.1.100' to the authentication table in a specific database 
+  msl-network auth add 192.168.1.100 --path path/to/database.db 
+  
+  # list all trusted hosts
+  msl-network auth list
 
 """
 
@@ -41,9 +45,9 @@ def add_parser_auth(parser):
         help='The action to perform.'
     )
     p.add_argument(
-        'hostnames',
+        'hostname',
         nargs='*',
-        help='The hostnames.'
+        help='The hostname of the trusted device.'
     )
     p.add_argument(
         '--database',
@@ -55,6 +59,8 @@ def add_parser_auth(parser):
 def execute(args):
     """Executes the ``auth`` command."""
     database = DATABASE_PATH if args.database is None else args.database
+    ensure_root_path(database)
+
     db = AuthenticateDatabase(database)
 
     if args.action == 'list':
@@ -63,10 +69,10 @@ def execute(args):
         for hostname in sorted(db.hostnames()):
             print('  ' + hostname)
     elif args.action in ['insert', 'add']:
-        for name in args.hostnames:
+        for name in args.hostname:
             db.insert(name)
     elif args.action in ['remove', 'delete']:
-        for name in args.hostnames:
+        for name in args.hostname:
             db.delete(name)
     else:
-        assert False, 'No action "{}" is implemented'.format(args.action)
+        assert False, f'No action "{args.action}" is implemented'
