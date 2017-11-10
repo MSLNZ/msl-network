@@ -15,8 +15,6 @@ from msl.network import Service
 
 class BasicMath(Service):
 
-    name = 'Basic Math'
-
     euler = 2.7182818
 
     @property

@@ -1,19 +1,21 @@
 """
 Command line interface for the ``keygen`` command.
 """
-from .crypto import generate_key
+from .cryptography import generate_key
 
-HELP = 'Generate a private key to digitally sign a certificate.'
+HELP = 'Generate a private key to digitally sign a PEM certificate.'
 
 DESCRIPTION = HELP + """
 
 The keygen command is similar to the openssl command
 
-  openssl req -newkey rsa:2048 -nodes -keyout key.pem  
+  openssl req -newkey rsa:2048 -nodes -keyout key.pem
+    
 """
 
 EPILOG = """
 Examples:
+
   # create a default private key (RSA, 2048-bit, unencrypted)
   # and save it to the default directory
   msl-network keygen 
@@ -23,6 +25,7 @@ Examples:
 
 See Also: 
   msl-network certgen
+  
 """
 
 
@@ -52,7 +55,8 @@ def add_parser_keygen(parser):
         '--path',
         help='The path to where to save the private key\n'
              '(e.g., --path where/to/save/key.pem). If omitted then\n'
-             'the default directory and filename is used.'
+             'the default directory and filename is used to\n'
+             'save the private key file.'
     )
     p.add_argument(
         '--size',
@@ -74,13 +78,13 @@ def execute(args):
     try:
         size = int(args.size)
     except ValueError:
-        print('The --size value must be an integer')
+        print('ValueError: The --size value must be an integer')
         return
 
     password = None if args.password is None else ' '.join(args.password)
 
     path = generate_key(
-        args.path,
+        path=args.path,
         algorithm=args.algorithm,
         password=password,
         size=size,

@@ -3,6 +3,7 @@ Functions to create a self-signed certificate for the secure SSL/TLS protocol.
 """
 import os
 import re
+import ssl
 import logging
 import inspect
 import datetime
@@ -22,13 +23,15 @@ from .constants import KEY_DIR, CERT_DIR, HOSTNAME
 log = logging.getLogger(__name__)
 
 
-def generate_key(path, algorithm='RSA', password=None, size=2048, curve='SECP384R1'):
+def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve='SECP384R1'):
     """Generate a new private key.
 
     Parameters
     ----------
-    path : :obj:`str`
+    path : :obj:`str`, optional
         The path to where to save the private key. Example, ``path/to/store/key.pem``.
+        If :obj:`None` then save the key in the default directory with the
+        default filename.
     algorithm : :obj:`str`, optional
         The encryption algorithm to use to generate the private key. Options are:
 
@@ -74,7 +77,7 @@ def generate_key(path, algorithm='RSA', password=None, size=2048, curve='SECP384
     if password is None:
         encryption = serialization.NoEncryption()
     else:
-        encryption = serialization.BestAvailableEncryption(bytes(str(password).encode()))
+        encryption = serialization.BestAvailableEncryption(str(password).encode())
 
     with open(path, 'wb') as f:
         f.write(key.private_bytes(
@@ -87,7 +90,7 @@ def generate_key(path, algorithm='RSA', password=None, size=2048, curve='SECP384
     return path
 
 
-def load_key(path, password=None):
+def load_key(path, *, password=None):
     """Load a private key from a file.
 
     Parameters
@@ -109,14 +112,15 @@ def load_key(path, password=None):
     return serialization.load_pem_private_key(data=data, password=pw, backend=default_backend())
 
 
-def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA256', years_valid=100):
+def generate_certificate(*, path=None, key_path=None, key_password=None, algorithm='SHA256', years_valid=100):
     """Generate a self-signed certificate.
 
     Parameters
     ----------
     path : :obj:`str`, optional
-        The path to where to save the certificate. Example,
-        ``path/to/store/certificate.pem``.
+        The path to where to save the certificate. Example, ``path/to/store/certificate.pem``.
+        If :obj:`None` then save the certificate in the default directory with the
+        default filename.
     key_path : :obj:`str`, optional
         The path to where the private key is saved which will be used to
         digitally sign the certificate. If :obj:`None` then automatically
@@ -157,8 +161,8 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
     if key_path is None:
         key_path = get_default_key_path()
         if not os.path.isfile(key_path):
-            generate_key(key_path)
-    key = load_key(key_path, key_password)
+            generate_key(path=key_path)
+    key = load_key(path=key_path, password=key_password)
 
     if path is None:
         path = get_default_cert_path()
@@ -189,7 +193,6 @@ def generate_certificate(path, key_path=None, key_password=None, algorithm='SHA2
     cert = cert.serial_number(x509.random_serial_number())
     cert = cert.not_valid_before(now)
     cert = cert.not_valid_after(expires)
-    cert = cert.add_extension(x509.SubjectAlternativeName([x509.DNSName('localhost')]), critical=False)
     cert = cert.sign(key, hash_class, default_backend())
 
     with open(path, 'wb') as f:
@@ -239,7 +242,7 @@ def get_default_key_path():
     return os.path.join(KEY_DIR, HOSTNAME + '.key')
 
 
-def get_fingerprint(cert, algorithm=hashes.SHA1):
+def get_fingerprint(cert, *, algorithm=hashes.SHA1):
     """Get the fingerprint of the certificate.
 
     Parameters
@@ -258,8 +261,8 @@ def get_fingerprint(cert, algorithm=hashes.SHA1):
     return ':'.join(fingerprint[i:i+2] for i in range(0, len(fingerprint), 2))
 
 
-def get_details(cert):
-    """Get the details of the certificate.
+def get_metadata(cert):
+    """Get the metadata of the certificate.
 
     Parameters
     ----------
@@ -268,8 +271,8 @@ def get_details(cert):
 
     Returns
     -------
-    :obj:`str`
-        The details about the certificate.
+    :obj:`dict`
+        The metadata of the certificate.
     """
     def to_hex_string(val):
         # create a colon-separated hex string
@@ -282,82 +285,183 @@ def get_details(cert):
         return ':'.join(val[i:i+2] for i in range(0, len(val), 2))
 
     def name_oid(value):
-        s = ''
+        oid = dict()
         for name in vars(NameOID):
             if name.startswith('_'):
                 continue
             attrib = value.get_attributes_for_oid(getattr(NameOID, name))
             if attrib:
-                s += ('  {}: {}\n'.format(name.replace('_', ' ').lower().title(), attrib[0].value))
-        return s
-
-    def justify(hex_string):
-        h = hex_string
-        n = 75
-        return '    ' + '    \n    '.join(h[i:i+n] for i in range(0, len(h), n)) + '\n'
+                oid[name.lower()] = attrib[0].value
+        return oid
 
     def oid_to_dict(oid):
         match = re.search(r'oid=(.+), name=(.+)\)', str(oid))
         return {'oid': match.group(1), 'name': match.group(2)}
 
-    details = ''
-    details += 'Version: {}\n'.format(cert.version.name)
+    meta = dict()
+    meta['version'] = cert.version.name
+    meta['serial_number'] = to_hex_string(cert.serial_number)
+    meta['valid_from'] = cert.not_valid_before
+    meta['valid_to'] = cert.not_valid_after
+    meta['fingerprint'] = get_fingerprint(cert)
+    meta['issuer'] = name_oid(cert.issuer)
+    meta['subject'] = name_oid(cert.subject)
 
-    details += 'Serial Number: {}\n'.format(to_hex_string(cert.serial_number))
-
-    details += 'Issuer:\n'
-    details += name_oid(cert.issuer)
-
-    details += 'Validity:\n'
-    details += '  Not Before: {}\n'.format(cert.not_valid_before.strftime('%d %B %Y %H:%M:%S GMT'))
-    details += '  Not After : {}\n'.format(cert.not_valid_after.strftime('%d %B %Y %H:%M:%S GMT'))
-
-    details += 'Subject:\n'
-    details += name_oid(cert.subject)
-
-    details += 'Subject Public Key Info:\n'
+    meta['key'] = dict()
     key = cert.public_key()
     if issubclass(key.__class__, ec.EllipticCurvePublicKey):
-        details += '  Encryption: Elliptic Curve\n'
-        details += '  Curve: {}\n'.format(key.curve.name)
-        details += '  Key Size: {}\n'.format(key.curve.key_size)
-        details += '  Key:\n'
-        details += justify(to_hex_string(key.public_numbers().encode_point()))
+        meta['key']['encryption'] = 'Elliptic Curve'
+        meta['key']['curve'] = key.curve.name
+        meta['key']['size'] = key.curve.key_size
+        meta['key']['key'] = to_hex_string(key.public_numbers().encode_point())
     elif issubclass(key.__class__, rsa.RSAPublicKey):
-        details += '  Encryption: RSA\n'
-        details += '  Exponent: {}\n'.format(key.public_numbers().e)
-        details += '  Key Size: {}\n'.format(key.key_size)
-        details += '  Key:\n'
-        details += justify(to_hex_string(key.public_numbers().n))
+        meta['key']['encryption'] = 'RSA'
+        meta['key']['exponent'] = key.public_numbers().e
+        meta['key']['size'] = key.key_size
+        meta['key']['modulus'] = to_hex_string(key.public_numbers().n)
     elif issubclass(key.__class__, dsa.DSAPublicKey):
-        details += '  Encryption: DSA\n'
-        details += '  Key Size: {}\n'.format(key.key_size)
-        details += '  Y:\n'
-        details += justify(to_hex_string(key.public_numbers().y))
-        details += '  P:\n'
-        details += justify(to_hex_string(key.public_numbers().parameter_numbers.p))
-        details += '  Q:\n'
-        details += justify(to_hex_string(key.public_numbers().parameter_numbers.q))
-        details += '  G:\n'
-        details += justify(to_hex_string(key.public_numbers().parameter_numbers.g))
+        meta['key']['encryption'] = 'DSA'
+        meta['key']['size'] = key.key_size
+        meta['key']['y'] = to_hex_string(key.public_numbers().y)
+        meta['key']['p'] = to_hex_string(key.public_numbers().parameter_numbers.p)
+        meta['key']['q'] = to_hex_string(key.public_numbers().parameter_numbers.q)
+        meta['key']['g'] = to_hex_string(key.public_numbers().parameter_numbers.g)
     else:
         raise NotImplementedError('Unsupported public key {}'.format(key.__class__.__name__))
 
-    if cert.extensions:
+    meta['algorithm'] = oid_to_dict(cert.signature_algorithm_oid)
+    meta['algorithm']['signature'] = to_hex_string(cert.signature)
+
+    meta['extensions'] = dict()
+    for ext in cert.extensions:
+        d = oid_to_dict(ext.oid)
+        meta['extensions']['oid'] = d['oid']
+        meta['extensions']['name'] = d['name']
+        meta['extensions']['value'] = str(ext.value)
+        meta['extensions']['critical'] = ext.critical
+
+    return meta
+
+
+def get_metadata_as_string(cert):
+    """Returns the metadata of the certificate as a human-readable string.
+
+    Parameters
+    ----------
+    cert : :class:`~cryptography.x509.Certificate`
+        The certificate.
+
+    Returns
+    -------
+    :obj:`str`
+        The metadata of the certificate.
+    """
+    def justify(hex_string):
+        h = hex_string
+        n = 75
+        return '    ' + '    \n    '.join(h[i:i+n] for i in range(0, len(h), n)) + '\n'
+
+    def to_title(k):
+        t = k.replace('_', ' ').title()
+        return t.replace(' Or ', ' or ')
+
+    meta = get_metadata(cert)
+
+    details = ''
+    details += f'Version: {meta["version"]}\n'
+
+    details += f'Serial Number: {meta["serial_number"]}\n'
+
+    details += 'Issuer:\n'
+    for key, value in meta['issuer'].items():
+        details += ('  {}: {}\n'.format(to_title(key), value))
+
+    details += 'Validity:\n'
+    details += f'  Not Before: {meta["valid_from"].strftime("%d %B %Y %H:%M:%S GMT")}\n'
+    details += f'  Not After : {meta["valid_to"].strftime("%d %B %Y %H:%M:%S GMT")}\n'
+
+    details += 'Subject:\n'
+    for key, value in meta['subject'].items():
+        details += ('  {}: {}\n'.format(to_title(key), value))
+
+    details += 'Subject Public Key Info:\n'
+    for key, value in meta['key'].items():
+        if key in ['key', 'modulus', 'y', 'p', 'q', 'g']:
+            details += '  {}:\n'.format(key.title())
+            details += justify(value)
+        else:
+            details += ('  {}: {}\n'.format(to_title(key), value))
+
+    if meta['extensions']:
         details += 'Extensions:\n'
-        for ext in cert.extensions:
-            details += '  ' + str(ext.value).replace('<', '').replace('>', '') + ':\n'
-            details += '    Critical: {}\n'.format(ext.critical)
-            d = oid_to_dict(ext.oid)
-            details += '    OID: {}\n'.format(d['oid'])
+        details += '  ' + str(meta['extensions']['value']).replace('<', '').replace('>', '') + ':\n'
+        for key, value in meta['extensions'].items():
+            if key != 'value':
+                details += '    {}: {}\n'.format(key, value)
 
     details += 'Signature Algorithm:\n'
-    d = oid_to_dict(cert.signature_algorithm_oid)
-    details += '  OID: {}\n'.format(d['oid'])
-    details += '  Name: {}\n'.format(d['name'])
-    details += '  Value:\n'
-    details += justify(to_hex_string(cert.signature))
+    details += '  oid: {}\n'.format(meta['algorithm']['oid'])
+    details += '  name: {}\n'.format(meta['algorithm']['name'])
+    details += '  value:\n'
+    details += justify(meta['algorithm']['signature'])
 
     details += 'Fingerprint (SHA1):\n  {}'.format(get_fingerprint(cert))
 
     return details
+
+
+def get_ssl_context(*, host=None, port=None, certificate=None):
+    """Get the SSL context to connect to a server.
+
+    Gets the context either from a remote server or from a file.
+
+    To get the context from a remote server you must specify both
+    `host` and `port`.
+
+    Parameters
+    ----------
+    host : :obj:`str`, optional
+        The hostname of the remote server to get the certificate of.
+    port : :obj:`int`, optional
+        The port number of the remote server to get the certificate of.
+    certificate : :obj:`str`, optional
+        The path to the certificate file.
+
+    Returns
+    -------
+    :class:`ssl.SSLContext`
+        The SSL context.
+    """
+    if certificate is None:
+
+        # check that the default certificate exists
+        # if it does not exist then fetch it
+        certificate = os.path.join(CERT_DIR, host + '.crt')
+        if not os.path.isfile(certificate):
+            cert_data = ssl.get_server_certificate((host, port)).encode()
+            cert = load_certificate(cert_data)
+            fingerprint = get_fingerprint(cert)
+            name = cert.signature_algorithm_oid._name
+
+            print(f'The certificate for {host} is not cached in the registry.\n'
+                  f'You have no guarantee that the server is the computer that\n'
+                  f'you think it is.\n\n'
+                  f'The server\'s {name} key fingerprint is\n{fingerprint}\n\n'
+                  f'If you trust this host you can save the certificate in the\n'
+                  f'registry and continue to connect, otherwise this is your\n'
+                  f'final chance to abort.\n')
+            while True:
+                r = input('Continue? y/n: ').lower()
+                if r.startswith('n'):
+                    return
+                elif r.startswith('y'):
+                    break
+
+            ensure_root_path(certificate)
+            with open(certificate, 'wb') as f:
+                f.write(cert_data)
+
+    elif not os.path.isfile(certificate):
+        raise IOError('Cannot find certificate ' + certificate)
+
+    return ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=certificate)

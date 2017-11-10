@@ -3,7 +3,8 @@ Command line interface for the ``certdump`` command.
 """
 import os
 
-from . import crypto, utils
+from .utils import ensure_root_path
+from .cryptography import get_metadata_as_string, load_certificate
 
 HELP = 'Dump the details of a PEM certificate.'
 
@@ -12,11 +13,13 @@ DESCRIPTION = HELP + """
 The certdump command is similar to the openssl command to
 get the details of a certificate
     
-  openssl x509 -in certificate.crt -text -noout  
+  openssl x509 -in certificate.crt -text -noout
+  
 """
 
 EPILOG = """
 Examples:
+
   # print the details to the terminal
   msl-network certdump path/to/cert.pem 
 
@@ -24,7 +27,8 @@ Examples:
   msl-network certdump path/to/cert.pem --out dump.txt
 
 See Also: 
-  msl-network certgen  
+  msl-network certgen
+  
 """
 
 
@@ -42,7 +46,7 @@ def add_parser_certdump(parser):
     )
     p.add_argument(
         '--out',
-        help='The path to a file to dump the details. If\n'
+        help='The path to a file to dump the details to. If\n'
              'omitted then prints the details to the terminal.'
     )
     p.set_defaults(func=execute)
@@ -55,13 +59,13 @@ def execute(args):
         print('Cannot find ' + args.certfile)
         return
 
-    dump = crypto.get_details(crypto.load_certificate(args.certfile))
+    meta = get_metadata_as_string(load_certificate(args.certfile))
 
     if args.out is None:
-        print(dump)
+        print(meta)
     else:
-        utils.ensure_root_path(args.out)
+        ensure_root_path(args.out)
         with open(args.out, 'wt') as fp:
             fp.write('Certificate details for {}\n'.format(args.certfile))
-            fp.write(dump)
+            fp.write(meta)
         print('Dumped the certificate details to ' + args.out)

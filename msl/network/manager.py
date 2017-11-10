@@ -3,47 +3,50 @@ An asynchronous Network Manager.
 """
 import ssl
 import json
+import socket
 import asyncio
 import logging
 import platform
 
 from .network import Network
-from .utils import parse_terminal_input
 from .constants import HOSTNAME
-from .database import ConnectionsDatabase
+from .utils import parse_terminal_input
+from .database import ConnectionsTable, UsersTable
 
 log = logging.getLogger(__name__)
 
 
 class Manager(Network):
 
-    def __init__(self, port, authentication, database, debug):
+    def __init__(self, port, password, login, hostnames, connections_table, users_table, debug):
         """An asynchronous Network Manager.
 
         .. attention::
             Not to be instantiated directly. To be called from the command line.
         """
         self._debug = debug
-        self._network_id = f'{HOSTNAME}:{port}'
-        self.database = database
-        self.authentication = authentication
+        self._network_name = f'{HOSTNAME}:{port}'
+        self.password = password
+        self.login = login
+        self.allowed_hostnames = hostnames
+        self.connections_table = connections_table
+        self.users_table = users_table
         self.clients = dict()
         self.services = dict()
         self.service_writers = dict()
         self.client_writers = dict()
-        self.client_service_link = dict()
 
         self._identity = {
             'hostname': HOSTNAME,
             'port': port,
+            'attributes': {
+                'identity': '() -> dict',
+                'link': '(service:str) -> bool',
+            },
             'language': 'Python ' + platform.python_version(),
             'os': '{} {} {}'.format(platform.system(), platform.release(), platform.machine()),
             'clients': self.clients,
             'services': self.services,
-            'attributes': {
-                'identity': '() -> dict',
-                'link': '(service:str) -> bool',
-            }
         }
 
     async def new_connection(self, reader, writer):
@@ -63,50 +66,99 @@ class Manager(Network):
         writer : :class:`asyncio.StreamWriter`
             The stream writer.
         """
-        peer = writer.get_extra_info('peername')
-        address = '{}:{}'.format(peer[0], peer[1])
-        log.info(f'new connection request from {address}')
+        peer = Peer(writer)  # a peer is either a Client or a Service
+        log.info(f'new connection request from {peer.address}')
+        self.connections_table.insert(peer, 'new connection request')
 
-        # create a new attribute called 'name' for the StreamReader and StreamWriter
-        # this is helpful when debugging
-        reader.name = address
-        writer.name = address
+        # create a new attribute called 'peer' for the StreamReader and StreamWriter
+        reader.peer = writer.peer = peer
 
-        # check the authentication (either a list of trusted hostname's or a password)
-        if self.authentication is not None:
-            log.info(f'{self._network_id} checking authentication from {address}')
-            if isinstance(self.authentication, list):
-                if peer[0] not in self.authentication:
-                    log.info(peer[0] + ' is not a trusted hostname, closing connection')
-                    self.database.insert(peer, 'rejected: untrusted hostname')
-                    self.send_error(writer, ValueError(peer[0] + ' is not a trusted hostname.'))
-                    await self.close_writer(writer, address)
-                    return
-                log.debug(peer[0] + ' is a trusted hostname')
-            else:
-                if not await self.check_password(address, reader, writer):
-                    return
+        # check authentication
+        if self.password is not None:
+            if not await self.check_manager_password(reader, writer):
+                return
+        elif self.allowed_hostnames:
+            log.info(f'{self._network_name} verifying hostname of {peer.network_name}')
+            if peer.hostname not in self.allowed_hostnames:
+                log.info(f'{peer.hostname} is not a trusted hostname, closing connection')
+                self.connections_table.insert(peer, 'rejected: untrusted hostname')
+                self.send_error(writer, ValueError(f'{peer.hostname} is not a trusted hostname.'), self._network_name)
+                await self.close_writer(writer)
+                return
+            log.debug(f'{peer.hostname} is a trusted hostname')
+        elif self.login:
+            if not await self.check_user(reader, writer):
+                return
+        else:
+            pass  # no authentication needed
 
         # check that the identity of the connecting device is valid
-        identity = await self.check_identity(address, reader, writer)
-        if not identity:
+        id_type = await self.check_identity(reader, writer)
+        if not id_type:
             return
 
-        # the device is now connected, handle requests until it requests to disconnect
-        self.database.insert(peer, 'connected')
-        await self.handle_requests(identity, address, reader, writer)
+        # the connection request from the device is now accepted
+        # handle requests/replies from the device until it wants to disconnect from the Manager
+        await self.handler(reader, writer)
 
-        # disconnect the device
-        await self.close_writer(writer, address)
-        self.remove_peer(identity, address, writer.name)
+        # disconnect the device from the Manager
+        await self.close_writer(writer)
+        self.remove_peer(id_type, writer)
 
-    async def check_password(self, address, reader, writer):
+    async def check_user(self, reader, writer):
+        """Check the login credentials.
+
+        Parameters
+        ----------
+        reader : :class:`asyncio.StreamReader`
+            The stream reader.
+        writer : :class:`asyncio.StreamWriter`
+            The stream writer.
+
+        Returns
+        -------
+        :obj:`bool`
+            Whether the login credentials are valid.
+        """
+        log.info(f'{self._network_name} verifying login credentials from {writer.peer.network_name}')
+        log.debug(f'{self._network_name} verifying login username from {writer.peer.network_name}')
+        self.send_request(writer, attribute='username', parameters={'name': self._network_name})
+        username = await self.get_handshake_data(reader)
+        if not username:  # then the connection closed prematurely
+            return False
+
+        user = self.users_table.get_user(username)
+        if not user:
+            log.debug(f'{reader.peer.network_name} sent a unregistered username, closing connection')
+            self.connections_table.insert(reader.peer, 'rejected: unregistered username')
+            self.send_error(writer, ValueError('Unregistered username'), self._network_name)
+            await self.close_writer(writer)
+            return False
+
+        log.debug(f'{self._network_name} verifying login password from {writer.peer.network_name}')
+        self.send_request(writer, attribute='password', parameters={'name': username})
+        password = await self.get_handshake_data(reader)
+
+        if not password:  # then the connection closed prematurely
+            return False
+
+        if self.users_table.is_password_valid(username, password):
+            log.debug(f'{reader.peer.network_name} sent the correct login password')
+            # writer.peer.is_admin points to the same location in memory so its value also gets updated
+            reader.peer.is_admin = self.users_table.is_admin(username)
+            return True
+
+        log.info(f'{reader.peer.network_name} sent the wrong login password, closing connection')
+        self.connections_table.insert(reader.peer, 'rejected: wrong login password')
+        self.send_error(writer, ValueError('Wrong login password'), self._network_name)
+        await self.close_writer(writer)
+        return False
+
+    async def check_manager_password(self, reader, writer):
         """Check the password from the connected device.
 
         Parameters
         ----------
-        address : :obj:`str`
-            The address, ``'host:port'`` of the connected device.
         reader : :class:`asyncio.StreamReader`
             The stream reader.
         writer : :class:`asyncio.StreamWriter`
@@ -117,29 +169,28 @@ class Manager(Network):
         :obj:`bool`
             Whether the correct password was received.
         """
-        self.send_request(writer, attribute='password', parameters={'hostname': HOSTNAME})
-        password = await self.get_handshake_data(address, reader)
+        log.info(f'{self._network_name} requesting password from {writer.peer.network_name}')
+        self.send_request(writer, attribute='password', parameters={'name': self._network_name})
+        password = await self.get_handshake_data(reader)
 
-        if password is None:  # then the connection closed prematurely
+        if not password:  # then the connection closed prematurely
             return False
 
-        if password == self.authentication:
-            log.debug(f'{address} sent the correct password')
+        if password == self.password:
+            log.debug(f'{reader.peer.network_name} sent the correct password')
             return True
 
-        log.info(f'{address} sent the wrong password, closing connection')
-        self.database.insert(address.split(':'), 'rejected: wrong password')
-        self.send_error(writer, ValueError('Wrong password, {!r}'.format(password)))
-        await self.close_writer(writer, address)
+        log.info(f'{reader.peer.network_name} sent the wrong password, closing connection')
+        self.connections_table.insert(reader.peer, 'rejected: wrong password')
+        self.send_error(writer, ValueError('Wrong password'), self._network_name)
+        await self.close_writer(writer)
         return False
 
-    async def check_identity(self, address, reader, writer):
-        """Check the :obj:`~msl.network.network.Network.identity` from the connected device.
+    async def check_identity(self, reader, writer):
+        """Check the :obj:`~msl.network.network.Network.identity` of the connected device.
 
         Parameters
         ----------
-        address : :obj:`str`
-            The address, ``'host:port'`` of the connected device.
         reader : :class:`asyncio.StreamReader`
             The stream reader.
         writer : :class:`asyncio.StreamWriter`
@@ -147,60 +198,60 @@ class Manager(Network):
 
         Returns
         -------
-        :obj:`str`
-            The type of the connection, either ``'client'`` or ``'service'``.
+        :obj:`str` or :obj:`None`
+            If the identity check was successful the returns the connection type,
+            either ``'client'`` or ``'service'``, otherwise returns :obj:`None`.
         """
-        log.info(f'{self._network_id} requesting identity from {address}')
-        self.send_request(writer, attribute='identity')
-        identity = await self.get_handshake_data(address, reader)
+        log.info(f'{self._network_name} requesting identity from {writer.peer.network_name}')
+        self.send_request(writer, attribute='identity', parameters={})
+        identity = await self.get_handshake_data(reader)
 
         if identity is None:  # then the connection closed prematurely (a certificate request?)
-            return ''
+            return None
         elif isinstance(identity, str):
             identity = parse_terminal_input(identity)
 
-        log.debug(f'{address} sent {identity}')
+        log.debug(f'{reader.peer.network_name} sent {identity}')
 
         try:
-            name = f'{identity["name"]}[{address}]'
-            reader.name = name
-            writer.name = name
+            # writer.peer.network_name points to the same location in memory so its value also gets updated
+            reader.peer.network_name = f'{identity["name"]}[{reader.peer.address}]'
 
-            type_ = identity['type'].lower()
-            if type_ == 'client':
-                self.clients[address] = identity['name']
-                self.client_writers[address] = writer
-                log.info(f'{name} is a new Client connection')
-            elif type_ == 'service':
+            typ = identity['type'].lower()
+            if typ == 'client':
+                self.clients[reader.peer.address] = identity['name']
+                # in the following line: None -> the Service that the writer will eventually be linked with
+                self.client_writers[reader.peer.address] = [writer, None]
+                log.info(f'{reader.peer.network_name} is a new Client connection')
+            elif typ == 'service':
                 if identity['name'] in self.services:
                     raise NameError(f'A {identity["name"]} service is already running on the Manager')
                 self.services[identity['name']] = {
                     'attributes': identity['attributes'],
-                    'address': identity.get('address', address),
+                    'address': identity.get('address', reader.peer.address),
                     'language': identity.get('language', 'Unknown'),
                     'os': identity.get('os', 'Unknown'),
                 }
-                self.service_writers[identity['name']] = (writer, address)
-                log.info(f'{name} is a new Service connection')
+                self.service_writers[identity['name']] = writer
+                log.info(f'{reader.peer.network_name} is a new Service connection')
             else:
-                raise TypeError(f'Unknown connection type "{type_}". Must be "client" or "service"')
+                raise TypeError(f'Unknown connection type "{typ}". Must be "client" or "service"')
 
-            return type_
+            self.connections_table.insert(reader.peer, f'connected as a {typ}')
+            return typ
 
-        except (TypeError, KeyError) as e:
-            log.info(address + ' sent an invalid identity, closing connection')
-            self.database.insert(address.split(':'), 'rejected: invalid identity')
-            self.send_error(writer, e)
-            await self.close_writer(writer, address)
+        except (TypeError, KeyError, NameError) as e:
+            log.info(f'{reader.peer.address} sent an invalid identity, closing connection')
+            self.connections_table.insert(reader.peer, 'rejected: invalid identity')
+            self.send_error(writer, e, self._network_name)
+            await self.close_writer(writer)
             return None
 
-    async def get_handshake_data(self, address, reader):
-        """Used by :meth:`check_password` and :meth`:check_identity`.
+    async def get_handshake_data(self, reader):
+        """Used by :meth:`check_password`, :meth:`check_identity` and :meth:`check_user`.
 
         Parameters
         ----------
-        address : :obj:`str`
-            The address, ``'host:port'`` of the connected device.
         reader : :class:`asyncio.StreamReader`
             The stream reader.
 
@@ -211,10 +262,10 @@ class Manager(Network):
         """
         try:
             data = (await reader.readline()).decode(self.encoding).rstrip()
-        except ConnectionAbortedError:
+        except (ConnectionAbortedError, ConnectionResetError):
             # then most likely the connection was for a certificate request
-            log.info(address + ' connection closed prematurely')
-            self.database.insert(address.split(':'), 'closed prematurely')
+            log.info(f'{reader.peer.network_name} connection closed prematurely')
+            self.connections_table.insert(reader.peer, 'connection closed prematurely')
             return None
 
         try:
@@ -222,12 +273,13 @@ class Manager(Network):
             # the required JSON format
             return json.loads(data)['return']
         except (json.JSONDecodeError, KeyError):
-            # it is convenient to return the string if the connection
-            # is through a terminal, e.g. Putty
+            # however, if connecting via a terminal, e.g. Putty,  then it is convenient
+            # to not manually type the JSON format and let the Manager parse the raw input
             return data
 
-    async def handle_requests(self, identity, address, reader, writer):
-        """Handle requests from the connected :class:`~msl.network.client.Client`.
+    async def handler(self, reader, writer):
+        """Handle requests from the connected :class:`~msl.network.client.Client`\'s and
+        replies from connected :class:`~msl.network.service.Service`\'s.
 
         A :class:`~msl.network.client.Client` that is sending requests to the Network
         :class:`Manager` **MUST** send a JSON_ object with the following format::
@@ -242,10 +294,6 @@ class Manager(Network):
 
         Parameters
         ----------
-        identity : :obj:`str`
-            The type of the connection, either ``'client'`` or ``'service'``.
-        address : :obj:`str`
-            The address, ``'host:port'`` of the connected device.
         reader : :class:`asyncio.StreamReader`
             The stream reader.
         writer : :class:`asyncio.StreamWriter`
@@ -259,7 +307,7 @@ class Manager(Network):
                 return  # then the device disconnected abruptly
 
             if self._debug:
-                log.debug(f'{reader.name} sent {line}')
+                log.debug(f'{reader.peer.network_name} sent {line}')
 
             if not line:
                 return
@@ -269,145 +317,196 @@ class Manager(Network):
             except json.JSONDecodeError as e:
                 data = parse_terminal_input(line.decode(self.encoding))
                 if not data:
-                    self.send_error(writer, e)
+                    self.send_error(writer, e, reader.peer.address)
                     continue
 
-            if 'return' in data:  # then data is a reply from a Service so send it to the Client
-                sent = False
-                for client_address, service_address in self.client_service_link.items():
-                    if address == service_address:
-                        self.send_line(self.client_writers[client_address], line)
-                        sent = True
-                        break
-                if not sent:
-                    log.error(f'Cannot find the Client to send the reply from {reader.name}')
-            elif data['service'] is None:  # then the Client is requesting something from the Manager
+            if 'return' in data:
+                # then data is a reply from a Service so send it back to the Client
+                try:
+                    self.send_line(self.client_writers[data['requester']][0], line)
+                except KeyError:
+                    log.error(f'{self._network_name} Client at {data["requester"]} is no longer available')
+            elif data['service'] is None:
+                # then the Client is requesting something from the Manager
                 if data['attribute'] == 'identity':
-                    self.send_reply(writer, self.identity())
+                    self.send_reply(writer, self.identity(), requester=reader.peer.address)
                 elif data['attribute'] == 'link':
                     try:
-                        success, msg = self.link(address, writer.name, **data['parameters'])
+                        self.link(writer, **data['parameters'])
                     except Exception as e:
-                        log.error(f'{e.__class__.__name__}: {e}')
-                        self.send_error(writer, e)
+                        log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
+                        self.send_error(writer, e, reader.peer.address)
+                else:
+                    # the peer needs admin rights to send any other request to the Manager
+                    if not reader.peer.is_admin:
+                        await self.check_user(reader, writer)
+                        if not reader.peer.is_admin:
+                            self.send_error(
+                                writer,
+                                ValueError('You must be an administrator to send this request to the Manager'),
+                                reader.peer.address,
+                            )
+                            continue
+                    # check for multiple dots "." in the name of the attribute
+                    try:
+                        attrib = self
+                        for item in data['attribute'].split('.'):
+                            attrib = getattr(attrib, item)
+                    except AttributeError as e:
+                        log.error(f'{self._network_name} AttributeError: {e}')
+                        self.send_error(writer, e, reader.peer.address)
                         continue
-                    if success:
-                        self.send_reply(writer, success)
-                    else:
-                        self.send_error(writer, ValueError(msg))
-                else:
-                    e = AttributeError(f'The Manager does not have a {data["attribute"]} attribute to call.')
-                    self.send_error(writer, e)
+                    # send the reply back to the Client
+                    try:
+                        self.send_reply(writer, attrib(**data['parameters']), requester=reader.peer.address)
+                    except Exception as e:
+                        log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
+                        self.send_error(writer, e, reader.peer.address)
             elif data['attribute'] == '__disconnect__':
-                return  # then the device requested to disconnect
-            else:  # send the request to the appropriate Service
+                # then the device requested to disconnect
+                return
+            else:
+                # send the request to the appropriate Service
                 try:
-                    service, _ = self.service_writers[data['service']]
+                    data['requester'] = writer.peer.address
+                    self.send_data(self.service_writers[data['service']], data)
                 except KeyError as e:
-                    self.send_error(writer, e)
-                else:
-                    self.send_data(service, data)
+                    log.error(f'{self._network_name} KeyError: {e}')
+                    self.send_error(writer, e, reader.peer.address)
 
-    def remove_peer(self, identity, address, name):
+    def remove_peer(self, id_type, writer):
         """Remove this peer from the registry of connected peers.
 
         Parameters
         ----------
-        identity : :obj:`str`
+        id_type : :obj:`str`
             The type of the connection, either ``'client'`` or ``'service'``.
-        address : :obj:`str`
-            The address, ``'host:port'`` of the connected device.
-        name : :obj:`str`
-            The name of the connected device.
+        writer : :class:`asyncio.StreamWriter`
+            The stream writer of the peer.
         """
-        if identity == 'client':
+        if id_type == 'client':
             try:
-                del self.clients[address]
-                log.info(f'{name} has been removed from the registry')
+                del self.clients[writer.peer.address]
+                del self.client_writers[writer.peer.address]
+                log.info(f'{writer.peer.network_name} has been removed from the registry')
             except KeyError:  # ideally this exception should never occur
-                pass
+                log.error(f'{writer.peer.network_name} is not in the clients dictionary')
         else:
             for service in self.services:
-                if self.services[service]['address'] == address:
+                if self.services[service]['address'] == writer.peer.address:
+                    # notify all Clients that are linked with this Service
+                    for w, service_address in self.client_writers.values():
+                        if writer.peer.address == service_address:
+                            self.send_error(
+                                w,
+                                ConnectionAbortedError(f'The {service} service has been disconnected'),
+                                service_address,
+                            )
                     del self.services[service]
-                    log.info(f'{name} service has been removed from the registry')
-                    # TODO notify the Client that the Service is disconnected
+                    del self.service_writers[service]
+                    log.info(f'{writer.peer.network_name} service has been removed from the registry')
                     break
 
-    async def close_writer(self, writer, address):
+    async def close_writer(self, writer):
         """Close the connection to the :class:`asyncio.StreamWriter`.
 
-        Log's that the connection is closing, drains the writer and then
-        closes it.
+        Log that the connection is closing, drains the writer and then
+        closes the connection.
 
         Parameters
         ----------
         writer : :class:`asyncio.StreamWriter`
-            The stream writer.
-        address : :obj:`str`
-            The address, ``'host:port'`` of the connected device.
+            The stream writer to close.
         """
         try:
-            log.info(f'{writer.name} closing connection')
             await writer.drain()
             writer.close()
-            log.info(f'{writer.name} connection closed')
-            self.database.insert(address.split(':'), 'disconnected')
-        except ConnectionResetError as e:
-            log.error(f'{writer.name} failed to close -- {e}')
+        except ConnectionResetError:
+            pass
+        log.info(f'{writer.peer.network_name} connection closed')
+        self.connections_table.insert(writer.peer, 'disconnected')
 
     async def shutdown_server(self):
         """Safely disconnect all :class:`~msl.network.service.Service`\'s and
         :class:`~msl.network.client.Client`\'s."""
-        for address in self.client_writers:
-            await self.close_writer(self.client_writers[address], address)
-        for name in self.service_writers:
-            await self.close_writer(*self.service_writers[name])
+        for writer, _ in self.client_writers.values():
+            await self.close_writer(writer)
+        for writer in self.service_writers.values():
+            await self.close_writer(writer)
 
     def identity(self):
         """:obj:`dict`: The :obj:`~msl.network.network.Network.identity` about
         the Network :class:`Manager`."""
         return self._identity
 
-    def link(self, client, name, service):
+    def link(self, writer, service):
         """A request from the :class:`~msl.network.client.Client` to link it
         with a :class:`~msl.network.service.Service`.
 
         Parameters
         ----------
-        client : :obj:`str`
-            The address, ``'host:port'``, of the :class:`~msl.network.client.Client`.
-        name : :obj:`str`
-            The name of the :class:`~msl.network.client.Client`.
+        writer : :class:`asyncio.StreamWriter`
+            The stream writer of the :class:`~msl.network.client.Client`.
         service : :obj:`str`
             The name of the :class:`~msl.network.service.Service` that the
             :class:`~msl.network.client.Client` wants to link with.
-
-        Returns
-        -------
-        :obj:`bool`
-            Whether the link was successful. The only reason why the link
-            would not be successful is if a :class:`~msl.network.service.Service`
-            named `service` is currently not connected to the Manager.
-        :obj:`str`
-            A message describing the outcome of the link request.
         """
         try:
-            service_address = self.services[service]['address']
-            # must use the client_address as the key since the address of a
-            # Client is unique, whereas a Service can have multiple Clients
-            # connected to it
-            self.client_service_link[client] = service_address
-            msg = f'linked {name} with {service}'
-            log.info(msg)
-            return True, msg
-        except KeyError as e:
-            msg = f'{service} service does not exist, could not link with {name}'
+            address = self.services[service]['address']
+            self.client_writers[writer.peer.address][1] = address
+            log.info(f'linked {writer.peer.network_name} with {service}[{address}]')
+            self.send_reply(writer, True, requester=writer.peer.address)
+        except KeyError:
+            msg = f'{service} service does not exist, could not link with {writer.peer.network_name}'
             log.error(msg)
-            return False, msg
+            self.send_error(writer, KeyError(msg), writer.peer.address)
+
+    def send_request(self, writer, attribute, parameters):
+        """Send a request to a :class:`~msl.network.client.Client` or a
+        :class:`~msl.network.service.Service`.
+
+        Parameters
+        ----------
+        writer : :class:`asyncio.StreamWriter`
+            The stream writer of the :class:`~msl.network.client.Client` or
+            :class:`~msl.network.service.Service`.
+        attribute : :obj:`str`
+            The name of the method to call from the :class:`~msl.network.client.Client`
+            or :class:`~msl.network.service.Service`.
+        parameters : :obj:`dict`, optional
+            The key-value pairs that the `attribute` method requires.
+        """
+        self.send_data(writer, {
+            'attribute': attribute,
+            'parameters': parameters,
+            'requester': self._network_name,
+            'error': False,
+        })
 
 
-def start(auth, port, cert, key, key_password, database, debug):
+class Peer(object):
+
+    def __init__(self, writer):
+        """Metadata about a peer that is connected to the Network :class:`Manager`.
+
+        Parameters
+        ----------
+        writer : :class:`asyncio.StreamWriter`
+            The stream writer for the peer.
+        """
+        self.is_admin = False
+        self.ip_address, self.port = writer.get_extra_info('peername')[:2]
+        self.domain = socket.getfqdn(self.ip_address)
+        self.hostname = self.domain.split('.')[0]
+        if self.hostname == HOSTNAME:
+            self.address = f'localhost:{self.port}'
+            self.network_name = f'localhost:{self.port}'
+        else:
+            self.address = f'{self.hostname}:{self.port}'
+            self.network_name = f'{self.hostname}:{self.port}'
+
+
+def start(password, login, hostnames, port, cert, key, key_password, database, debug):
     """Start the asynchronous network manager event loop.
 
     .. attention::
@@ -420,17 +519,29 @@ def start(auth, port, cert, key, key_password, database, debug):
 
     log.info(f'loaded certificate {cert}')
 
-    # load the connections database
-    db = ConnectionsDatabase(database)
-    log.info(f'loaded database {db.path}')
+    # load the connections table
+    conn_table = ConnectionsTable(database)
+    log.info(f'loaded the connections table {conn_table.path}')
 
-    if isinstance(auth, list):
+    # load the users table for the login credentials
+    users_table = UsersTable(database)
+    if login and not users_table.users():
+        print('The Users Table is empty. You cannot use login credentials for authorisation.')
+        print('See: msl-network users')
+        return
+    log.info(f'loaded the users table {users_table.path}')
+
+    if hostnames:
         log.debug('using trusted hosts for authentication')
-    elif isinstance(auth, str):
+    elif password:
         log.debug('using a password for authentication')
+    elif login:
+        log.debug('using a login for authentication')
+    else:
+        log.debug('not using authentication')
 
     # create the network manager
-    manager = Manager(port, auth, db, debug)
+    manager = Manager(port, password, login, hostnames, conn_table, users_table, debug)
 
     # create the event loop
     #
@@ -457,10 +568,6 @@ def start(auth, port, cert, key, key_password, database, debug):
 
         if manager.client_writers or manager.service_writers:
             loop.run_until_complete(manager.shutdown_server())
-
-        for task in asyncio.Task.all_tasks():
-            log.info(f'cancelling {task}')
-            task.cancel()
 
         log.info('closing server')
         server.close()

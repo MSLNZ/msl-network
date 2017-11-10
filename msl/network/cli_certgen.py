@@ -1,20 +1,25 @@
 """
 Command line interface for the ``certgen`` command.
 """
-from . import crypto
+from . import cryptography
 
 HELP = 'Generate a self-signed PEM certificate.'
 
 DESCRIPTION = HELP + """
 
+The certificate uses the hostname of the computer that this command was
+executed on as the Common Name and as the Issuer Name.
+
 The certgen command is similar to the openssl command to generate a 
 self-signed certificate from a pre-existing private key
 
-  openssl req -key private.key -new -x509 -days 365 -out certificate.crt  
+  openssl req -key private.key -new -x509 -days 365 -out certificate.crt
+ 
 """
 
 EPILOG = """
 Examples:
+
   # create a default certificate using a default private key
   # and save it to the default directory
   msl-network certgen 
@@ -25,7 +30,8 @@ Examples:
 
 See Also: 
   msl-network keygen
-  msl-network certdump  
+  msl-network certdump
+ 
 """
 
 
@@ -42,7 +48,8 @@ def add_parser_certgen(parser):
         nargs='?',
         help='The path to where to save the certificate\n'
              '(e.g., /where/to/save/cert.pem). If omitted then\n'
-             'the default directory and filename is used.'
+             'the default directory and filename is used to\n'
+             'save the certificate file.'
     )
     p.add_argument(
         '--key-path',
@@ -82,14 +89,16 @@ def execute(args):
     """Executes the ``certgen`` command."""
     try:
         years = float(args.years_valid)
+        if years <= 0:
+            raise ValueError
     except ValueError:
-        print('The --years-valid value must be a decimal number')
+        print('ValueError: The --years-valid value must be a positive number')
         return
 
     password = None if args.key_password is None else ' '.join(args.key_password)
 
-    path = crypto.generate_certificate(
-        args.path,
+    path = cryptography.generate_certificate(
+        path=args.path,
         key_path=args.key_path,
         key_password=password,
         algorithm=args.algorithm,
@@ -99,4 +108,4 @@ def execute(args):
     print('Created the self-signed certificate ' + path)
     if args.show:
         print('')
-        print(crypto.get_details(crypto.load_certificate(path)))
+        print(cryptography.get_metadata(cryptography.load_certificate(path)))

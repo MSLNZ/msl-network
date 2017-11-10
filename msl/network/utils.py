@@ -3,8 +3,9 @@ Common functions.
 """
 import re
 import os
-import ssl
 import ast
+
+from .constants import HOSTNAME
 
 _key_value_regex = re.compile(r'(\w+)[\s]*=[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
 
@@ -24,66 +25,6 @@ def ensure_root_path(path):
     root = os.path.dirname(path)
     if root and not os.path.isdir(root):
         os.makedirs(root)
-
-
-def get_ssl_context(host=None, port=None, certificate=None):
-    """Get the SSL context to connect to a server.
-
-    Gets the context either from a remote server or from a file.
-
-    To get the context from a remote server you must specify both
-    `host` and `port`.
-
-    Parameters
-    ----------
-    host : :obj:`str`, optional
-        The hostname of the remote server to get the certificate of.
-    port : :obj:`int`, optional
-        The port number of the remote server to get the certificate of.
-    certificate : :obj:`str`, optional
-        The path to the certificate file.
-
-    Returns
-    -------
-    :class:`ssl.SSLContext`
-        The SSL context.
-    """
-    if certificate is None:
-
-        if host in ('localhost', '127.0.0.1', '::1'):
-            host = HOSTNAME
-
-        # check that the default certificate exists
-        # if it does not exist then fetch it
-        certificate = os.path.join(CERT_DIR, host + '.crt')
-        if not os.path.isfile(certificate):
-            cert_data = ssl.get_server_certificate((host, port)).encode()
-            cert = load_certificate(cert_data)
-            fingerprint = get_fingerprint(cert)
-            name = cert.signature_algorithm_oid._name
-
-            print(f'The certificate for {host} is not cached in the registry.\n'
-                  f'You have no guarantee that the server is the computer that\n'
-                  f'you think it is.\n\n'
-                  f'The server\'s {name} key fingerprint is\n{fingerprint}\n\n'
-                  f'If you trust this host you can save the certificate in the\n'
-                  f'registry and continue to connect, otherwise this is your\n'
-                  f'final chance to abort.\n')
-            while True:
-                r = input('Continue? y/n: ').lower()
-                if r.startswith('n'):
-                    return
-                elif r.startswith('y'):
-                    break
-
-            ensure_root_path(certificate)
-            with open(certificate, 'wb') as f:
-                f.write(cert_data)
-
-    elif not os.path.isfile(certificate):
-        raise IOError('Cannot find certificate ' + certificate)
-
-    return ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=certificate)
 
 
 def parse_terminal_input(line):
@@ -143,31 +84,51 @@ def parse_terminal_input(line):
     :obj:`dict`
         The JSON_ object.
     """
-    def convert_value(value):
-        if value.lower() == 'false':
+    def convert_value(val):
+        val_ = val.lower()
+        if val_ == 'false':
             return False
-        elif value.lower() == 'true':
+        elif val_ == 'true':
             return True
-        elif value.lower() == 'null' or value.lower() == 'none':
+        elif val_ == 'null' or val_ == 'none':
             return None
         else:
             try:
-                return ast.literal_eval(value)
+                return ast.literal_eval(val)
             except:
-                return value
+                return val
 
     line = line.strip()
     line_lower = line.lower()
     if line_lower == 'identity':
-        return {'service': None, 'attribute': 'identity', 'parameters': {}}
+        return {
+            'service': None,
+            'attribute': 'identity',
+            'parameters': {},
+            'error': False,
+        }
     elif line_lower.startswith('client'):
         values = line.split()  # can also specify a name for the Client, e.g., client Me and Myself
         name = 'Client' if len(values) == 1 else ' '.join(values[1:])
-        return {'type': 'client', 'name': name.replace('"', '')}
+        return {
+            'type': 'client',
+            'name': name.replace('"', ''),
+            'error': False,
+        }
     elif line_lower == '__disconnect__' or line_lower == 'disconnect' or line_lower == 'exit':
-        return {'service': 'self', 'attribute': '__disconnect__', 'parameters': {}}
+        return {
+            'service': 'self',
+            'attribute': '__disconnect__',
+            'parameters': {},
+            'error': False,
+        }
     elif line_lower.startswith('link'):
-        return {'service': None, 'attribute': 'link', 'parameters': {'service': line[4:].strip().replace('"', '')}}
+        return {
+            'service': None,
+            'attribute': 'link',
+            'parameters': {'service': line[4:].strip().replace('"', '')},
+            'error': False,
+        }
     else:
         line = line.replace("'", '"')
         if line.startswith('"'):
@@ -178,22 +139,31 @@ def parse_terminal_input(line):
         else:
             items = line.split(None, maxsplit=2)
 
-        if len(items) < 2:  # then the service and/or attribute was not set
+        if len(items) < 2:  # then the name of the service and/or attribute was not set
             return None
 
         service = convert_value(items[0])
         attribute = convert_value(items[1]).replace('"', '')
         if len(items) == 2:  # no parameters
-            return {'service': service, 'attribute': attribute, 'parameters': {}}
+            return {
+                'service': service,
+                'attribute': attribute,
+                'parameters': {},
+                'error': False,
+            }
         else:
             params = dict()
             for m in re.finditer(_key_value_regex, items[2]):
                 key, value = m.groups()
                 params[key] = convert_value(value)
-            return {'service': service, 'attribute': attribute, 'parameters': params}
+            return {
+                'service': service,
+                'attribute': attribute,
+                'parameters': params,
+                'error': False,
+            }
 
 
-# import these here to avoid circular import errors (for the crypto module)
-
-from .constants import CERT_DIR, HOSTNAME
-from .crypto import get_fingerprint, load_certificate
+def localhost_aliases():
+    """:obj:`tuple` of :obj:`str`: Aliases for ``localhost``."""
+    return HOSTNAME, 'localhost', '127.0.0.1', '::1'

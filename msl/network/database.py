@@ -6,6 +6,14 @@ import sqlite3
 import logging
 from datetime import datetime
 
+from cryptography.exceptions import InvalidKey
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+from .constants import DATABASE
+from .utils import localhost_aliases
+
 log = logging.getLogger(__name__)
 
 
@@ -22,18 +30,18 @@ class Database(object):
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
         """
-        self._path = database
+        self._path = database if database is not None else DATABASE
         self._connection = None
 
         # open the connection to the database
-        if database == ':memory:':
+        if self._path == ':memory:':
             log.debug('creating a database in RAM')
-        elif not os.path.isfile(database):
-            log.debug('creating a new database ' + database)
+        elif not os.path.isfile(self._path):
+            log.debug('creating a new database ' + self._path)
         else:
-            log.debug('opening ' + database)
+            log.debug('opening ' + self._path)
 
-        self._connection = sqlite3.connect(database, **kwargs)
+        self._connection = sqlite3.connect(self._path, **kwargs)
         self._connection.row_factory = sqlite3.Row
         self._cursor = self._connection.cursor()
 
@@ -60,7 +68,7 @@ class Database(object):
 
         .. note::
            The connection to the database is automatically closed when
-           the :class:`Database` object gets destroyed.
+           the :class:`Database` object gets destroyed (the reference count is 0).
         """
         if self._connection is not None:
             self._connection.close()
@@ -145,113 +153,353 @@ class Database(object):
         return [item['type'] for item in self.table_info(table_name)]
 
 
-class ConnectionsDatabase(Database):
+class ConnectionsTable(Database):
 
     NAME = 'connections'
     """:obj:`str`: The name of the table in the database."""
 
-    def __init__(self, database, **kwargs):
+    def __init__(self, database=None, **kwargs):
         """Database for devices that have connected to the Network
         :class:`~msl.network.manager.Manager`.
 
         Parameters
         ----------
-        database : :obj:`str`
+        database : :obj:`str`, optional
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
+            If :obj:`None` then loads the default database.
         """
-        super().__init__(database, **kwargs)
+        super(ConnectionsTable, self).__init__(database, **kwargs)
         self.execute('CREATE TABLE IF NOT EXISTS %s ('
                      'pid INTEGER PRIMARY KEY AUTOINCREMENT, '
-                     'datetime TEXT, '
-                     'host TEXT, '
-                     'port INTEGER, '
-                     'action TEXT);' % self.NAME)
+                     'datetime TEXT NOT NULL, '
+                     'address TEXT NOT NULL, '
+                     'name TEXT NOT NULL, '
+                     'port INTEGER NOT NULL, '
+                     'message TEXT NOT NULL);' % self.NAME)
         self.connection.commit()
 
-    def insert(self, peer, action):
-        """Insert the action about the peer."""
-        self.execute('INSERT INTO %s VALUES(NULL, ?, ?, ?, ?);' % self.NAME,
-                     (datetime.now(), peer[0], peer[1], action))
+    def insert(self, peer, message):
+        """Insert a message about what happened to the connection of the peer.
+
+        Parameters
+        ----------
+        peer : :class:`~msl.network.manager.Peer`
+            The peer that connected to the Network :class:`~msl.network.manager.Manager`
+        message : :obj:`str`
+            The message about what happened.
+        """
+        self.execute('INSERT INTO %s VALUES(NULL, ?, ?, ?, ?, ?);' % self.NAME,
+                     (datetime.now(), peer.ip_address, peer.domain, peer.port, message))
         self.connection.commit()
 
-    def connections(self):
-        """:obj:`list` of :obj:`tuple`: Returns all the connection records."""
+    def connections(self, json_safe=True):
+        """Returns all the connection records.
+
+        Parameters
+        ----------
+        json_safe : :obj:`bool`
+            Whether to return the results as a JSON-serializable object.
+            If :obj:`False` then the values in the datetime column are converted
+            to :class:`datetime.datetime` objects.
+
+        Returns
+        -------
+        :obj:`list` of :obj:`tuple`
+            The connection records.
+        """
         self.execute('SELECT * FROM %s;' % self.NAME)
-        return [(r[0], datetime.strptime(r[1], '%Y-%m-%d %H:%M:%S.%f'), r[2], r[3], r[4])
-                for r in self.cursor.fetchall()]
+        if json_safe:
+            return [tuple(item) for item in self.cursor.fetchall()]
+        else:
+            return [(r[0], datetime.strptime(r[1], '%Y-%m-%d %H:%M:%S.%f'), r[2], r[3], r[4], r[5])
+                    for r in self.cursor.fetchall()]
 
 
-class AuthenticateDatabase(Database):
+class HostnamesTable(Database):
 
-    NAME = 'authenticate'
+    NAME = 'hostnames'
     """:obj:`str`: The name of the table in the database."""
 
-    def __init__(self, database, **kwargs):
+    def __init__(self, database=None, **kwargs):
         """Database for trusted hostname's that are allowed to connect
         to the Network :class:`~msl.network.manager.Manager`.
 
         Parameters
         ----------
-        database : :obj:`str`
+        database : :obj:`str`, optional
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
-        """
-        super().__init__(database, **kwargs)
-        self.execute('CREATE TABLE IF NOT EXISTS %s (hostname TEXT, UNIQUE(hostname));' % self.NAME)
+            If :obj:`None` then loads the default database.
+       """
+        super(HostnamesTable, self).__init__(database, **kwargs)
+        self.execute('CREATE TABLE IF NOT EXISTS %s (hostname TEXT NOT NULL, UNIQUE(hostname));' % self.NAME)
         self.connection.commit()
 
         if not self.hostnames():
-            for hostname in ['localhost', '127.0.0.1', '::1']:
+            for hostname in localhost_aliases():
                 self.insert(hostname)
 
     def insert(self, hostname):
-        """Insert the hostname (only if it does not already exist in the table)."""
+        """Insert the hostname.
+
+        If the hostname is already in the table then it does not insert it again.
+
+        Parameters
+        ----------
+        hostname : :obj:`str`
+            The trusted hostname.
+        """
         self.execute('INSERT OR IGNORE INTO %s VALUES(?);' % self.NAME, (hostname,))
         self.connection.commit()
 
     def delete(self, hostname):
-        """Insert the hostname (only if it does not already exist in the table)."""
+        """Delete the hostname.
+
+        Parameters
+        ----------
+        hostname : :obj:`str`
+            The trusted hostname.
+
+        Raises
+        ------
+        ValueError
+            If `hostname` is not in the table.
+        """
+        # want to know if this hostname is not in the table
+        if hostname not in self.hostnames():
+            raise ValueError(f'Cannot delete "{hostname}". This hostname is not in the table.')
         self.execute('DELETE FROM %s WHERE hostname = ?;' % self.NAME, (hostname,))
         self.connection.commit()
 
     def hostnames(self):
-        """:obj:`list` of :obj:`str`: Returns all the hostname's."""
+        """:obj:`list` of :obj:`str`: Returns all the trusted hostnames."""
         self.execute('SELECT * FROM %s;' % self.NAME)
         return [h[0] for h in self.cursor.fetchall()]
 
 
-if __name__ == '__main__':
+class UsersTable(Database):
 
-    cd = ConnectionsDatabase(':memory:')
-    cd.insert(('localhost', 1234), 'hello')
-    cd.insert(('127.0.0.1', 5678), 'world')
+    NAME = 'users'
+    """:obj:`str`: The name of the table in the database."""
 
-    print('Database: ' + cd.path)
-    for table in cd.tables():
-        print('  Table: ' + table)
-        for info in cd.table_info(table):
-            print('    column[{}]: {}'.format(info[0], info[1:]))
-        for record in cd.connections():
-            print('    record:', record)
+    def __init__(self, database=None, **kwargs):
+        """Database for keeping information about a users login and admin rights
+        for connecting to the Network :class:`~msl.network.manager.Manager`.
 
-    ad = AuthenticateDatabase(':memory:')
-    ad.insert('127.0.0.1')
-    ad.insert('localhost')
-    ad.insert('::1')
-    ad.insert('localhost')
-    ad.insert('127.0.0.1')
-    ad.insert('localhost')
-    ad.insert('::1')
-    ad.insert('0.0.0.0')
-    ad.insert('127.0.0.1')
+        Parameters
+        ----------
+        database : :obj:`str`, optional
+            The path to the database file, or ``':memory:'`` to open a
+            connection to a database that resides in RAM instead of on disk.
+            If :obj:`None` then loads the default database.
+        """
+        super(UsersTable, self).__init__(database, **kwargs)
+        self.execute('CREATE TABLE IF NOT EXISTS %s ('
+                     'pid INTEGER PRIMARY KEY AUTOINCREMENT, '
+                     'username TEXT NOT NULL, '
+                     'key BLOB NOT NULL, '
+                     'salt BLOB NOT NULL, '
+                     'is_admin BOOLEAN NOT NULL, '
+                     'UNIQUE(username));' % self.NAME)
+        self.connection.commit()
 
-    ad.delete('0.0.0.0')
+        self._salt_size = 16
+        self._length = 32
+        self._iterations = 100000
+        self._algorithm = hashes.SHA256()
 
-    print('Database: ' + ad.path)
-    for table in ad.tables():
-        print('  Table: ' + table)
-        for info in ad.table_info(table):
-            print('    column[{}]: {}'.format(info[0], info[1:]))
-        for name in ad.hostnames():
-            print('    hostname:', name)
+    def insert(self, username, password, is_admin):
+        """Insert a new user.
+
+        The password is encrypted and stored in the database using PBKDF2_
+
+        .. _PBKDF2: https://en.wikipedia.org/wiki/PBKDF2
+
+        Parameters
+        ----------
+        username : :obj:`str`
+            The name of the user.
+        password : :obj:`str`
+            The password of the user in plain-text format.
+        is_admin : :obj:`bool`
+            Does this user have admin rights?
+
+        Raises
+        -------
+        ValueError
+            If a user with `username` already exists in the table. To update the values
+            for a user use :meth:`.update`. Or if the password is empty.
+        """
+        if not password:
+            raise ValueError('The password cannot be an empty string')
+
+        salt = os.urandom(self._salt_size)
+        kdf = PBKDF2HMAC(
+            algorithm=self._algorithm,
+            length=self._length,
+            salt=salt,
+            iterations=self._iterations,
+            backend=default_backend()
+        )
+        key = kdf.derive(password.encode())
+        try:
+            self.execute('INSERT INTO %s VALUES(NULL, ?, ?, ?, ?);' % self.NAME, (username, key, salt, bool(is_admin)))
+        except sqlite3.IntegrityError:
+            raise ValueError(f'A user with the name "{username}" already exists') from None
+        self.connection.commit()
+
+    def update(self, username, *, password=None, is_admin=None):
+        """Update either the salt used for the password and/or the admin rights.
+
+        Parameters
+        ----------
+        username : :obj:`str`
+            The name of the user.
+        password : :obj:`str`, optional
+            The salt to use for decrypting the password with PBKDF2_
+        is_admin : :obj:`bool`, optional
+            Does this user have admin rights?
+
+        .. _PBKDF2: https://en.wikipedia.org/wiki/PBKDF2
+
+        Raises
+        ------
+        ValueError
+            If `username` is not in the table.
+            If both `password` and `is_admin` are not specified.
+            If `password` is an empty string.
+        """
+        self._ensure_user_exists(username, 'update')
+
+        if password is None and is_admin is None:
+            raise ValueError('Must specify either the password and/or the admin rights when updating')
+
+        if password is None:
+            self.execute('UPDATE %s SET username=?, is_admin=? WHERE username=?;' % self.NAME,
+                         (username, bool(is_admin), username))
+            self.connection.commit()
+            return
+
+        if not password:
+            raise ValueError('The password cannot be an empty string')
+
+        salt = os.urandom(self._salt_size)
+        key = PBKDF2HMAC(
+            algorithm=self._algorithm,
+            length=self._length,
+            salt=salt,
+            iterations=self._iterations,
+            backend=default_backend()
+        ).derive(password.encode())
+
+        if is_admin is None:
+            self.execute('UPDATE %s SET username=?, key=?, salt=? WHERE username=?;' % self.NAME,
+                         (username, key, salt, username))
+        else:
+            self.execute('UPDATE %s SET username=?, key=?, salt=?, is_admin=? WHERE username=?;' % self.NAME,
+                         (username, key, salt, bool(is_admin), username))
+
+        self.connection.commit()
+
+    def delete(self, username):
+        """Delete the user.
+
+        Parameters
+        ----------
+        username : :obj:`str`
+            The name of the user.
+
+        Raises
+        ------
+        ValueError
+            If `username` is not in the table.
+        """
+        self._ensure_user_exists(username, 'update')
+        self.execute('DELETE FROM %s WHERE username = ?;' % self.NAME, (username,))
+        self.connection.commit()
+
+    def get_user(self, username):
+        """Get the information about a user.
+
+        Parameters
+        ----------
+        username : :obj:`str`
+            The name of the user.
+
+        Returns
+        -------
+        :class:`sqlite3.Row`
+            The information about the user.
+        """
+        self.execute('SELECT * FROM %s WHERE username = ?;' % self.NAME, (username,))
+        return self.cursor.fetchone()
+
+    def records(self):
+        """:obj:`list` of :class:`sqlite3.Row`: Returns the information about all users."""
+        self.execute('SELECT * FROM %s;' % self.NAME)
+        return self.cursor.fetchall()
+
+    def usernames(self):
+        """:obj:`list` of :class:`str`: Returns a list of all usernames."""
+        self.execute('SELECT username FROM %s;' % self.NAME)
+        return [item['username'] for item in self.cursor.fetchall()]
+
+    def users(self):
+        """:obj:`list` of :class:`tuple`: Returns [(username, is_admin), ... ] for all users."""
+        self.execute('SELECT username,is_admin FROM %s;' % self.NAME)
+        return [(item['username'], bool(item['is_admin'])) for item in self.cursor.fetchall()]
+
+    def is_password_valid(self, username, password):
+        """Check whether the password matches the encrypted password in the database.
+
+        Parameters
+        ----------
+        username : :obj:`str`
+            The name of the user.
+        password : :obj:`str`
+            The password to check (in plain-text format).
+
+        Returns
+        -------
+        :obj:`bool`
+            Whether `password` matches the password in the database for the user.
+        """
+        user = self.get_user(username)
+        if not user:
+            return False
+        kdf = PBKDF2HMAC(
+            algorithm=self._algorithm,
+            length=self._length,
+            salt=user['salt'],
+            iterations=self._iterations,
+            backend=default_backend()
+        )
+        try:
+            kdf.verify(password.encode(), user['key'])
+            return True
+        except InvalidKey:
+            return False
+
+    def is_admin(self, username):
+        """Check whether a user has admin rights.
+
+        Parameters
+        ----------
+        username : :obj:`str`
+            The name of the user.
+
+        Returns
+        -------
+        :obj:`bool`
+            Whether the user has admin rights.
+        """
+        user = self.get_user(username)
+        if user:
+            return bool(user['is_admin'])
+        return False
+
+    def _ensure_user_exists(self, username, action):
+        # want to know if this user is not in the table
+        if username not in self.usernames():
+            raise ValueError(f'Cannot {action} "{username}". This user is not in the table.')

@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 class Network(object):
     """
-    Base class for all :class:`~msl.network.manager.Manager`'\s,
+    Base class for all Network :class:`~msl.network.manager.Manager`'\s,
     :class:`~msl.network.service.Service`'\s and :class:`~msl.network.client.Client`'\s.
     """
 
@@ -20,7 +20,7 @@ class Network(object):
     """:obj:`str`: The encoding to use to convert a :obj:`str` to :obj:`bytes`."""
 
     _debug = False
-    _network_id = None
+    _network_name = None  # helpful for debugging who is sending what to where
 
     def identity(self):
         """Identify oneself on the network.
@@ -41,15 +41,16 @@ class Network(object):
             - port : integer
                 The port number that the Network :class:`~msl.network.manager.Manager` is running on.
 
+            - attributes : object
+                An object (a Python dictionary) of public attributes that the Network
+                :class:`~msl.network.manager.Manager` provides. Users who are an administrator of
+                the Network :class:`~msl.network.manager.Manager` can access private attributes.
+
             - language : string
                 The programming language that the Network :class:`~msl.network.manager.Manager` is running on.
 
             - os : string
                 The operating system that the :class:`~msl.network.manager.Manager` is running on.
-
-            - attributes : object
-                An object (a Python dictionary) of attributes that the Network
-                :class:`~msl.network.manager.Manager` provides.
 
             - clients : array
                 An array (a Python list) of :class:`~msl.network.client.Client`\'s that are currently
@@ -70,10 +71,6 @@ class Network(object):
             - attributes : object
                 An object (a Python dictionary) of attributes that the
                 :class:`~msl.network.service.Service` provides.
-
-            - address : string, optional
-                The hostname and port number (separated by a colon) that
-                the :class:`~msl.network.service.Service` is running on.
 
             - language : string, optional
                 The programming language that the :class:`~msl.network.service.Service` is running on.
@@ -106,10 +103,10 @@ class Network(object):
         writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
             The writer to use to send the bytes.
         line : :obj:`bytes`
-            The bytes to send, terminated with the line-feed character.
+            The bytes to send (that are already terminated with the line-feed character).
         """
         if self._debug:
-            log.debug(f'{self._network_id} sent {line}')
+            log.debug(f'{self._network_name} sent {line}')
         writer.write(line)
 
     def send_data(self, writer, data):
@@ -132,9 +129,9 @@ class Network(object):
             self.send_line(writer, (json.dumps(data) + '\n').encode(self.encoding))
         except (json.JSONDecodeError, TypeError) as e:
             # get TypeError if an object is not JSON serializable
-            self.send_error(writer, e)
+            self.send_error(writer, e, data['requester'])
 
-    def send_error(self, writer, error):
+    def send_error(self, writer, error, requester):
         """Send an error through the network.
 
         Parameters
@@ -143,18 +140,24 @@ class Network(object):
             The writer.
         error : :class:`Exception`
             An exception object.
+        requester : :obj:`str`
+            The address, ``host:port``, of the device that sent the request.
         """
         tb = traceback.format_exc()
         message = error.__class__.__name__ + ': ' + str(error)
         self.send_data(writer, {
             'error': True,
-            'return': None,
             'message': message,
             'traceback': [message] if tb.startswith('NoneType:') else tb.splitlines(),
+            'return': None,
+            'requester': requester,
         })
 
-    def send_reply(self, writer, reply):
+    def send_reply(self, writer, reply, *, requester=None):
         """Send a reply through the network.
+
+        :class:`~msl.network.client.Client`\'s, :class:`~msl.network.service.Service`\'s
+        and the Network :class:`~msl.network.manager.Manager` can send replies.
 
         .. _JSON: http://www.json.org/
 
@@ -164,30 +167,9 @@ class Network(object):
             The writer.
         reply : :obj:`object`
             Any object that can be serialized into a JSON_ string.
+        requester : :obj:`str`
+            The address, ``host:port``, of the device that sent the request.
+            It is only mandatory to specify the address of the `requester` if a
+            :class:`~msl.network.service.Service` is sending the reply.
         """
-        self.send_data(writer, {'return': reply, 'error': False})
-
-    def send_request(self, writer, attribute, parameters=None, service=''):
-        """Send a request through the network.
-
-        Parameters
-        ----------
-        writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
-            The writer.
-        attribute : :obj:`str`
-            The name of an attribute that the request . For example, the name
-            of a method or variable.
-        parameters : :obj:`dict`, optional
-            The key-value pairs that the `attribute` requires.
-        service : :obj:`str`, optional
-            The name of a :class:`~msl.network.service.Service` to handle the request.
-            Only a :class:`~msl.network.client.Client` that is sending the request must
-            specify the service it wants to connect to. Set `service` to :obj:`None`
-            to send a request from the Network :class:`~msl.network.manager.Manager`.
-        """
-        if parameters is None:
-            parameters = {}
-        if service is None or service:  # then the request comes from a Client
-            self.send_data(writer, {'service': service, 'attribute': attribute, 'parameters': parameters})
-        else:  # the request comes from the Manager
-            self.send_data(writer, {'attribute': attribute, 'parameters': parameters, 'error': False})
+        self.send_data(writer, {'return': reply, 'requester': requester, 'error': False})
