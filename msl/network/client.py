@@ -19,7 +19,7 @@ from .cryptography import get_ssl_context
 log = logging.getLogger(__name__)
 
 
-def connect(*, name='Client', host='localhost', port=PORT, username=None, password_username=None,
+def connect(*, name='Client', host='localhost', port=PORT, username=None, password=None,
             password_manager=None, certificate=None, debug=False):
     """Create a new connection to a Network :class:`~msl.network.manager.Manager`.
 
@@ -38,7 +38,7 @@ def connect(*, name='Client', host='localhost', port=PORT, username=None, passwo
         If not specified then you will be asked for the username (only if the Network
         :class:`~msl.network.manager.Manager` requires login credentials to be able
         to connect to it).
-    password_username : :obj:`str`, optional
+    password : :obj:`str`, optional
         The password that is associated with `username`. Can be specified if the Network
         :class:`~msl.network.manager.Manager` requires a login to connect to it. If the
         `password_username` value is not specified then you will be asked for the
@@ -61,7 +61,7 @@ def connect(*, name='Client', host='localhost', port=PORT, username=None, passwo
         A new connection.
     """
     client = Client(name)
-    success = client.start(host, port, username, password_username, password_manager, certificate, debug)
+    success = client.start(host, port, username, password, password_manager, certificate, debug)
     if not success:
         client.raise_latest_error()
     return client
@@ -329,7 +329,7 @@ class Client(Network, asyncio.Protocol):
     def connection_lost(self, exc):
         """Automatically called when the connection to the Network
         :class:`~msl.network.manager.Manager` has been closed."""
-        log.debug(f'{self} connection lost')
+        log.info(f'{self} connection lost')
         self._transport = None
         self._address_manager = None
         self._port = None
@@ -353,9 +353,8 @@ class Client(Network, asyncio.Protocol):
         :class:`Client`:
             A new Client.
         """
-        return connect(name=name, host=self._host_manager, port=self._port_manager,
-                       username=self._username, password_username=self._password,
-                       password_manager=self._password_manager,
+        return connect(name=name, host=self._host_manager, port=self._port_manager, username=self._username,
+                       password=self._password, password_manager=self._password_manager,
                        certificate=self._certificate, debug=self._debug)
 
     def raise_latest_error(self):
@@ -408,9 +407,7 @@ class Client(Network, asyncio.Protocol):
         debug : :obj:`bool`, optional
             Whether to log debug messages for the :class:`Client`.
         """
-        if host in localhost_aliases():
-            self._host_manager = HOSTNAME
-
+        self._host_manager = HOSTNAME if host in localhost_aliases() else host
         self._port_manager = port
         self._debug = debug
         self._username = username
