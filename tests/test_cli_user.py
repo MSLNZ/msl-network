@@ -8,7 +8,7 @@ from msl.network.database import UsersTable
 db = os.path.join(tempfile.gettempdir(), 'test_cli_user.db')
 out = os.path.join(tempfile.gettempdir(), 'test_cli_user.tmp')
 pw_file = os.path.join(tempfile.gettempdir(), 'password.tmp')
-table = UsersTable(db)
+table = UsersTable(database=db)
 
 
 def get_args(command):

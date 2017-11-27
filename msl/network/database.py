@@ -29,6 +29,8 @@ class Database(object):
         database : :obj:`str`
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
+        kwargs : :obj:`dict`, optional
+            Optional keyword arguments to pass to :meth:`sqlite3.connect`.
         """
         self._path = database if database is not None else DATABASE
         self._connection = None
@@ -41,8 +43,10 @@ class Database(object):
         else:
             log.debug('opening ' + self._path)
 
+        if 'timeout' not in kwargs:
+            kwargs['timeout'] = 60.0
+
         self._connection = sqlite3.connect(self._path, **kwargs)
-        self._connection.row_factory = sqlite3.Row
         self._cursor = self._connection.cursor()
 
     @property
@@ -95,7 +99,7 @@ class Database(object):
     def tables(self):
         """:obj:`list` of :obj:`str`: A list of the table names that are in the database."""
         self.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        return [t[0] for t in self._cursor.fetchall() if t[0] != 'sqlite_sequence']
+        return sorted([t[0] for t in self._cursor.fetchall() if t[0] != 'sqlite_sequence'])
 
     def table_info(self, name):
         """Returns the information about each column in the specified table.
@@ -107,17 +111,15 @@ class Database(object):
 
         Returns
         -------
-        :obj:`list` of :class:`sqlite3.Row`
-            A list of the fields in the table.
+        :obj:`list` of :obj:`tuple`
+            The list of the fields in the table. The indices of each tuple correspond to:
 
-            The keys of each returned :class:`sqlite3.Row` item are:
-
-            * **cid** - id of the column
-            * **name** - the name of the column
-            * **type** - the datatype of the column
-            * **notnull** - whether or not a value in the column can be NULL (0 or 1)
-            * **dflt_value** - the default value for the column
-            * **pk** - whether or not the column is used as a primary key (0 or 1)
+            * 0 - id number of the column
+            * 1 - the name of the column
+            * 2 - the datatype of the column
+            * 3 - whether or not a value in the column can be NULL (0 or 1)
+            * 4 - the default value for the column
+            * 5 - whether or not the column is used as a primary key (0 or 1)
         """
         self.execute("PRAGMA table_info('%s');" % name)
         return self._cursor.fetchall()
@@ -135,7 +137,7 @@ class Database(object):
         :obj:`list` of :obj:`str`
             A list of the names of the columns in the table.
         """
-        return [item['name'] for item in self.table_info(table_name)]
+        return [item[1] for item in self.table_info(table_name)]
 
     def column_datatypes(self, table_name):
         """Returns the datatype of each column in the specified table.
@@ -148,9 +150,9 @@ class Database(object):
         Returns
         -------
         :obj:`list` of :obj:`str`
-            A list of the datatype of each column in the table
+            A list of the datatype of each column in the table.
         """
-        return [item['type'] for item in self.table_info(table_name)]
+        return [item[2] for item in self.table_info(table_name)]
 
 
 class ConnectionsTable(Database):
@@ -158,8 +160,8 @@ class ConnectionsTable(Database):
     NAME = 'connections'
     """:obj:`str`: The name of the table in the database."""
 
-    def __init__(self, database=None, **kwargs):
-        """Database for devices that have connected to the Network
+    def __init__(self, *, database=None, as_datetime=False, **kwargs):
+        """Database table for devices that have connected to the Network
         :class:`~msl.network.manager.Manager`.
 
         Parameters
@@ -168,24 +170,32 @@ class ConnectionsTable(Database):
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
             If :obj:`None` then loads the default database.
+        as_datetime : :obj:`bool`, optional
+            Whether to fetch the timestamps from the database as :class:`datetime.datetime`
+            objects. If :obj:`False` then the timestamps will be of type :obj:`str`.
+        kwargs : :obj:`dict`, optional
+            Optional keyword arguments to pass to :meth:`sqlite3.connect`.
         """
+        if as_datetime and 'detect_types' not in kwargs:
+            kwargs['detect_types'] = sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
+
         super(ConnectionsTable, self).__init__(database, **kwargs)
         self.execute('CREATE TABLE IF NOT EXISTS %s ('
                      'pid INTEGER PRIMARY KEY AUTOINCREMENT, '
-                     'datetime TEXT NOT NULL, '
-                     'address TEXT NOT NULL, '
-                     'name TEXT NOT NULL, '
+                     'timestamp TIMESTAMP NOT NULL, '
+                     'ip_address TEXT NOT NULL, '
+                     'domain TEXT NOT NULL, '
                      'port INTEGER NOT NULL, '
                      'message TEXT NOT NULL);' % self.NAME)
         self.connection.commit()
 
     def insert(self, peer, message):
-        """Insert a message about what happened to the connection of the peer.
+        """Insert a message about what happened to the connection of the device.
 
         Parameters
         ----------
         peer : :class:`~msl.network.manager.Peer`
-            The peer that connected to the Network :class:`~msl.network.manager.Manager`
+            The peer that connected to the Network :class:`~msl.network.manager.Manager`.
         message : :obj:`str`
             The message about what happened.
         """
@@ -193,36 +203,40 @@ class ConnectionsTable(Database):
                      (datetime.now(), peer.ip_address, peer.domain, peer.port, message))
         self.connection.commit()
 
-    def connections(self, json_safe=True):
+    def connections(self, *, timestamp1=None, timestamp2=None):
         """Returns all the connection records.
 
         Parameters
         ----------
-        json_safe : :obj:`bool`
-            Whether to return the results as a JSON-serializable object.
-            If :obj:`False` then the values in the datetime column are converted
-            to :class:`datetime.datetime` objects.
+        timestamp1 : :obj:`datetime.datetime`, optional
+            Include all records that have a timestamp > `timestamp1`.
+        timestamp2 : :obj:`datetime.datetime`, optional
+            Include all records that have a timestamp < `timestamp2`.
 
         Returns
         -------
         :obj:`list` of :obj:`tuple`
             The connection records.
         """
-        self.execute('SELECT * FROM %s;' % self.NAME)
-        if json_safe:
-            return [tuple(item) for item in self.cursor.fetchall()]
+        if timestamp1 is None and timestamp2 is None:
+            self.execute('SELECT * FROM %s;' % self.NAME)
+        elif timestamp1 is not None and timestamp2 is None:
+            self.execute('SELECT * FROM %s WHERE timestamp > ?;' % self.NAME, (timestamp1,))
+        elif timestamp1 is None and timestamp2 is not None:
+            self.execute('SELECT * FROM %s WHERE timestamp < ?;' % self.NAME, (timestamp2,))
         else:
-            return [(r[0], datetime.strptime(r[1], '%Y-%m-%d %H:%M:%S.%f'), r[2], r[3], r[4], r[5])
-                    for r in self.cursor.fetchall()]
+            self.execute('SELECT * FROM %s WHERE timestamp > ? AND timestamp < ?;' % self.NAME,
+                         (timestamp1, timestamp2))
+        return self.cursor.fetchall()
 
 
 class HostnamesTable(Database):
 
-    NAME = 'hostnames'
+    NAME = 'auth_hostnames'
     """:obj:`str`: The name of the table in the database."""
 
-    def __init__(self, database=None, **kwargs):
-        """Database for trusted hostname's that are allowed to connect
+    def __init__(self, *, database=None, **kwargs):
+        """Database table for trusted hostname's that are allowed to connect
         to the Network :class:`~msl.network.manager.Manager`.
 
         Parameters
@@ -231,6 +245,8 @@ class HostnamesTable(Database):
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
             If :obj:`None` then loads the default database.
+        kwargs : :obj:`dict`, optional
+            Optional keyword arguments to pass to :meth:`sqlite3.connect`.
        """
         super(HostnamesTable, self).__init__(database, **kwargs)
         self.execute('CREATE TABLE IF NOT EXISTS %s (hostname TEXT NOT NULL, UNIQUE(hostname));' % self.NAME)
@@ -275,16 +291,16 @@ class HostnamesTable(Database):
     def hostnames(self):
         """:obj:`list` of :obj:`str`: Returns all the trusted hostnames."""
         self.execute('SELECT * FROM %s;' % self.NAME)
-        return [h[0] for h in self.cursor.fetchall()]
+        return [item[0] for item in self.cursor.fetchall()]
 
 
 class UsersTable(Database):
 
-    NAME = 'users'
+    NAME = 'auth_users'
     """:obj:`str`: The name of the table in the database."""
 
-    def __init__(self, database=None, **kwargs):
-        """Database for keeping information about a users login and admin rights
+    def __init__(self, *, database=None, **kwargs):
+        """Database table for keeping information about a users login and admin rights
         for connecting to the Network :class:`~msl.network.manager.Manager`.
 
         Parameters
@@ -293,6 +309,8 @@ class UsersTable(Database):
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
             If :obj:`None` then loads the default database.
+        kwargs : :obj:`dict`, optional
+            Optional keyword arguments to pass to :meth:`sqlite3.connect`.
         """
         super(UsersTable, self).__init__(database, **kwargs)
         self.execute('CREATE TABLE IF NOT EXISTS %s ('
@@ -328,11 +346,11 @@ class UsersTable(Database):
         Raises
         -------
         ValueError
-            If a user with `username` already exists in the table. To update the values
-            for a user use :meth:`.update`. Or if the password is empty.
+            If a user with `username` already exists in the table or if `password` is empty.
+            To update the values for a user use :meth:`.update`.
         """
         if not password:
-            raise ValueError('The password cannot be an empty string')
+            raise ValueError('You must specify a password')
 
         salt = os.urandom(self._salt_size)
         kdf = PBKDF2HMAC(
@@ -357,11 +375,9 @@ class UsersTable(Database):
         username : :obj:`str`
             The name of the user.
         password : :obj:`str`, optional
-            The salt to use for decrypting the password with PBKDF2_
+            The password of the user in plain-text format.
         is_admin : :obj:`bool`, optional
             Does this user have admin rights?
-
-        .. _PBKDF2: https://en.wikipedia.org/wiki/PBKDF2
 
         Raises
         ------
@@ -376,13 +392,12 @@ class UsersTable(Database):
             raise ValueError('Must specify either the password and/or the admin rights when updating')
 
         if password is None:
-            self.execute('UPDATE %s SET username=?, is_admin=? WHERE username=?;' % self.NAME,
-                         (username, bool(is_admin), username))
+            self.execute('UPDATE %s SET is_admin=? WHERE username=?;' % self.NAME, (bool(is_admin), username))
             self.connection.commit()
             return
 
         if not password:
-            raise ValueError('The password cannot be an empty string')
+            raise ValueError('You must specify a password')
 
         salt = os.urandom(self._salt_size)
         key = PBKDF2HMAC(
@@ -394,11 +409,11 @@ class UsersTable(Database):
         ).derive(password.encode())
 
         if is_admin is None:
-            self.execute('UPDATE %s SET username=?, key=?, salt=? WHERE username=?;' % self.NAME,
-                         (username, key, salt, username))
+            self.execute('UPDATE %s SET key=?, salt=? WHERE username=?;' % self.NAME,
+                         (key, salt, username))
         else:
-            self.execute('UPDATE %s SET username=?, key=?, salt=?, is_admin=? WHERE username=?;' % self.NAME,
-                         (username, key, salt, bool(is_admin), username))
+            self.execute('UPDATE %s SET key=?, salt=?, is_admin=? WHERE username=?;' % self.NAME,
+                         (key, salt, bool(is_admin), username))
 
         self.connection.commit()
 
@@ -429,26 +444,27 @@ class UsersTable(Database):
 
         Returns
         -------
-        :class:`sqlite3.Row`
-            The information about the user.
+        :obj:`tuple`
+            The information about the user as a (pid, username, key, salt, is_admin) :obj:`tuple`.
         """
         self.execute('SELECT * FROM %s WHERE username = ?;' % self.NAME, (username,))
         return self.cursor.fetchone()
 
     def records(self):
-        """:obj:`list` of :class:`sqlite3.Row`: Returns the information about all users."""
+        """:obj:`list` of :obj:`tuple`: Returns the information about all users as
+        (pid, username, key, salt, is_admin) :obj:`tuple`\'s."""
         self.execute('SELECT * FROM %s;' % self.NAME)
         return self.cursor.fetchall()
 
     def usernames(self):
-        """:obj:`list` of :class:`str`: Returns a list of all usernames."""
+        """:obj:`list` of :class:`str`: Returns the names of all registered users."""
         self.execute('SELECT username FROM %s;' % self.NAME)
-        return [item['username'] for item in self.cursor.fetchall()]
+        return [item[0] for item in self.cursor.fetchall()]
 
     def users(self):
         """:obj:`list` of :class:`tuple`: Returns [(username, is_admin), ... ] for all users."""
         self.execute('SELECT username,is_admin FROM %s;' % self.NAME)
-        return [(item['username'], bool(item['is_admin'])) for item in self.cursor.fetchall()]
+        return [(item[0], bool(item[1])) for item in self.cursor.fetchall()]
 
     def is_password_valid(self, username, password):
         """Check whether the password matches the encrypted password in the database.
@@ -471,12 +487,12 @@ class UsersTable(Database):
         kdf = PBKDF2HMAC(
             algorithm=self._algorithm,
             length=self._length,
-            salt=user['salt'],
+            salt=user[3],
             iterations=self._iterations,
             backend=default_backend()
         )
         try:
-            kdf.verify(password.encode(), user['key'])
+            kdf.verify(password.encode(), user[2])
             return True
         except InvalidKey:
             return False
@@ -496,7 +512,7 @@ class UsersTable(Database):
         """
         user = self.get_user(username)
         if user:
-            return bool(user['is_admin'])
+            return bool(user[4])
         return False
 
     def _ensure_user_exists(self, username, action):

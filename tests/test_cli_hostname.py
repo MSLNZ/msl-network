@@ -7,7 +7,7 @@ from msl.network.database import HostnamesTable
 
 db = os.path.join(tempfile.gettempdir(), 'test_cli_hostname.db')
 out = os.path.join(tempfile.gettempdir(), 'test_cli_hostname.tmp')
-table = HostnamesTable(db)
+table = HostnamesTable(database=db)
 
 
 def get_args(command):

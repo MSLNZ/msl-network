@@ -74,7 +74,7 @@ def execute(args):
     database = DATABASE if args.database is None else args.database
     ensure_root_path(database)
 
-    db = HostnamesTable(database)
+    db = HostnamesTable(database=database)
 
     if args.action == 'list':
         print('Trusted devices in ' + db.path)

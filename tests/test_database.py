@@ -8,7 +8,7 @@ from msl.network import database
 
 def test_users_table():
 
-    table = database.UsersTable(':memory:')
+    table = database.UsersTable(database=':memory:')
 
     users = [
         ('admin', 'the administrator', True),
@@ -23,10 +23,10 @@ def test_users_table():
         table.insert(*user)
 
     user = table.get_user('admin')
-    assert user['username'] == 'admin'
-    assert isinstance(user['key'], bytes)
-    assert isinstance(user['salt'], bytes)
-    assert user['is_admin']
+    assert user[1] == 'admin'
+    assert isinstance(user[2], bytes)
+    assert isinstance(user[3], bytes)
+    assert user[4]
 
     assert not table.get_user('does not exist')
 
@@ -85,13 +85,13 @@ def test_users_table():
             assert not is_admin
 
     for record in table.records():
-        table.delete(record['username'])
+        table.delete(record[1])
     assert not table.usernames()
 
 
 def test_hostnames_table():
 
-    table = database.HostnamesTable(':memory:')
+    table = database.HostnamesTable(database=':memory:')
 
     # all localhost aliases are added if the table is empty
     assert 'localhost' in table.hostnames()
@@ -117,14 +117,13 @@ def test_connections_table():
             self.domain = domain
             self.port = port
 
-    table = database.ConnectionsTable(':memory:')
-
     connections = [
         (Peer('192.168.1.100', 'MSL.domain.nz', 7614), 'message 1'),
         (Peer('192.168.1.100', 'MSL.domain.nz', 21742), 'message 2'),
         (Peer('192.168.1.200', 'MSL.domain.nz', 51942), 'message 3'),
     ]
 
+    table = database.ConnectionsTable(database=':memory:', as_datetime=False)
     for peer, message in connections:
         table.insert(peer, message)
 
@@ -136,7 +135,11 @@ def test_connections_table():
             else:
                 assert isinstance(connection[i], str)
 
-    for connection in table.connections(False):
+    table = database.ConnectionsTable(database=':memory:', as_datetime=True)
+    for peer, message in connections:
+        table.insert(peer, message)
+
+    for connection in table.connections():
         assert len(connection) == 6
         for i in range(6):
             if i == 0 or i == 4:
