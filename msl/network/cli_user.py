@@ -72,11 +72,11 @@ def add_parser_user(parser):
         nargs='+',
         help='The password for the user (can contain spaces). Specify\n'
              'a path to a file if you do not want to type the password\n'
-             'in the terminal (i.e., do not want the password to appear\n'
-             'in your command history). Whatever is written on the first\n'
-             'line in the file will be used for the password. Warning: if\n'
-             'you enter a path that does not exist then the path itself\n'
-             'will be used as the password!'
+             'in the terminal (i.e., you do not want the password to\n'
+             'appear in your command history). Whatever is written on\n'
+             'the first line in the file will be used for the password.\n'
+             'WARNING: If you enter a path that does not exist then the\n'
+             'path itself will be used as the password.'
     )
     p.add_argument(
         '-a', '--admin',
@@ -98,7 +98,7 @@ def execute(args):
     database = DATABASE if args.database is None else args.database
     ensure_root_path(database)
 
-    db = UsersTable(database)
+    db = UsersTable(database=database)
 
     if args.action == 'list':
         users = db.users()

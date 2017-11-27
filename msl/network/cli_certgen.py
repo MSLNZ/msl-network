@@ -1,6 +1,8 @@
 """
 Command line interface for the ``certgen`` command.
 """
+import os
+
 from . import cryptography
 
 HELP = 'Generate a self-signed PEM certificate.'
@@ -62,7 +64,13 @@ def add_parser_certgen(parser):
         nargs='+',
         help='The password (passphrase) to use to decrypt the\n'
              'private key. Only required if --key-path is specified\n'
-             'and it is an encrypted file.'
+             'and it is an encrypted file. Specify a path to a file\n'
+             'if you do not want to type the password in the terminal\n'
+             '(i.e., you do not want the password to appear in your\n'
+             'command history). Whatever is written on the first line\n'
+             'in the file will be used for the password. WARNING: If you\n'
+             'enter a path that does not exist then the path itself will\n'
+             'be used as the password.'
     )
     p.add_argument(
         '--algorithm',
@@ -95,12 +103,15 @@ def execute(args):
         print('ValueError: The --years-valid value must be a positive number')
         return
 
-    password = None if args.key_password is None else ' '.join(args.key_password)
+    key_password = None if args.key_password is None else ' '.join(args.key_password)
+    if key_password is not None and os.path.isfile(key_password):
+        with open(key_password, 'r') as fp:
+            key_password = fp.readline().strip()
 
     path = cryptography.generate_certificate(
         path=args.path,
         key_path=args.key_path,
-        key_password=password,
+        key_password=key_password,
         algorithm=args.algorithm,
         years_valid=years
     )

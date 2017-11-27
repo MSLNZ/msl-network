@@ -61,7 +61,13 @@ def add_parser_start(parser):
              'connect to the Network Manager. The password can contain\n'
              'spaces. Using this type of authentication can be thought of\n'
              'as using a global password that can easily be changed every\n'
-             'time that the Network Manager starts.'
+             'time that the Network Manager starts. Specify a path to a\n'
+             'file if you do not want to type the password in the terminal\n'
+             '(i.e., you do not want the password to appear in your command\n'
+             'history). Whatever is written on the first line in the file\n'
+             'will be used for the password. WARNING: If you enter a path\n'
+             'that does not exist then the path itself will be used as the\n'
+             'password.'
     )
     p.add_argument(
         '--auth-hostname',
@@ -96,7 +102,13 @@ def add_parser_start(parser):
         '--key-password',
         nargs='+',
         help='The password (passphrase) to use to decrypt the private key.\n'
-             'Only required if the key file is encrypted.'
+             'Only required if the key file is encrypted. Specify a path to\n'
+             'a file if you do not want to type the password in the terminal\n'
+             '(i.e., you do not want the password to appear in your command\n'
+             'history). Whatever is written on the first line in the file\n'
+             'will be used for the password. WARNING: If you enter a path\n'
+             'that does not exist then the path itself will be used as the\n'
+             'password.'
     )
     p.add_argument(
         '--database',
@@ -143,6 +155,9 @@ def execute(args):
 
     # get the password to decrypt the private key
     key_password = None if args.key_password is None else ' '.join(args.key_password)
+    if key_password is not None and os.path.isfile(key_password):
+        with open(key_password, 'r') as fp:
+            key_password = fp.readline().strip()
 
     # get the path to the certificate and to the private key
     cert, key = args.cert, args.key
@@ -175,13 +190,16 @@ def execute(args):
     elif args.auth_password is not None and not args.auth_hostname and not args.auth_login:
         # then the authentication is a password.
         password = ' '.join(args.auth_password)
+        if os.path.isfile(password):
+            with open(password, 'r') as fp:
+                password = fp.readline().strip()
     elif args.auth_password is None and args.auth_hostname and not args.auth_login:
         # then the authentication is based on a list of trusted hosts
-        hostnames = HostnamesTable(database).hostnames()
+        hostnames = HostnamesTable(database=database).hostnames()
     elif args.auth_password is None and not args.auth_hostname and args.auth_login:
         # then the authentication is based on the user's login information
         login = True
-        table = UsersTable(database)
+        table = UsersTable(database=database)
         if not table.usernames():
             table.close()
             print('ValueError: The Users table is empty. No one could login...')

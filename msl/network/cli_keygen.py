@@ -1,6 +1,8 @@
 """
 Command line interface for the ``keygen`` command.
 """
+import os
+
 from .cryptography import generate_key
 
 HELP = 'Generate a private key to digitally sign a PEM certificate.'
@@ -49,7 +51,13 @@ def add_parser_keygen(parser):
         '--password',
         nargs='+',
         help='The password (passphrase) to use to encrypt the private\n'
-             'key. Can include spaces. Default is None (unencrypted).'
+             'key. Can include spaces. Default is None (unencrypted).\n'
+             'Specify a path to a file if you do not want to type the\n'
+             'password in the terminal (i.e., you do not want the\n'
+             'password to appear in your command history). Whatever is\n'
+             'written on the first line in the file will be used for the\n'
+             'password. WARNING: If you enter a path that does not exist\n'
+             'then the path itself will be used as the password.'
     )
     p.add_argument(
         '--path',
@@ -82,6 +90,9 @@ def execute(args):
         return
 
     password = None if args.password is None else ' '.join(args.password)
+    if password is not None and os.path.isfile(password):
+        with open(password, 'r') as fp:
+            password = fp.readline().strip()
 
     path = generate_key(
         path=args.path,
