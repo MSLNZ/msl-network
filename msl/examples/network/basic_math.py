@@ -48,7 +48,7 @@ class BasicMath(Service):
             raise ValueError('The value is < 0')
         return True
 
-    def power(self, x: float, n=2) -> float:
+    def power(self, x: float, n: int =2) -> float:
         log.info('power -- sleeping for 6 seconds')
         time.sleep(6)
         return x ** n
