@@ -137,7 +137,8 @@ class Service(Network, asyncio.Protocol):
                 {
                     'requester': string (the address of the device that made the request)
                     'attribute': string (the name of a method or variable to access from the Service)
-                    'parameters': object (key-value pairs to be passed to the Service's method)
+                    'args': object (arguments to be passed to the Service's method)
+                    'kwargs': object (keyword arguments to be passed to the Service's method)
                     'error' : boolean (False)
                 }
 
@@ -199,7 +200,7 @@ class Service(Network, asyncio.Protocol):
 
         if callable(attrib):
             try:
-                reply = attrib(**data['parameters'])
+                reply = attrib(*data['args'], **data['kwargs'])
             except Exception as e:
                 log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
                 self.send_error(self._transport, e, requester=data['requester'])

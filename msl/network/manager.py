@@ -122,7 +122,7 @@ class Manager(Network):
         """
         log.info(f'{self._network_name} verifying login credentials from {writer.peer.network_name}')
         log.debug(f'{self._network_name} verifying login username from {writer.peer.network_name}')
-        self.send_request(writer, attribute='username', parameters={'name': self._network_name})
+        self.send_request(writer, 'username', self._network_name)
         username = await self.get_handshake_data(reader)
         if not username:  # then the connection closed prematurely
             return False
@@ -136,7 +136,7 @@ class Manager(Network):
             return False
 
         log.debug(f'{self._network_name} verifying login password from {writer.peer.network_name}')
-        self.send_request(writer, attribute='password', parameters={'name': username})
+        self.send_request(writer, 'password', username)
         password = await self.get_handshake_data(reader)
 
         if not password:  # then the connection closed prematurely
@@ -170,7 +170,7 @@ class Manager(Network):
             Whether the correct password was received.
         """
         log.info(f'{self._network_name} requesting password from {writer.peer.network_name}')
-        self.send_request(writer, attribute='password', parameters={'name': self._network_name})
+        self.send_request(writer, 'password', self._network_name)
         password = await self.get_handshake_data(reader)
 
         if not password:  # then the connection closed prematurely
@@ -203,7 +203,7 @@ class Manager(Network):
             either ``'client'`` or ``'service'``, otherwise returns :obj:`None`.
         """
         log.info(f'{self._network_name} requesting identity from {writer.peer.network_name}')
-        self.send_request(writer, attribute='identity', parameters={})
+        self.send_request(writer, 'identity')
         identity = await self.get_handshake_data(reader)
 
         if identity is None:  # then the connection closed prematurely (a certificate request?)
@@ -332,7 +332,7 @@ class Manager(Network):
                     self.send_reply(writer, self.identity(), requester=reader.peer.address)
                 elif data['attribute'] == 'link':
                     try:
-                        self.link(writer, **data['parameters'])
+                        self.link(writer, data['args'][0])
                     except Exception as e:
                         log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
                         self.send_error(writer, e, reader.peer.address)
@@ -461,7 +461,7 @@ class Manager(Network):
             log.error(msg)
             self.send_error(writer, KeyError(msg), writer.peer.address)
 
-    def send_request(self, writer, attribute, parameters):
+    def send_request(self, writer, attribute, *args, **kwargs):
         """Send a request to a :class:`~msl.network.client.Client` or a
         :class:`~msl.network.service.Service`.
 
@@ -473,12 +473,15 @@ class Manager(Network):
         attribute : :obj:`str`
             The name of the method to call from the :class:`~msl.network.client.Client`
             or :class:`~msl.network.service.Service`.
-        parameters : :obj:`dict`, optional
+        args : :obj:`dict`, optional
+            The arguments that the `attribute` method requires.
+        kwargs : :obj:`dict`, optional
             The key-value pairs that the `attribute` method requires.
         """
         self.send_data(writer, {
             'attribute': attribute,
-            'parameters': parameters,
+            'args': args,
+            'kwargs': kwargs,
             'requester': self._network_name,
             'error': False,
         })
@@ -520,16 +523,16 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
     log.info(f'loaded certificate {cert}')
 
     # load the connections table
-    conn_table = ConnectionsTable(database)
-    log.info(f'loaded the connections table {conn_table.path}')
+    conn_table = ConnectionsTable(database=database)
+    log.info(f'loaded the {conn_table.NAME} table from {conn_table.path}')
 
     # load the users table for the login credentials
-    users_table = UsersTable(database)
+    users_table = UsersTable(database=database)
     if login and not users_table.users():
         print('The Users Table is empty. You cannot use login credentials for authorisation.')
         print('See: msl-network users')
         return
-    log.info(f'loaded the users table {users_table.path}')
+    log.info(f'loaded the {users_table.NAME} table from {users_table.path}')
 
     if hostnames:
         log.debug('using trusted hosts for authentication')

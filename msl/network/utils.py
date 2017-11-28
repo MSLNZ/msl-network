@@ -7,7 +7,9 @@ import ast
 
 from .constants import HOSTNAME
 
-_key_value_regex = re.compile(r'(\w+)[\s]*=[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
+_args_regex = re.compile(r'[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
+
+_kwargs_regex = re.compile(r'(\w+)[\s]*=[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
 
 
 def ensure_root_path(path):
@@ -63,7 +65,7 @@ def parse_terminal_input(line):
           For example,
 
           To request the addition of two numbers from a ``BasicMath.add(x, y)``
-          :class:`~msl.network.service.Service` enter ``BasicMath add x=4 y=10``
+          :class:`~msl.network.service.Service` enter ``BasicMath add x=4 y=10`` or ``BasicMath add 4 10``
 
           To request concatenating two strings from a ``ModifyString.concat(s1, s2)``
           :class:`~msl.network.service.Service`, but with the :class:`~msl.network.service.Service`
@@ -104,7 +106,8 @@ def parse_terminal_input(line):
         return {
             'service': None,
             'attribute': 'identity',
-            'parameters': {},
+            'args': [],
+            'kwargs': {},
             'error': False,
         }
     elif line_lower.startswith('client'):
@@ -119,14 +122,16 @@ def parse_terminal_input(line):
         return {
             'service': 'self',
             'attribute': '__disconnect__',
-            'parameters': {},
+            'args': [],
+            'kwargs': {},
             'error': False,
         }
     elif line_lower.startswith('link'):
         return {
             'service': None,
             'attribute': 'link',
-            'parameters': {'service': line[4:].strip().replace('"', '')},
+            'args': [line[4:].strip().replace('"', '')],
+            'kwargs': {},
             'error': False,
         }
     else:
@@ -148,18 +153,23 @@ def parse_terminal_input(line):
             return {
                 'service': service,
                 'attribute': attribute,
-                'parameters': {},
+                'args': [],
+                'kwargs': {},
                 'error': False,
             }
         else:
-            params = dict()
-            for m in re.finditer(_key_value_regex, items[2]):
+            args = [convert_value(m.groups()[0]) for m in re.finditer(_args_regex, items[2])]
+            kwargs = dict()
+            for i, m in enumerate(re.finditer(_kwargs_regex, items[2])):
                 key, value = m.groups()
-                params[key] = convert_value(value)
+                if i == 0:
+                    args = [convert_value(m.groups()[0]) for m in re.finditer(_args_regex, items[2].split(key)[0])]
+                kwargs[key] = convert_value(value)
             return {
                 'service': service,
                 'attribute': attribute,
-                'parameters': params,
+                'args': args,
+                'kwargs': kwargs,
                 'error': False,
             }
 

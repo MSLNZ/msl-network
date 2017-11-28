@@ -116,7 +116,7 @@ class Client(Network, asyncio.Protocol):
         return self._address_manager
 
     def __repr__(self):
-        return '<{} at {:#x} manager={} port={} service={}>'.format(
+        return '<{} object at {:#x} manager={} port={} service={}>'.format(
             self._name, id(self), self._address_manager, self._port, self._service)
 
     def __getattr__(self, item):
@@ -167,7 +167,7 @@ class Client(Network, asyncio.Protocol):
             If there is no :class:`~msl.network.service.Service` available
             with the name `service`.
         """
-        result = self._send_request_blocking(None, 'link', {'service': service})
+        result = self._send_request_blocking(None, 'link', service)
         if result['error']:
             self.raise_latest_error()
         else:
@@ -177,32 +177,36 @@ class Client(Network, asyncio.Protocol):
         """Disconnect from the Network :class:`~msl.network.manager.Manager`."""
         self._send_request('self', '__disconnect__', {})
 
-    def manager(self):
-        """:obj:`dict`: The :obj:`~msl.network.network.Network.identity` of
-        the Network :class:`~msl.network.manager.Manager`."""
-        return self._send_request_blocking(None, 'identity', {})['return']
-
-    def manager_to_yaml(self, indent=4):
-        """Returns :meth:`.manager`, but as a YAML_\-style string.
+    def manager(self, *, as_yaml=False, indent=4):
+        """Returns the :obj:`~msl.network.network.Network.identity` of the
+        Network :class:`~msl.network.manager.Manager`.
 
         .. _YAML: https://en.wikipedia.org/wiki/YAML
 
         Parameters
         ----------
+        as_yaml : :obj:`bool`, optional
+            Whether to return the information as a YAML_\-style string.
         indent : :obj:`int`
-            The amount of indentation added for each recursive level.
+            The amount of indentation added for each recursive level. Only used if
+            `as_yaml` is :obj:`True`.
 
         Returns
         -------
-        :obj:`str`:
+        :obj:`dict` or :obj:`str`
             The :obj:`~msl.network.network.Network.identity` of the Network
-            :class:`~msl.network.manager.Manager` as a YAML_\-style string.
+            :class:`~msl.network.manager.Manager`.
         """
-        identity = self.manager()
+        identity = self._send_request_blocking(None, 'identity', {})['return']
+        if not as_yaml:
+            return identity
         space = ' ' * indent
-        s = f'Summary for the Network Manager at {identity["hostname"]}:{identity["port"]}\n'
-        service_address = identity["services"][self._service]["address"]
-        s += f'{self._name}[{self._port}] is currently linked with {self._service}[{service_address}]\n'
+        if self._service:
+            service_address = identity["services"][self._service]["address"]
+            s = f'{self._name}[{self._port}] is currently linked with {self._service}[{service_address}]\n'
+        else:
+            s = f'{self._name}[{self._port}] is not currently linked with a Service\n'
+        s += f'Summary for the Network Manager at {self._address_manager}\n'
         s += 'Manager:\n'
         for key in sorted(identity):
             if key == 'clients' or key == 'services':
@@ -320,7 +324,7 @@ class Client(Network, asyncio.Protocol):
             if self._error_message.startswith('ConnectionAbortedError:'):
                 self.raise_latest_error()
         elif not self._handshake_finished:
-            self.send_reply(self._transport, getattr(self, data['attribute'])(**data['parameters']))
+            self.send_reply(self._transport, getattr(self, data['attribute'])(*data['args'], **data['kwargs']))
             self._handshake_finished = data['attribute'] == 'identity'
 
         if self._waiter is not None:
@@ -414,7 +418,7 @@ class Client(Network, asyncio.Protocol):
         self._password = password
         self._password_manager = password_manager
         self._certificate = certificate
-        self._address_manager = f'{self._host_manager}:{port}'
+        self._address_manager = f'{host}:{port}'
 
         context = get_ssl_context(host=self._host_manager, port=port, certificate=certificate)
         if not context:
@@ -446,12 +450,10 @@ class Client(Network, asyncio.Protocol):
 
         def run_forever():
             try:
-                log.debug(f'{self} connection accepted')
                 self._loop.run_forever()
             except KeyboardInterrupt:
                 log.debug('CTRL+C keyboard interrupt received')
             finally:
-                log.debug(f'{self} disconnected')
                 self._loop.close()
 
         thread = threading.Thread(target=run_forever)
@@ -459,7 +461,7 @@ class Client(Network, asyncio.Protocol):
         thread.start()
         return True
 
-    def _request(self, **kwargs):
+    def _request(self, *args, **kwargs):
         """Send __getattr__ and  __getitem__ requests to the Manager."""
         if self._service is None:
             self.disconnect()
@@ -481,15 +483,16 @@ class Client(Network, asyncio.Protocol):
         self._waiter = None
         return result
 
-    def _send_request(self, service, attribute, parameters):
+    def _send_request(self, service, attribute, *args, **kwargs):
         self.send_data(self._transport, {
             'service': service,
             'attribute': attribute,
-            'parameters': parameters,
+            'args': args,
+            'kwargs': kwargs,
             'error': False,
         })
 
-    def _send_request_blocking(self, service, attribute, parameters):
+    def _send_request_blocking(self, service, attribute, *args, **kwargs):
         self._waiter = self._loop.create_future()
-        self._send_request(service, attribute, parameters)
+        self._send_request(service, attribute, *args, **kwargs)
         return self._wait()
