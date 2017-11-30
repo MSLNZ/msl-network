@@ -2,16 +2,16 @@
 Connect to a Network :class:`~msl.network.manager.Manager`.
 """
 import sys
-import json
 import time
 import asyncio
 import getpass
 import logging
 import threading
-
+from concurrent.futures import CancelledError
 from collections import deque
 
 from .network import Network
+from .json import deserialize
 from .utils import localhost_aliases
 from .constants import PORT, HOSTNAME
 from .cryptography import get_ssl_context
@@ -19,8 +19,8 @@ from .cryptography import get_ssl_context
 log = logging.getLogger(__name__)
 
 
-def connect(*, name='Client', host='localhost', port=PORT, username=None, password=None,
-            password_manager=None, certificate=None, debug=False):
+def connect(*, name='Client', host='localhost', port=PORT, timeout=None, username=None,
+            password=None, password_manager=None, certificate=None, debug=False):
     """Create a new connection to a Network :class:`~msl.network.manager.Manager`.
 
     Parameters
@@ -33,6 +33,10 @@ def connect(*, name='Client', host='localhost', port=PORT, username=None, passwo
     port : :obj:`int`, optional
         The port number of the Network :class:`~msl.network.manager.Manager`
         that the :class:`~msl.network.client.Client` should connect to.
+    timeout : :obj:`float`, optional
+        The number of seconds to wait for a reply from the Network
+        :class:`~msl.network.manager.Manager`. The default is to wait forever
+        (i.e., no timeout).
     username : :obj:`str`, optional
         The username to use to connect to Network :class:`~msl.network.manager.Manager`.
         If not specified then you will be asked for the username (only if the Network
@@ -61,7 +65,7 @@ def connect(*, name='Client', host='localhost', port=PORT, username=None, passwo
         A new connection.
     """
     client = Client(name)
-    success = client.start(host, port, username, password, password_manager, certificate, debug)
+    success = client.start(host, port, timeout, username, password, password_manager, certificate, debug)
     if not success:
         client.raise_latest_error()
     return client
@@ -80,7 +84,7 @@ class Client(Network, asyncio.Protocol):
         self._network_name = name
         self._port = None
         self._loop = None
-        self._debug = None
+        self._debug = False
         self._username = None
         self._password = None
         self._host_manager = None
@@ -97,6 +101,9 @@ class Client(Network, asyncio.Protocol):
         self._error_message = ''
         self._waiter = None
         self._queue = deque()  # TODO implement queue
+        self._buffer = bytearray()
+        self._timeout = None
+        self._t0 = None  # used for profiling sections of the code
 
     @property
     def name(self):
@@ -167,6 +174,8 @@ class Client(Network, asyncio.Protocol):
             If there is no :class:`~msl.network.service.Service` available
             with the name `service`.
         """
+        if self._debug:
+            log.debug(f'requesting to link with {service}')
         result = self._send_request_blocking(None, 'link', service)
         if result['error']:
             self.raise_latest_error()
@@ -175,7 +184,8 @@ class Client(Network, asyncio.Protocol):
 
     def disconnect(self):
         """Disconnect from the Network :class:`~msl.network.manager.Manager`."""
-        self._send_request('self', '__disconnect__', {})
+        if self._transport is not None:
+            self._send_request('self', '__disconnect__')
 
     def manager(self, *, as_yaml=False, indent=4):
         """Returns the :obj:`~msl.network.network.Network.identity` of the
@@ -203,41 +213,41 @@ class Client(Network, asyncio.Protocol):
         space = ' ' * indent
         if self._service:
             service_address = identity["services"][self._service]["address"]
-            s = f'{self._name}[{self._port}] is currently linked with {self._service}[{service_address}]\n'
+            s = [f'{self._name}[{self._port}] is currently linked with {self._service}[{service_address}]\n']
         else:
-            s = f'{self._name}[{self._port}] is not currently linked with a Service\n'
-        s += f'Summary for the Network Manager at {self._address_manager}\n'
-        s += 'Manager:\n'
+            s = [f'{self._name}[{self._port}] is not currently linked with a Service\n']
+        s.append(f'Summary for the Network Manager at {self._address_manager}\n')
+        s.append('Manager:\n')
         for key in sorted(identity):
             if key == 'clients' or key == 'services':
                 pass
             elif key == 'attributes':
-                s += space + 'attributes:\n'
+                s.append(space + 'attributes:\n')
                 for item in sorted(identity[key]):
-                    s += 2 * space + f'{item}: {identity[key][item]}\n'
+                    s.append(2 * space + f'{item}: {identity[key][item]}\n')
             else:
-                s += space + f'{key}: {identity[key]}\n'
-        s += f'Clients [{len(identity["clients"])}]:\n'
+                s.append(space + f'{key}: {identity[key]}\n')
+        s.append(f'Clients [{len(identity["clients"])}]:\n')
         for client in sorted(identity['clients']):
-            s += space + f'{identity["clients"][client]}: {client}\n'
-        s += f'Services [{len(identity["services"])}]:\n'
+            s.append(space + f'{identity["clients"][client]}: {client}\n')
+        s.append(f'Services [{len(identity["services"])}]:\n')
         for name in sorted(identity['services']):
-            s += space + f'{name}:\n'
+            s.append(space + f'{name}:\n')
             service = identity['services'][name]
             for key in sorted(service):
                 if key == 'attributes':
-                    s += 2 * space + 'attributes:\n'
+                    s.append(2 * space + 'attributes:\n')
                     for item in sorted(service[key]):
-                        s += 3 * space + f'{item}: {service[key][item]}\n'
+                        s.append(3 * space + f'{item}: {service[key][item]}\n')
                 else:
-                    s += 2 * space + f'{key}: {service[key]}\n'
-        return s
+                    s.append(2 * space + f'{key}: {service[key]}\n')
+        return ''.join(s)
 
     def admin_request(self, attrib, *args, **kwargs):
         """Request something from the Network :class:`~msl.network.manager.Manager`
         as an administrator.
 
-        The person that call this method must have administrative privileges for the
+        The person that calls this method must have administrative privileges for that
         Network :class:`~msl.network.manager.Manager`.
 
         Parameters
@@ -246,9 +256,9 @@ class Client(Network, asyncio.Protocol):
             The attribute on the Network :class:`~msl.network.manager.Manager`. Can contain
             dots ``.`` to access sub-attributes.
         args : :obj:`list`
-            The arguments.
+            The arguments to send to the Network :class:`~msl.network.manager.Manager`.
         kwargs : :obj:`dict`
-            The keyword arguments.
+            The keyword arguments to send to the Network :class:`~msl.network.manager.Manager`.
 
         Returns
         -------
@@ -279,6 +289,7 @@ class Client(Network, asyncio.Protocol):
         """Automatically called when the connection to the Network
         :class:`~msl.network.manager.Manager` has been established."""
         self._transport = transport
+        self._transport.set_write_buffer_limits(high=2**17, low=2**16)
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self.name, self._port)
         log.info(f'{self} connection made')
@@ -315,10 +326,31 @@ class Client(Network, asyncio.Protocol):
                 }
 
         """
-        if self._debug:
-            log.debug(f'{self._network_name} received {reply}')
+        if not self._buffer:
+            self._t0 = time.perf_counter()
 
-        data = json.loads(reply)
+        # there is a chunk-size limit of 2**14 for each reply
+        # keep reading the data on the stream until the \n character is received
+        self._buffer.extend(reply)
+        if not reply.endswith(b'\n'):
+            return
+
+        buffer_bytes = bytes(self._buffer)
+
+        if self._debug:
+            dt = time.perf_counter() - self._t0
+            n = len(buffer_bytes)
+            if dt > 0:
+                log.debug('{} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
+                    self._network_name, n, dt, n*1e-6/dt))
+            else:
+                log.debug('{} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
+            if len(buffer_bytes) > self._max_print_size:
+                log.debug(buffer_bytes[:self._max_print_size//2] + b' ... ' + buffer_bytes[-self._max_print_size//2:])
+            else:
+                log.debug(buffer_bytes)
+
+        data = deserialize(buffer_bytes)
         if data['error']:
             self._error_message = data['message']
             self._traceback = data['traceback']
@@ -332,6 +364,8 @@ class Client(Network, asyncio.Protocol):
         if self._waiter is not None:
             self._waiter.set_result(data)
 
+        self._buffer.clear()
+
     def connection_lost(self, exc):
         """Automatically called when the connection to the Network
         :class:`~msl.network.manager.Manager` has been closed."""
@@ -343,7 +377,7 @@ class Client(Network, asyncio.Protocol):
         self._attribute = None
         self._loop.stop()
         if exc:
-            log.error(str(exc))
+            log.error(exc)
             raise exc
 
     def spawn(self, name='Client'):
@@ -367,6 +401,8 @@ class Client(Network, asyncio.Protocol):
         """Raises the latest exception that was received from the Network
         :class:`~msl.network.manager.Manager`."""
         if self._handshake_finished:
+            if self._waiter:
+                self._waiter.cancel()
             self.disconnect()
         raise Exception('\n'.join(self._traceback))
 
@@ -376,7 +412,7 @@ class Client(Network, asyncio.Protocol):
         print('\n'.join(self._traceback), file=sys.stderr)
         print(self._error_message, file=sys.stderr)
 
-    def start(self, host, port, username, password, password_manager, certificate, debug):
+    def start(self, host, port, timeout, username, password, password_manager, certificate, debug):
         """Start the connection to a Network :class:`~msl.network.manager.Manager`.
 
         .. attention::
@@ -391,6 +427,9 @@ class Client(Network, asyncio.Protocol):
         port : :obj:`int`, optional
             The port number of the Network :class:`~msl.network.manager.Manager` that
             the :class:`Client` should connect to.
+        timeout : :obj:`float`
+            The number of seconds to wait for a reply from the Network
+            :class:`~msl.network.manager.Manager`.
         username : :obj:`str`, optional
             The username to use to connect to Network :class:`~msl.network.manager.Manager`.
             If not specified then you will be asked for the username (only if the Network
@@ -399,8 +438,7 @@ class Client(Network, asyncio.Protocol):
         password : :obj:`str`, optional
             The password that is associated with `username`. Can be specified if the Network
             :class:`~msl.network.manager.Manager` requires a login to connect to it. If the
-            `password_username` value is not specified then you will be asked for the
-            password if needed.
+            `password` is not specified then you will be asked for the password if needed.
         password_manager : :obj:`str`, optional
             The password of the Network :class:`~msl.network.manager.Manager`. A Network
             :class:`~msl.network.manager.Manager` can be started with the option to
@@ -415,12 +453,13 @@ class Client(Network, asyncio.Protocol):
         """
         self._host_manager = HOSTNAME if host in localhost_aliases() else host
         self._port_manager = port
-        self._debug = debug
+        self._debug = bool(debug)
         self._username = username
         self._password = password
         self._password_manager = password_manager
         self._certificate = certificate
         self._address_manager = f'{host}:{port}'
+        self._timeout = timeout
 
         context = get_ssl_context(host=self._host_manager, port=port, certificate=certificate)
         if not context:
@@ -468,7 +507,11 @@ class Client(Network, asyncio.Protocol):
         if self._service is None:
             self.disconnect()
             raise ValueError(f'{self._network_name} has not been linked to a Service yet')
-        result = self._send_request_blocking(self._service, self._attribute, *args, *kwargs)
+        if self._debug:
+            log.debug(f'sending request to {self._service}.{self._attribute}')
+        result = self._send_request_blocking(self._service, self._attribute, *args, **kwargs)
+        if not result:
+            return None
         if result['error']:
             # self.raise_latest_error()
             self.print_latest_error()
@@ -477,10 +520,17 @@ class Client(Network, asyncio.Protocol):
 
     def _wait(self):
         """A blocking method. Returns what the waiter is waiting for."""
-        while not self._waiter.done():
+        t0 = time.perf_counter()
+        if self._debug:
             log.debug('waiting...')
+        while not self._waiter.done():
+            if self._timeout and time.perf_counter() - t0 > self._timeout:
+                msg = f'while waiting for the reply from {self._service}.{self._attribute}'
+                log.error('TimeoutError: ' + msg)
+                raise TimeoutError(msg)
             time.sleep(0.01)
-        log.debug('done waiting')
+        if self._debug:
+            log.debug('done waiting')
         result = self._waiter.result()
         self._waiter = None
         return result
@@ -496,5 +546,8 @@ class Client(Network, asyncio.Protocol):
 
     def _send_request_blocking(self, service, attribute, *args, **kwargs):
         self._waiter = self._loop.create_future()
-        self._send_request(service, attribute, *args, *kwargs)
-        return self._wait()
+        self._send_request(service, attribute, *args, **kwargs)
+        try:
+            return self._wait()
+        except CancelledError:
+            return None

@@ -1,7 +1,7 @@
 """
 Base class for all Services.
 """
-import json
+import time
 import asyncio
 import inspect
 import logging
@@ -9,6 +9,7 @@ import getpass
 import platform
 
 from .network import Network
+from .json import deserialize
 from .utils import localhost_aliases
 from .constants import PORT, HOSTNAME
 from .cryptography import get_ssl_context
@@ -28,16 +29,18 @@ class Service(Network, asyncio.Protocol):
         """Base class for all Services."""
         self._loop = None
         self._username = None
-        self._password_username = None
+        self._password = None
         self._password_manager = None
         self._transport = None
         self._identity = dict()
-        self._debug = None
+        self._debug = False
         self._port = None
         self._address_manager = None
         if self.name is None:
             self.name = self.__class__.__name__
         self._network_name = self.name
+        self._buffer = bytearray()
+        self._t0 = None  # used for profiling sections of the code
 
     @property
     def port(self):
@@ -52,7 +55,7 @@ class Service(Network, asyncio.Protocol):
         return self._address_manager
 
     def __repr__(self):
-        return '<{} at {:#x} manager={} port={}>'.format(self.name, id(self), self._address_manager, self._port)
+        return '<{} object at {:#x} manager={} port={}>'.format(self.name, id(self), self._address_manager, self._port)
 
     def password(self, name):
         """:obj:`str`: Returns the password to use to try to connect to the Network
@@ -67,8 +70,8 @@ class Service(Network, asyncio.Protocol):
             return 'You do not have permission to receive the password'
         if name == self._address_manager and self._password_manager is not None:
             return self._password_manager
-        elif self._password_username is not None:
-            return self._password_username
+        elif self._password is not None:
+            return self._password
         else:
             return getpass.getpass(f'Enter the password for {name} > ')
 
@@ -135,11 +138,10 @@ class Service(Network, asyncio.Protocol):
             then the JSON_ object must contain::
 
                 {
-                    'requester': string (the address of the device that made the request)
                     'attribute': string (the name of a method or variable to access from the Service)
                     'args': object (arguments to be passed to the Service's method)
                     'kwargs': object (keyword arguments to be passed to the Service's method)
-                    'error' : boolean (False)
+                    'requester': string (the address of the device that made the request)
                 }
 
         Returns
@@ -169,24 +171,47 @@ class Service(Network, asyncio.Protocol):
                 }
 
         """
-        if self._debug:
-            log.debug(f'{self._network_name} received {data}')
+        if not self._buffer:
+            self._t0 = time.perf_counter()
 
-        try:
-            data = json.loads(data)
-        except json.JSONDecodeError as e:
-            log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
-            self.send_error(self._transport, e, None)
+        # there is a chunk-size limit of 2**14 for each reply
+        # keep reading the data on the stream until the \n character is received
+        self._buffer.extend(data)
+        if not data.endswith(b'\n'):
             return
 
-        if data['error']:
+        buffer_bytes = bytes(self._buffer)
+
+        if self._debug:
+            dt = time.perf_counter() - self._t0
+            n = len(buffer_bytes)
+            if dt > 0:
+                log.debug('{} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
+                    self._network_name, n, dt, n*1e-6/dt))
+            else:
+                log.debug('{} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
+            if len(buffer_bytes) > self._max_print_size:
+                log.debug(buffer_bytes[:self._max_print_size//2] + b' ... ' + buffer_bytes[-self._max_print_size//2:])
+            else:
+                log.debug(buffer_bytes)
+
+        try:
+            data = deserialize(buffer_bytes)
+            self._buffer.clear()
+        except Exception as e:
+            log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
+            self.send_error(self._transport, e, None)
+            self._buffer.clear()
+            return
+
+        if data.get('error', False):
             # Then log the error message and don't send a reply back to the Manager.
             # Ideally, the Manager is the only device that would send an error to the
             # Service, which could happen during the handshake if the password or identity
             # that the Service provided was invalid.
             try:
                 msg = '\n'.join(data['traceback'])  # traceback should be a list of strings
-            except TypeError:
+            except (TypeError, KeyError):
                 msg = data.get('message', 'Error: Unfortunately, no error message has been provided')
             log.error(f'{self._network_name} {msg}')
             return
@@ -219,10 +244,10 @@ class Service(Network, asyncio.Protocol):
         self._address_manager = None
         self._loop.stop()
         if exc:
-            log.error(str(exc))
+            log.error(exc)
             raise exc
 
-    def start(self, host='localhost', port=PORT, username=None, password_username=None,
+    def start(self, host='localhost', port=PORT, username=None, password=None,
               password_manager=None, certificate=None, debug=False):
         """Start the :class:`Service`.
 
@@ -239,11 +264,10 @@ class Service(Network, asyncio.Protocol):
             If not specified then you will be asked for the username (only if the Network
             :class:`~msl.network.manager.Manager` requires login credentials to be able
             to connect to it).
-        password_username : :obj:`str`, optional
+        password : :obj:`str`, optional
             The password that is associated with `username`. Can be specified if the Network
             :class:`~msl.network.manager.Manager` requires a login to connect to it. If the
-            `password_username` value is not specified then you will be asked for the
-            password if needed.
+            `password` is not specified then you will be asked for the password if needed.
         password_manager : :obj:`str`, optional
             The password of the Network :class:`~msl.network.manager.Manager`. A Network
             :class:`~msl.network.manager.Manager` can be started with the option to
@@ -262,9 +286,9 @@ class Service(Network, asyncio.Protocol):
         else:
             self._address_manager = f'{host}:{port}'
 
-        self._debug = debug
+        self._debug = bool(debug)
         self._username = username
-        self._password_username = password_username
+        self._password = password
         self._password_manager = password_manager
 
         context = get_ssl_context(host=host, port=port, certificate=certificate)

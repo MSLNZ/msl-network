@@ -1,14 +1,15 @@
 """
 An asynchronous Network Manager.
 """
+import sys
 import ssl
-import json
 import socket
 import asyncio
 import logging
 import platform
 
 from .network import Network
+from .json import deserialize
 from .constants import HOSTNAME
 from .utils import parse_terminal_input
 from .database import ConnectionsTable, UsersTable
@@ -211,7 +212,7 @@ class Manager(Network):
         elif isinstance(identity, str):
             identity = parse_terminal_input(identity)
 
-        log.debug(f'{reader.peer.network_name} sent {identity}')
+        log.debug(f'{reader.peer.network_name} has identity {identity}')
 
         try:
             # writer.peer.network_name points to the same location in memory so its value also gets updated
@@ -271,8 +272,8 @@ class Manager(Network):
         try:
             # ideally the response from the connected device will be in
             # the required JSON format
-            return json.loads(data)['return']
-        except (json.JSONDecodeError, KeyError):
+            return deserialize(data)['return']
+        except:
             # however, if connecting via a terminal, e.g. Putty,  then it is convenient
             # to not manually type the JSON format and let the Manager parse the raw input
             return data
@@ -287,7 +288,8 @@ class Manager(Network):
             {
                 'service': string (the name of the Service to process the request)
                 'attribute': string (the name of a method or variable of the Service)
-                'parameters': object (key-value pairs to be passed to the Service's method)
+                'args': array
+                'kwargs': object (key-value pairs to be passed to the Service's method)
             }
 
         .. _JSON: http://www.json.org/
@@ -307,14 +309,18 @@ class Manager(Network):
                 return  # then the device disconnected abruptly
 
             if self._debug:
-                log.debug(f'{reader.peer.network_name} sent {line}')
+                log.debug(f'{reader.peer.network_name} sent {len(line)} bytes')
+                if len(line) > self._max_print_size:
+                    log.debug(line[:self._max_print_size//2] + b' ... ' + line[-self._max_print_size//2:])
+                else:
+                    log.debug(line)
 
             if not line:
                 return
 
             try:
-                data = json.loads(line)
-            except json.JSONDecodeError as e:
+                data = deserialize(line)
+            except Exception as e:
                 data = parse_terminal_input(line.decode(self.encoding))
                 if not data:
                     self.send_error(writer, e, reader.peer.address)
@@ -322,10 +328,13 @@ class Manager(Network):
 
             if 'return' in data:
                 # then data is a reply from a Service so send it back to the Client
-                try:
-                    self.send_line(self.client_writers[data['requester']][0], line)
-                except KeyError:
-                    log.error(f'{self._network_name} Client at {data["requester"]} is no longer available')
+                if data['requester'] is None:
+                    log.error(f'{reader.peer.network_name} was not able to deserialize the bytes')
+                else:
+                    try:
+                        self.send_line(self.client_writers[data['requester']][0], line)
+                    except KeyError:
+                        log.error(f'{self._network_name} Client at {data["requester"]} is no longer available')
             elif data['service'] is None:
                 # then the Client is requesting something from the Manager
                 if data['attribute'] == 'identity':
@@ -358,7 +367,11 @@ class Manager(Network):
                         continue
                     # send the reply back to the Client
                     try:
-                        self.send_reply(writer, attrib(**data['parameters']), requester=reader.peer.address)
+                        if callable(attrib):
+                            self.send_reply(writer, attrib(*data['args'], **data['kwargs']),
+                                            requester=reader.peer.address)
+                        else:
+                            self.send_reply(writer, attrib, requester=reader.peer.address)
                     except Exception as e:
                         log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
                         self.send_error(writer, e, reader.peer.address)
@@ -458,7 +471,7 @@ class Manager(Network):
             self.send_reply(writer, True, requester=writer.peer.address)
         except KeyError:
             msg = f'{service} service does not exist, could not link with {writer.peer.network_name}'
-            log.error(msg)
+            log.info(msg)
             self.send_error(writer, KeyError(msg), writer.peer.address)
 
     def send_request(self, writer, attribute, *args, **kwargs):
@@ -557,7 +570,7 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
     # loop.set_debug(debug)
 
     server = loop.run_until_complete(
-        asyncio.start_server(manager.new_connection, port=port, ssl=context, loop=loop)
+        asyncio.start_server(manager.new_connection, port=port, ssl=context, loop=loop, limit=sys.maxsize)
     )
 
     log.info(f'Network Manager running on {HOSTNAME}:{port} using {context.protocol.name}')

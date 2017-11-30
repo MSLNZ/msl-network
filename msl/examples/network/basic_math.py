@@ -22,34 +22,34 @@ class BasicMath(Service):
         return 3.1415926
 
     def add(self, x: int, y: int) -> int:
-        log.info('add -- sleeping for 1 second')
+        log.info(f'BasicMath.add({x}, {y}) -- sleeping for 1 second')
         time.sleep(1)
         return x + y
 
     def subtract(self, x: int, y: int) -> int:
-        log.info('subtract -- sleeping for 2 seconds')
+        log.info(f'BasicMath.subtract({x}, {y}) -- sleeping for 2 seconds')
         time.sleep(2)
         return x - y
 
     def multiply(self, x: float, y: float) -> float:
-        log.info('multiply -- sleeping for 3 seconds')
+        log.info(f'BasicMath.multiply({x}, {y}) -- sleeping for 3 seconds')
         time.sleep(3)
         return x * y
 
     def divide(self, x: float, y: float) -> float:
-        log.info('divide -- sleeping for 4 seconds')
+        log.info(f'BasicMath.divide({x}, {y}) -- sleeping for 4 seconds')
         time.sleep(4)
         return x / float(y)
 
     def error_if_negative(self, x: float) -> bool:
-        log.info('error_if_negative -- sleeping for 5 seconds')
+        log.info(f'BasicMath.error_if_negative({x}) -- sleeping for 5 seconds')
         time.sleep(5)
         if x < 0:
             raise ValueError('The value is < 0')
         return True
 
-    def power(self, x: float, n: int =2) -> float:
-        log.info('power -- sleeping for 6 seconds')
+    def power(self, x: float, n: int=2) -> float:
+        log.info(f'BasicMath.power({x}, {n}) -- sleeping for 6 seconds')
         time.sleep(6)
         return x ** n
 

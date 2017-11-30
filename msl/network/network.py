@@ -2,10 +2,12 @@
 Base class for all :class:`~msl.network.manager.Manager`'\s,
 :class:`~msl.network.service.Service`'\s and :class:`~msl.network.client.Client`'\s.
 """
-import json
+import time
 import asyncio
 import logging
 import traceback
+
+from .json import serialize
 
 log = logging.getLogger(__name__)
 
@@ -19,8 +21,8 @@ class Network(object):
     encoding = 'utf-8'
     """:obj:`str`: The encoding to use to convert a :obj:`str` to :obj:`bytes`."""
 
-    _debug = False
     _network_name = None  # helpful for debugging who is sending what to where
+    _max_print_size = 256  # the maximum number of characters to display when debugging
 
     def identity(self):
         """Identify oneself on the network.
@@ -105,9 +107,25 @@ class Network(object):
         line : :obj:`bytes`
             The bytes to send (that are already terminated with the line-feed character).
         """
+        n = len(line)
+
         if self._debug:
-            log.debug(f'{self._network_name} sent {line}')
+            log.debug(f'{self._network_name} is sending {n} bytes')
+            if n > self._max_print_size:
+                log.debug(line[:self._max_print_size//2] + b' ... ' + line[-self._max_print_size//2:])
+            else:
+                log.debug(line)
+
+        t0 = time.perf_counter()
         writer.write(line)
+
+        if self._debug:
+            dt = time.perf_counter() - t0
+            if dt > 0:
+                log.debug('{} sent {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
+                    self._network_name, n, dt, n*1e-6/dt))
+            else:
+                log.debug('{} sent {} bytes in {:.3f} useconds'.format(self._network_name, n, dt*1e6))
 
     def send_data(self, writer, data):
         """Serialize `data` as JSON_ bytes and send.
@@ -126,9 +144,8 @@ class Network(object):
             Any object that can be serialized into a JSON_ string.
         """
         try:
-            self.send_line(writer, (json.dumps(data) + '\n').encode(self.encoding))
-        except (json.JSONDecodeError, TypeError) as e:
-            # get TypeError if an object is not JSON serializable
+            self.send_line(writer, (serialize(data) + '\n').encode(self.encoding))
+        except Exception as e:
             self.send_error(writer, e, data['requester'])
 
     def send_error(self, writer, error, requester):
