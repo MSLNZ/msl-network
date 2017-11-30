@@ -100,7 +100,7 @@ setup(
     ],
     setup_requires=sphinx + pytest_runner,
     tests_require=['pytest-cov', 'pytest'],
-    install_requires=['cryptography'],
+    install_requires=['cryptography', 'ujson'],
     cmdclass={'docs': BuildDocs, 'apidocs': ApiDocs},
     entry_points={
         'console_scripts': [
