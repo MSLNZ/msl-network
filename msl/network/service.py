@@ -124,14 +124,12 @@ class Service(Network, asyncio.Protocol):
             The input data **MUST** have one of the following formats.
 
             If the input data represents an error from the Network
-            :class:`~msl.network.manager.Manager` then the JSON_ object will be::
+            :class:`~msl.network.manager.Manager` then the JSON_ object must contain::
 
                 {
                     'error' : boolean (True)
                     'message': string (a short description of the error message)
                     'traceback': list of strings (a detailed stack trace of the error)
-                    'return': null
-                    'requester': string (the hostname:port of the Manager)
                 }
 
             If the input data represents a request from a :class:`~msl.network.client.Client`
@@ -142,6 +140,7 @@ class Service(Network, asyncio.Protocol):
                     'args': object (arguments to be passed to the Service's method)
                     'kwargs': object (keyword arguments to be passed to the Service's method)
                     'requester': string (the address of the device that made the request)
+                    'uuid' string (the universally unique identifier of the request)
                 }
 
         Returns
@@ -151,22 +150,23 @@ class Service(Network, asyncio.Protocol):
 
             A :class:`Service` will reply with a JSON_ object in one of the following formats.
 
-            If the :class:`Service` raised an exception then the JSON_ object must contain::
+            If the :class:`Service` raised an exception then the JSON_ object will be::
 
                 {
                     'error' : boolean (True)
                     'message': string (a short description of the error)
                     'traceback': list of strings (a detailed stack trace of the error)
-                    'return': null
+                    'result': null
                     'requester': string (the address of the device that made the request)
                 }
 
-            If the :class:`Service` successfully executed the request then the JSON_ object
-            must contain::
+            If the :class:`Service` successfully processed the request then the JSON_ object
+            will be::
 
                 {
-                    'return': object (whatever the reply is from the Service)
+                    'result': object (whatever the reply is from the Service)
                     'requester': string (the address of the device that made the request)
+                    'uuid' string (the universally unique identifier of the request)
                     'error' : boolean (False)
                 }
 
@@ -180,10 +180,11 @@ class Service(Network, asyncio.Protocol):
         if not data.endswith(b'\n'):
             return
 
+        dt = time.perf_counter() - self._t0
         buffer_bytes = bytes(self._buffer)
+        self._buffer.clear()
 
         if self._debug:
-            dt = time.perf_counter() - self._t0
             n = len(buffer_bytes)
             if dt > 0:
                 log.debug('{} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
@@ -197,11 +198,9 @@ class Service(Network, asyncio.Protocol):
 
         try:
             data = deserialize(buffer_bytes)
-            self._buffer.clear()
         except Exception as e:
             log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
             self.send_error(self._transport, e, None)
-            self._buffer.clear()
             return
 
         if data.get('error', False):
@@ -210,7 +209,8 @@ class Service(Network, asyncio.Protocol):
             # Service, which could happen during the handshake if the password or identity
             # that the Service provided was invalid.
             try:
-                msg = '\n'.join(data['traceback'])  # traceback should be a list of strings
+                if data['traceback']:
+                    msg = '\n'.join(data['traceback'])  # traceback should be a list of strings
             except (TypeError, KeyError):
                 msg = data.get('message', 'Error: Unfortunately, no error message has been provided')
             log.error(f'{self._network_name} {msg}')
@@ -233,7 +233,7 @@ class Service(Network, asyncio.Protocol):
         else:
             reply = attrib
 
-        self.send_reply(self._transport, reply, requester=data['requester'])
+        self.send_reply(self._transport, reply, requester=data['requester'], uuid=data['uuid'])
 
     def connection_lost(self, exc):
         """Automatically called when the connection to the

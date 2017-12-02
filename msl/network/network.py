@@ -165,12 +165,12 @@ class Network(object):
         self.send_data(writer, {
             'error': True,
             'message': message,
-            'traceback': [message] if tb.startswith('NoneType:') else tb.splitlines(),
-            'return': None,
+            'traceback': [] if tb.startswith('NoneType:') else tb.splitlines(),
+            'result': None,
             'requester': requester,
         })
 
-    def send_reply(self, writer, reply, *, requester=None):
+    def send_reply(self, writer, reply, *, requester=None, uuid=None):
         """Send a reply through the network.
 
         :class:`~msl.network.client.Client`\'s, :class:`~msl.network.service.Service`\'s
@@ -184,9 +184,11 @@ class Network(object):
             The writer.
         reply : :obj:`object`
             Any object that can be serialized into a JSON_ string.
+        uuid : :obj:`str`
+            The universally unique identifier of the request.
         requester : :obj:`str`
             The address, ``host:port``, of the device that sent the request.
             It is only mandatory to specify the address of the `requester` if a
             :class:`~msl.network.service.Service` is sending the reply.
         """
-        self.send_data(writer, {'return': reply, 'requester': requester, 'error': False})
+        self.send_data(writer, {'result': reply, 'requester': requester, 'uuid': uuid, 'error': False})

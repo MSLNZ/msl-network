@@ -130,7 +130,7 @@ class Manager(Network):
 
         user = self.users_table.get_user(username)
         if not user:
-            log.debug(f'{reader.peer.network_name} sent a unregistered username, closing connection')
+            log.error(f'{reader.peer.network_name} sent a unregistered username, closing connection')
             self.connections_table.insert(reader.peer, 'rejected: unregistered username')
             self.send_error(writer, ValueError('Unregistered username'), self._network_name)
             await self.close_writer(writer)
@@ -200,7 +200,7 @@ class Manager(Network):
         Returns
         -------
         :obj:`str` or :obj:`None`
-            If the identity check was successful the returns the connection type,
+            If the identity check was successful then returns the connection type,
             either ``'client'`` or ``'service'``, otherwise returns :obj:`None`.
         """
         log.info(f'{self._network_name} requesting identity from {writer.peer.network_name}')
@@ -272,7 +272,7 @@ class Manager(Network):
         try:
             # ideally the response from the connected device will be in
             # the required JSON format
-            return deserialize(data)['return']
+            return deserialize(data)['result']
         except:
             # however, if connecting via a terminal, e.g. Putty,  then it is convenient
             # to not manually type the JSON format and let the Manager parse the raw input
@@ -326,7 +326,7 @@ class Manager(Network):
                     self.send_error(writer, e, reader.peer.address)
                     continue
 
-            if 'return' in data:
+            if 'result' in data:
                 # then data is a reply from a Service so send it back to the Client
                 if data['requester'] is None:
                     log.error(f'{reader.peer.network_name} was not able to deserialize the bytes')
@@ -335,13 +335,13 @@ class Manager(Network):
                         self.send_line(self.client_writers[data['requester']][0], line)
                     except KeyError:
                         log.error(f'{self._network_name} Client at {data["requester"]} is no longer available')
-            elif data['service'] is None:
+            elif data['service'] == 'Manager':
                 # then the Client is requesting something from the Manager
                 if data['attribute'] == 'identity':
-                    self.send_reply(writer, self.identity(), requester=reader.peer.address)
+                    self.send_reply(writer, self.identity(), requester=reader.peer.address, uuid=data['uuid'])
                 elif data['attribute'] == 'link':
                     try:
-                        self.link(writer, data['args'][0])
+                        self.link(writer, data.get('uuid', None), data['args'][0])
                     except Exception as e:
                         log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
                         self.send_error(writer, e, reader.peer.address)
@@ -369,9 +369,9 @@ class Manager(Network):
                     try:
                         if callable(attrib):
                             self.send_reply(writer, attrib(*data['args'], **data['kwargs']),
-                                            requester=reader.peer.address)
+                                            requester=reader.peer.address)  # do not include the uuid
                         else:
-                            self.send_reply(writer, attrib, requester=reader.peer.address)
+                            self.send_reply(writer, attrib, requester=reader.peer.address)  # do not include the uuid
                     except Exception as e:
                         log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
                         self.send_error(writer, e, reader.peer.address)
@@ -452,7 +452,7 @@ class Manager(Network):
         the Network :class:`Manager`."""
         return self._identity
 
-    def link(self, writer, service):
+    def link(self, writer, uuid, service):
         """A request from the :class:`~msl.network.client.Client` to link it
         with a :class:`~msl.network.service.Service`.
 
@@ -460,6 +460,8 @@ class Manager(Network):
         ----------
         writer : :class:`asyncio.StreamWriter`
             The stream writer of the :class:`~msl.network.client.Client`.
+        uuid : :obj:`str`
+            The universally unique identifier of the request.
         service : :obj:`str`
             The name of the :class:`~msl.network.service.Service` that the
             :class:`~msl.network.client.Client` wants to link with.
@@ -468,7 +470,7 @@ class Manager(Network):
             address = self.services[service]['address']
             self.client_writers[writer.peer.address][1] = address
             log.info(f'linked {writer.peer.network_name} with {service}[{address}]')
-            self.send_reply(writer, True, requester=writer.peer.address)
+            self.send_reply(writer, True, requester=writer.peer.address, uuid=uuid)
         except KeyError:
             msg = f'{service} service does not exist, could not link with {writer.peer.network_name}'
             log.info(msg)
@@ -496,6 +498,7 @@ class Manager(Network):
             'args': args,
             'kwargs': kwargs,
             'requester': self._network_name,
+            'uuid': None,
             'error': False,
         })
 
