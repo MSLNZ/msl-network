@@ -225,7 +225,8 @@ class Manager(Network):
                     'language': identity.get('language', 'unknown'),
                     'os': identity.get('os', 'unknown'),
                 }
-                # in the following line, "None" is the Service that the writer will eventually be linked with
+                # in the following line, "None" will eventually be the address
+                # of the Service that the writer will be linked with
                 self.client_writers[reader.peer.address] = [writer, None]
                 log.info(f'{reader.peer.network_name} is a new Client connection')
             elif typ == 'service':
@@ -482,7 +483,7 @@ class Manager(Network):
             address = self.services[service]['address']
             self.client_writers[writer.peer.address][1] = address
             log.info(f'linked {writer.peer.network_name} with {service}[{address}]')
-            self.send_reply(writer, True, requester=writer.peer.address, uuid=uuid)
+            self.send_reply(writer, self.services[service], requester=writer.peer.address, uuid=uuid)
         except KeyError:
             msg = f'{service} service does not exist, could not link with {writer.peer.network_name}'
             log.info(msg)

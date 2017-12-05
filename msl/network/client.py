@@ -99,8 +99,6 @@ class Client(Network, asyncio.Protocol):
             'language': 'Python ' + platform.python_version(),
             'os': '{} {} {}'.format(platform.system(), platform.release(), platform.machine()),
         }
-        self._service = None
-        self._attribute = None
         self._handshake_finished = False
         self._latest_error = None
         self._buffer = bytearray()
@@ -108,6 +106,7 @@ class Client(Network, asyncio.Protocol):
         self._t0 = None  # used for profiling sections of the code
         self._requests = dict()
         self._futures = dict()
+        self._pending_requests_sent = False
 
     @property
     def name(self):
@@ -140,16 +139,8 @@ class Client(Network, asyncio.Protocol):
         self._timeout = value
 
     def __repr__(self):
-        return '<{} object at {:#x} manager={} port={} service={}>'.format(
-            self._name, id(self), self._address_manager, self._port, self._service)
-
-    def __getattr__(self, item):
-        self._attribute = item
-        return self._send_request_for_service
-
-    def __getitem__(self, item):
-        self._attribute = item
-        return self._send_request_for_service
+        return '<{} object at {:#x} manager={} port={}>'.format(
+            self._name, id(self), self._address_manager, self._port)
 
     def password(self, name):
         """:obj:`str`: The password required to connect to the Network
@@ -185,19 +176,21 @@ class Client(Network, asyncio.Protocol):
         service : :obj:`str`
             The name of the :class:`~msl.network.service.Service` to link with.
 
+        Returns
+        -------
+        :class:`~msl.network.client.Link`
+            A :class:`~msl.network.client.Link` with the requested `service`.
+
         Raises
         ------
-        :class:`Exception`
+        :class:`~msl.network.exceptions.NetworkManagerError`
             If there is no :class:`~msl.network.service.Service` available
             with the name `service`.
         """
         if self._debug:
-            log.debug(f'preparing to link with the {service} Service')
-        success = self._send_request_for_manager('link', service)
-        if success:
-            self._service = service
-        else:
-            self.raise_latest_error()
+            log.debug(f'preparing to link with {service}')
+        identity = self._send_request_for_manager('link', service)
+        return Link(self, service, identity)
 
     def disconnect(self):
         """Disconnect from the Network :class:`~msl.network.manager.Manager`."""
@@ -289,7 +282,7 @@ class Client(Network, asyncio.Protocol):
         --------
         admin_request('users_table.usernames')
         admin_request('users_table.is_user_registered', 'n.bohr')
-        admin_request('connections_table.connections')
+        admin_request('connections_table.connections', timestamp1='2017-11-29', timestamp2='2017-11-30')
         admin_request('shutdown_manager')  **WARNING: this will terminate all connections to the Manager**
         """
         reply = self._send_request_for_manager(attrib, *args, **kwargs)
@@ -416,8 +409,6 @@ class Client(Network, asyncio.Protocol):
         self._transport = None
         self._address_manager = None
         self._port = None
-        self._service = None
-        self._attribute = None
         self._loop.stop()
         if exc:
             raise exc
@@ -440,11 +431,93 @@ class Client(Network, asyncio.Protocol):
                        certificate=self._certificate, debug=self._debug)
 
     def raise_latest_error(self):
-        """Raises the latest exception that was received from the Network
-        :class:`~msl.network.manager.Manager`. If there is no error then
-        calling this method does nothing."""
+        """
+        Raises the latest exception that was received from the Network
+        :class:`~msl.network.manager.Manager` as a :exc:`~msl.network.exception.NetworkManagerError`
+        exception.
+
+        If there is no error then calling this method does nothing.
+        """
         if self._latest_error:
             raise NetworkManagerError(self._latest_error)
+
+    def send_request(self, service, attribute, *args, **kwargs):
+        """Send a request to a :class:`~msl.network.service.Service` on the
+        Network :class:`~msl.network.manager.Manager`.
+
+        Although a :class:`Client` can call this method directly, it is recommended to create
+        a :meth:`link` with a :class:`~msl.network.service.Service` and to send requests via the
+        :class:`Link` object.
+
+        Parameters
+        ----------
+        service : :obj:`str`
+            The name of the :class:`~msl.network.service.Service`
+        attribute : :obj:`str`
+            The name of the property or method of the :class:`~msl.network.service.Service`
+            to process the request.
+        args : :obj:`list`
+            The arguments that the :class:`~msl.network.service.Service` `attribute`
+            requires.
+        kwargs : :obj:`dict`
+            The keyword arguments that the :class:`~msl.network.service.Service`
+            `attribute` requires.
+
+        Returns
+        -------
+        The result from the :class:`~msl.network.service.Service` executing the request or
+        an :class:`asyncio.Future` object if the ``async=True`` keyword argument is specified.
+        If sending asynchronous requests then you must call :meth:`send_pending_requests`
+        to be able to get the result from each :class:`asyncio.Future`.
+
+        Raises
+        ------
+        ConnectionError
+            If the connection to the Network :class:`~msl.network.manager.Manager`
+            has been disconnected.
+        ValueError
+            If there are asynchronous requests pending and a synchronous request is made.
+        :exc:`~msl.network.exception.NetworkManagerError`
+            If there was an error executing the request.
+        """
+        if self._transport is None:
+            raise ConnectionError(f'{self} has been disconnected')
+
+        send_asynchronously = kwargs.pop('async', False)
+        if not send_asynchronously and self._futures:
+            raise ValueError('Asynchronous requests are pending. '
+                             'You must call the wait() method to wait for them to '
+                             'finish before sending a synchronous request')
+
+        uid = self._create_request(service, attribute, *args, **kwargs)
+        if send_asynchronously:
+            return self._futures[uid]
+        else:
+            self.send_data(self._transport, self._requests[uid])
+            self._wait(uid)
+            result = self._futures[uid].result()
+            self._remove_future(uid)
+            return result
+
+    def send_pending_requests(self, wait=True):
+        """Send all pending requests to the Network :class:`~msl.network.manager.Manager`.
+
+        Parameters
+        ----------
+        wait : :obj:`bool`, optional
+            Whether to wait for all pending requests to finish before returning to
+            the calling program. If wait is :obj:`True` then this method will block
+            until all requests are done executing. If wait is :obj:`False` then this
+            method will return immediately and you must call the :meth:`wait` method
+            to ensure that all pending requests have a result.
+        """
+        for request in self._requests.values():
+            if self._debug:
+                log.debug(f'sending request to {request["service"]}.{request["attribute"]}')
+            self.send_data(self._transport, request)
+        self._pending_requests_sent = True
+        if wait:
+            self._wait()
 
     def start(self, host, port, timeout, username, password, password_manager, certificate, debug):
         """Start the connection to a Network :class:`~msl.network.manager.Manager`.
@@ -536,12 +609,11 @@ class Client(Network, asyncio.Protocol):
         return True
 
     def wait(self):
-        for data in self._requests.values():
-            if self._debug:
-                log.debug(f'sending request to {data["service"]}.{data["attribute"]}')
-            self.send_data(self._transport, data)
+        """This method will not return until all pending requests are done executing."""
+        if not self._pending_requests_sent:
+            self.send_pending_requests(False)
         self._wait()
-        self._clear_all_futures()
+        self._pending_requests_sent = False
 
     def _wait(self, uid=None):
         # Do not use asyncio.wait_for and asyncio.wait since they are coroutines.
@@ -579,6 +651,9 @@ class Client(Network, asyncio.Protocol):
         for future in self._futures.values():
             if future.cancelled():
                 self.raise_latest_error()
+
+        if uid is None:
+            self._clear_all_futures()
 
     def _create_future(self):
         uid = str(uuid.uuid4())
@@ -619,27 +694,6 @@ class Client(Network, asyncio.Protocol):
             log.debug(f'created request {service}.{attribute} [{len(self._requests)} pending]')
         return uid
 
-    def _send_request_for_service(self, *args, **kwargs):
-        # Send __getattr__ and  __getitem__ requests to the Manager
-        if self._service is None:
-            raise ValueError(f'{self._network_name} has not been linked to a Service yet')
-
-        send_asynchronously = kwargs.pop('async', False)
-        if not send_asynchronously and self._futures:
-            raise ValueError('Asynchronous requests are pending. '
-                             'You must call the wait() method to wait for them to '
-                             'finish before sending a synchronous request')
-
-        uid = self._create_request(self._service, self._attribute, *args, **kwargs)
-        if send_asynchronously:
-            return self._futures[uid]
-        else:
-            self.send_data(self._transport, self._requests[uid])
-            self._wait(uid)
-            result = self._futures[uid].result()
-            self._remove_future(uid)
-            return result
-
     def _send_request_for_manager(self, attribute, *args, **kwargs):
         # the request is for the Manager to handle, not for a Service
         if self._debug:
@@ -650,3 +704,53 @@ class Client(Network, asyncio.Protocol):
         result = self._futures[uid].result()
         self._remove_future(uid)
         return result
+
+
+class Link(object):
+
+    def __init__(self, client, service, identity):
+        """Creates a link with a :class:`~msl.network.service.Service`.
+
+        .. attention::
+            Not to be instantiated directly. A :class:`Client` creates the link
+            via the :meth:`Client.link` method.
+        """
+        self._client = client
+        self._service_name = service
+        self._service_identity = identity
+        if client._debug:
+            log.debug(f'linked with {service}[{identity["address"]}]')
+
+    @property
+    def service_name(self):
+        """:obj:`str`: The name of the :class:`~msl.network.service.Service` that this object is linked with."""
+        return self._service_name
+
+    @property
+    def service_address(self):
+        """:obj:`str`: The address of the :class:`~msl.network.service.Service` that this object is linked with."""
+        return self._service_identity['address']
+
+    @property
+    def service_attributes(self):
+        """:obj:`dict`: The attributes of the :class:`~msl.network.service.Service`
+        that this object is linked with."""
+        return self._service_identity['attributes']
+
+    @property
+    def service_language(self):
+        """:obj:`str`: The programming language that the :class:`~msl.network.service.Service` is running on."""
+        return self._service_identity['language']
+
+    @property
+    def service_os(self):
+        """:obj:`str`: The operating system that the :class:`~msl.network.service.Service` is running on."""
+        return self._service_identity['os']
+
+    def __repr__(self):
+        return f'<Link with {self.service_name}[{self.service_address}] at Manager[{self._client.address_manager}]>'
+
+    def __getattr__(self, item):
+        def service_request(*args, **kwargs):
+            return self._client.send_request(self._service_name, item, *args, **kwargs)
+        return service_request
