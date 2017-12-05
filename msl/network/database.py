@@ -208,10 +208,12 @@ class ConnectionsTable(Database):
 
         Parameters
         ----------
-        timestamp1 : :obj:`datetime.datetime`, optional
-            Include all records that have a timestamp > `timestamp1`.
-        timestamp2 : :obj:`datetime.datetime`, optional
-            Include all records that have a timestamp < `timestamp2`.
+        timestamp1 : :obj:`datetime.datetime` or :obj:`str`, optional
+            Include all records that have a timestamp > `timestamp1`. If a
+            :obj:`str` then in the ``yyyy-mm-dd`` or ``yyyy-mm-dd HH:MM:SS`` format.
+        timestamp2 : :obj:`datetime.datetime` or :obj:`str`, optional
+            Include all records that have a timestamp < `timestamp2`. If a
+            :obj:`str` then in the ``yyyy-mm-dd`` or ``yyyy-mm-dd HH:MM:SS`` format.
 
         Returns
         -------
