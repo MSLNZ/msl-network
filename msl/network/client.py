@@ -6,6 +6,7 @@ import uuid
 import asyncio
 import getpass
 import logging
+import platform
 import threading
 
 from .network import Network
@@ -92,7 +93,12 @@ class Client(Network, asyncio.Protocol):
         self._password_manager = None
         self._transport = None
         self._certificate = None
-        self._identity = {'type': 'client', 'name': name}
+        self._identity = {
+            'type': 'client',
+            'name': name,
+            'language': 'Python ' + platform.python_version(),
+            'os': '{} {} {}'.format(platform.system(), platform.release(), platform.machine()),
+        }
         self._service = None
         self._attribute = None
         self._handshake_finished = False
@@ -225,37 +231,38 @@ class Client(Network, asyncio.Protocol):
         if not as_yaml:
             return identity
         space = ' ' * indent
-        if self._service:
-            service_address = identity["services"][self._service]["address"]
-            s = [f'{self._name}[{self._port}] is currently linked with {self._service}[{service_address}]\n']
-        else:
-            s = [f'{self._name}[{self._port}] is not currently linked with a Service\n']
-        s.append(f'Summary for the Network Manager at {self._address_manager}\n')
-        s.append('Manager:\n')
+        s = [f'Manager[{identity["hostname"]}:{identity["port"]}]']
         for key in sorted(identity):
-            if key == 'clients' or key == 'services':
+            if key in ('clients', 'services', 'hostname', 'port'):
                 pass
             elif key == 'attributes':
-                s.append(space + 'attributes:\n')
+                s.append(space + 'attributes:')
                 for item in sorted(identity[key]):
-                    s.append(2 * space + f'{item}: {identity[key][item]}\n')
+                    s.append(2 * space + f'{item}: {identity[key][item]}')
             else:
-                s.append(space + f'{key}: {identity[key]}\n')
-        s.append(f'Clients [{len(identity["clients"])}]:\n')
-        for client in sorted(identity['clients']):
-            s.append(space + f'{identity["clients"][client]}: {client}\n')
-        s.append(f'Services [{len(identity["services"])}]:\n')
+                s.append(space + f'{key}: {identity[key]}')
+        s.append(f'Clients [{len(identity["clients"])}]:')
+        for address in sorted(identity['clients']):
+            s.append(space + f'{identity["clients"][address]["name"]}[{address}]')
+            keys = identity['clients'][address]
+            for key in sorted(keys):
+                if key == 'name':
+                    continue
+                s.append(2 * space + f'{key}: {keys[key]}')
+        s.append(f'Services [{len(identity["services"])}]:')
         for name in sorted(identity['services']):
-            s.append(space + f'{name}:\n')
+            s.append(space + f'{name}[{identity["services"][name]["address"]}]')
             service = identity['services'][name]
             for key in sorted(service):
                 if key == 'attributes':
-                    s.append(2 * space + 'attributes:\n')
+                    s.append(2 * space + 'attributes:')
                     for item in sorted(service[key]):
-                        s.append(3 * space + f'{item}: {service[key][item]}\n')
+                        s.append(3 * space + f'{item}: {service[key][item]}')
+                elif key == 'address':
+                    continue
                 else:
-                    s.append(2 * space + f'{key}: {service[key]}\n')
-        return ''.join(s)
+                    s.append(2 * space + f'{key}: {service[key]}')
+        return '\n'.join(s)
 
     def admin_request(self, attrib, *args, **kwargs):
         """Request something from the Network :class:`~msl.network.manager.Manager`
@@ -277,10 +284,18 @@ class Client(Network, asyncio.Protocol):
         Returns
         -------
         The reply from the Network :class:`~msl.network.manager.Manager`.
+
+        Examples
+        --------
+        admin_request('users_table.usernames')
+        admin_request('users_table.is_user_registered', 'n.bohr')
+        admin_request('connections_table.connections')
+        admin_request('shutdown_manager')  **WARNING: this will terminate all connections to the Manager**
         """
         reply = self._send_request_for_manager(attrib, *args, **kwargs)
         if 'result' not in reply:
             # then we need to send an admin username and password
+            result = None
             for method in ('username', 'password'):
                 uid = self._create_future()
                 if method == 'username':
@@ -288,7 +303,7 @@ class Client(Network, asyncio.Protocol):
                 else:
                     self.send_reply(self._transport, self.password(self._username))
                 self._wait(uid)
-                if method == 'password':
+                if method == 'password' and attrib != 'shutdown_manager':
                     result = self._futures[uid].result()['result']
                 self._remove_future(uid)
             return result
@@ -300,7 +315,8 @@ class Client(Network, asyncio.Protocol):
         self._transport = transport
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self.name, self._port)
-        log.debug(f'{self} connection made')
+        if self._debug:
+            log.debug(f'{self} connection made')
 
     def data_received(self, reply):
         """New data is received for the :class:`Client`.
@@ -319,21 +335,33 @@ class Client(Network, asyncio.Protocol):
             If the input data represents an error then the JSON_ object will be::
 
                 {
-                    'error' : boolean (True)
+                    'error' : true
                     'message': string (a short description of the error)
                     'traceback': list of strings (a detailed stack trace of the error)
                     'result': null
                     'requester': string (the address of the device that made the request)
                 }
 
-            If the output data **does not** represent an error then the JSON_ object
-            will be::
+            If the input data represents a request from the Network :class:`~msl.network.manager.Manager`
+            then the JSON_ object will be::
 
                 {
-                    'result': object (whatever the reply is from the Service)
-                    'requester': string (the address of the device that made the request)
+                    'error' : false
+                    'attribute' : string (the name of a method to call from the Client)
+                    'args': object (arguments to be passed to the Client's method)
+                    'kwargs': object (keyword arguments to be passed to the Client's method)
+                    'requester': string (the address of the Network Manager)
+                    'uuid': string (an empty string)
+                }
+
+            If the input data represent a reply from the :class:`~msl.network.service.Service`
+            then the JSON_ object will be::
+
+                {
+                    'error' : false
+                    'result': object (the reply is from the Service)
+                    'requester': string (the address of the Client that made the request)
                     'uuid' string (the universally unique identifier of the request)
-                    'error' : boolean (False)
                 }
 
         """
@@ -381,7 +409,8 @@ class Client(Network, asyncio.Protocol):
     def connection_lost(self, exc):
         """Automatically called when the connection to the Network
         :class:`~msl.network.manager.Manager` has been closed."""
-        log.debug(f'{self} connection lost')
+        if self._debug:
+            log.debug(f'{self} connection lost')
         for future in self._futures.values():
             future.cancel()
         self._transport = None
@@ -474,8 +503,6 @@ class Client(Network, asyncio.Protocol):
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
-        # self._loop.set_debug(debug)
-
         self._loop.run_until_complete(
             self._loop.create_connection(
                 lambda: self,
@@ -556,18 +583,27 @@ class Client(Network, asyncio.Protocol):
     def _create_future(self):
         uid = str(uuid.uuid4())
         self._futures[uid] = self._loop.create_future()
+        if self._debug:
+            log.debug(f'created future[{uid}]')
         return uid
 
     def _remove_future(self, uid):
-        if self._debug:
-            log.debug(f'removing future for {self._requests[uid]["service"]}.{self._requests[uid]["attribute"]} '
-                      f'[{len(self._requests)-1} pending]')
         del self._futures[uid]
-        del self._requests[uid]
+        if self._debug:
+            log.debug(f'removed future[{uid}]; {len(self._futures)} pending')
+        try:
+            # In general, we want to delete the request when the future is deleted.
+            # However, the admin_request() method does not create a new self._request[uid]
+            # when the Manager is requesting the username and password from the Client.
+            del self._requests[uid]
+        except KeyError:
+            pass
 
     def _clear_all_futures(self):
         self._futures.clear()
         self._requests.clear()
+        if self._debug:
+            log.debug('removed all futures')
 
     def _create_request(self, service, attribute, *args, **kwargs):
         uid = self._create_future()

@@ -76,11 +76,9 @@ class Network(object):
 
             - language : string, optional
                 The programming language that the :class:`~msl.network.service.Service` is running on.
-                Default is null.
 
             - os : string, optional
                 The operating system that the :class:`~msl.network.service.Service` is running on.
-                Default is null.
 
         * :class:`~msl.network.client.Client`
 
@@ -89,6 +87,12 @@ class Network(object):
 
             - name : string
                 The name to associate with the :class:`~msl.network.client.Client` (can contain spaces).
+
+            - language : string, optional
+                The programming language that the :class:`~msl.network.client.Client` is running on.
+
+            - os : string, optional
+                The operating system that the :class:`~msl.network.client.Client` is running on.
 
         Returns
         -------
@@ -110,7 +114,7 @@ class Network(object):
         n = len(line)
 
         if self._debug:
-            log.debug(f'{self._network_name} is sending {n} bytes')
+            log.debug(f'{self._network_name} is sending {n} bytes...')
             if n > self._max_print_size:
                 log.debug(line[:self._max_print_size//2] + b' ... ' + line[-self._max_print_size//2:])
             else:
@@ -170,7 +174,7 @@ class Network(object):
             'requester': requester,
         })
 
-    def send_reply(self, writer, reply, *, requester=None, uuid=None):
+    def send_reply(self, writer, reply, *, requester='', uuid=''):
         """Send a reply through the network.
 
         :class:`~msl.network.client.Client`\'s, :class:`~msl.network.service.Service`\'s
@@ -184,9 +188,9 @@ class Network(object):
             The writer.
         reply : :obj:`object`
             Any object that can be serialized into a JSON_ string.
-        uuid : :obj:`str`
+        uuid : :obj:`str`, optional
             The universally unique identifier of the request.
-        requester : :obj:`str`
+        requester : :obj:`str`, optional
             The address, ``host:port``, of the device that sent the request.
             It is only mandatory to specify the address of the `requester` if a
             :class:`~msl.network.service.Service` is sending the reply.

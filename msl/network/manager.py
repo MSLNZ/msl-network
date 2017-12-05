@@ -128,7 +128,7 @@ class Manager(Network):
         if not username:  # then the connection closed prematurely
             return False
 
-        user = self.users_table.get_user(username)
+        user = self.users_table.is_user_registered(username)
         if not user:
             log.error(f'{reader.peer.network_name} sent a unregistered username, closing connection')
             self.connections_table.insert(reader.peer, 'rejected: unregistered username')
@@ -220,8 +220,12 @@ class Manager(Network):
 
             typ = identity['type'].lower()
             if typ == 'client':
-                self.clients[reader.peer.address] = identity['name']
-                # in the following line: None -> the Service that the writer will eventually be linked with
+                self.clients[reader.peer.address] = {
+                    'name': identity['name'],
+                    'language': identity.get('language', 'unknown'),
+                    'os': identity.get('os', 'unknown'),
+                }
+                # in the following line, "None" is the Service that the writer will eventually be linked with
                 self.client_writers[reader.peer.address] = [writer, None]
                 log.info(f'{reader.peer.network_name} is a new Client connection')
             elif typ == 'service':
@@ -230,8 +234,8 @@ class Manager(Network):
                 self.services[identity['name']] = {
                     'attributes': identity['attributes'],
                     'address': identity.get('address', reader.peer.address),
-                    'language': identity.get('language', 'Unknown'),
-                    'os': identity.get('os', 'Unknown'),
+                    'language': identity.get('language', 'unknown'),
+                    'os': identity.get('os', 'unknown'),
                 }
                 self.service_writers[identity['name']] = writer
                 log.info(f'{reader.peer.network_name} is a new Service connection')
@@ -341,12 +345,13 @@ class Manager(Network):
                     self.send_reply(writer, self.identity(), requester=reader.peer.address, uuid=data['uuid'])
                 elif data['attribute'] == 'link':
                     try:
-                        self.link(writer, data.get('uuid', None), data['args'][0])
+                        self.link(writer, data.get('uuid', ''), data['args'][0])
                     except Exception as e:
                         log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
                         self.send_error(writer, e, reader.peer.address)
                 else:
-                    # the peer needs admin rights to send any other request to the Manager
+                    # the peer needs administrative rights to send any other request to the Manager
+                    log.info('received an admin request from {reader.peer.network_name}')
                     if not reader.peer.is_admin:
                         await self.check_user(reader, writer)
                         if not reader.peer.is_admin:
@@ -356,6 +361,12 @@ class Manager(Network):
                                 reader.peer.address,
                             )
                             continue
+                    if data['attribute'] == 'shutdown_manager':
+                        # shutting down the Manager needs to be "awaited"
+                        # so it is different from all other admin-type requests
+                        log.info(f'received shutdown request from {reader.peer.network_name}')
+                        await self.shutdown_manager()
+                        return
                     # check for multiple dots "." in the name of the attribute
                     try:
                         attrib = self
@@ -439,13 +450,14 @@ class Manager(Network):
         log.info(f'{writer.peer.network_name} connection closed')
         self.connections_table.insert(writer.peer, 'disconnected')
 
-    async def shutdown_server(self):
+    async def shutdown_manager(self):
         """Safely disconnect all :class:`~msl.network.service.Service`\'s and
         :class:`~msl.network.client.Client`\'s."""
         for writer, _ in self.client_writers.values():
             await self.close_writer(writer)
         for writer in self.service_writers.values():
             await self.close_writer(writer)
+        asyncio.get_event_loop().stop()
 
     def identity(self):
         """:obj:`dict`: The :obj:`~msl.network.network.Network.identity` about
@@ -498,7 +510,7 @@ class Manager(Network):
             'args': args,
             'kwargs': kwargs,
             'requester': self._network_name,
-            'uuid': None,
+            'uuid': '',
             'error': False,
         })
 
@@ -570,8 +582,6 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
     # https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.AbstractEventLoop.create_connection
     loop = asyncio.get_event_loop()
 
-    # loop.set_debug(debug)
-
     server = loop.run_until_complete(
         asyncio.start_server(manager.new_connection, port=port, ssl=context, loop=loop, limit=sys.maxsize)
     )
@@ -586,7 +596,7 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
         log.info('shutting down the network manager')
 
         if manager.client_writers or manager.service_writers:
-            loop.run_until_complete(manager.shutdown_server())
+            loop.run_until_complete(manager.shutdown_manager())
 
         log.info('closing server')
         server.close()

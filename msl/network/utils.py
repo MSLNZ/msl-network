@@ -46,7 +46,7 @@ def parse_terminal_input(line):
 
         * To identify as a :class:`~msl.network.client.Client` enter ``client``.
 
-        * To identify as a :class:`~msl.network.client.Client` with a the name ``My Name``
+        * To identify as a :class:`~msl.network.client.Client` with the name ``My Name``
           enter ``client My Name``.
 
         * To request the identity of the Network :class:`~msl.network.manager.Manager`
@@ -65,7 +65,7 @@ def parse_terminal_input(line):
           For example,
 
           To request the addition of two numbers from a ``BasicMath.add(x, y)``
-          :class:`~msl.network.service.Service` enter ``BasicMath add x=4 y=10`` or ``BasicMath add 4 10``
+          :class:`~msl.network.service.Service` enter ``BasicMath add 4 10`` or ``BasicMath add x=4 y=10``
 
           To request concatenating two strings from a ``ModifyString.concat(s1, s2)``
           :class:`~msl.network.service.Service`, but with the :class:`~msl.network.service.Service`
@@ -104,10 +104,11 @@ def parse_terminal_input(line):
     line_lower = line.lower()
     if line_lower == 'identity':
         return {
-            'service': None,
+            'service': 'Manager',
             'attribute': 'identity',
             'args': [],
             'kwargs': {},
+            'uuid': '',
             'error': False,
         }
     elif line_lower.startswith('client'):
@@ -116,6 +117,8 @@ def parse_terminal_input(line):
         return {
             'type': 'client',
             'name': name.replace('"', ''),
+            'language': 'unknown',
+            'os': 'unknown',
             'error': False,
         }
     elif line_lower == '__disconnect__' or line_lower == 'disconnect' or line_lower == 'exit':
@@ -124,14 +127,16 @@ def parse_terminal_input(line):
             'attribute': '__disconnect__',
             'args': [],
             'kwargs': {},
+            'uuid': '',
             'error': False,
         }
     elif line_lower.startswith('link'):
         return {
-            'service': None,
+            'service': 'Manager',
             'attribute': 'link',
             'args': [line[4:].strip().replace('"', '')],
             'kwargs': {},
+            'uuid': '',
             'error': False,
         }
     else:
@@ -155,6 +160,7 @@ def parse_terminal_input(line):
                 'attribute': attribute,
                 'args': [],
                 'kwargs': {},
+                'uuid': '',
                 'error': False,
             }
         else:
@@ -170,6 +176,7 @@ def parse_terminal_input(line):
                 'attribute': attribute,
                 'args': args,
                 'kwargs': kwargs,
+                'uuid': '',
                 'error': False,
             }
 

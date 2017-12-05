@@ -124,18 +124,21 @@ class Service(Network, asyncio.Protocol):
             The input data **MUST** have one of the following formats.
 
             If the input data represents an error from the Network
-            :class:`~msl.network.manager.Manager` then the JSON_ object must contain::
+            :class:`~msl.network.manager.Manager` then the JSON_ object will be::
 
                 {
-                    'error' : boolean (True)
-                    'message': string (a short description of the error message)
+                    'error' : true
+                    'message': string (a short description of the error)
                     'traceback': list of strings (a detailed stack trace of the error)
+                    'result': null
+                    'requester': string (the address of the device that made the request)
                 }
 
             If the input data represents a request from a :class:`~msl.network.client.Client`
-            then the JSON_ object must contain::
+            then the JSON_ object will be::
 
                 {
+                    'error': false
                     'attribute': string (the name of a method or variable to access from the Service)
                     'args': object (arguments to be passed to the Service's method)
                     'kwargs': object (keyword arguments to be passed to the Service's method)
@@ -153,7 +156,7 @@ class Service(Network, asyncio.Protocol):
             If the :class:`Service` raised an exception then the JSON_ object will be::
 
                 {
-                    'error' : boolean (True)
+                    'error' : true
                     'message': string (a short description of the error)
                     'traceback': list of strings (a detailed stack trace of the error)
                     'result': null
@@ -164,10 +167,10 @@ class Service(Network, asyncio.Protocol):
             will be::
 
                 {
-                    'result': object (whatever the reply is from the Service)
+                    'error' : false
+                    'result': object (the reply is from the Service)
                     'requester': string (the address of the device that made the request)
                     'uuid' string (the universally unique identifier of the request)
-                    'error' : boolean (False)
                 }
 
         """
@@ -298,8 +301,6 @@ class Service(Network, asyncio.Protocol):
 
         self._loop = asyncio.get_event_loop()
 
-        # self._loop.set_debug(debug)
-
         self._loop.run_until_complete(
             self._loop.create_connection(
                 lambda: self,
@@ -308,12 +309,6 @@ class Service(Network, asyncio.Protocol):
                 ssl=context,
             )
         )
-
-        # https://stackoverflow.com/questions/27480967/why-does-the-asyncios-event-loop-suppress-the-keyboardinterrupt-on-windows
-        async def wakeup():
-            while True:
-                await asyncio.sleep(1)
-        asyncio.async(wakeup())
 
         try:
             self._loop.run_forever()

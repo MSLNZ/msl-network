@@ -108,7 +108,7 @@ def test_terminal_parser():
 
     for item in ['link Basic Math', 'linkBasic Math', 'link "Basic Math"', 'link  Basic Math ']:
         d = utils.parse_terminal_input(item)
-        assert d['service'] is None
+        assert d['service'] is 'Manager'
         assert d['attribute'] == 'link'
         assert d['args'][0] == 'Basic Math'
         assert isinstance(d['kwargs'], dict) and not d['kwargs']

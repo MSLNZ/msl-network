@@ -466,6 +466,11 @@ class UsersTable(Database):
         self.execute('SELECT username,is_admin FROM %s;' % self.NAME)
         return [(item[0], bool(item[1])) for item in self.cursor.fetchall()]
 
+    def is_user_registered(self, username):
+        """:obj:`bool`: Whether `username` is a registered user."""
+        self.execute('SELECT count(*) FROM %s WHERE username = ?;' % self.NAME, (username,))
+        return bool(self.cursor.fetchone()[0])
+
     def is_password_valid(self, username, password):
         """Check whether the password matches the encrypted password in the database.
 
@@ -481,18 +486,19 @@ class UsersTable(Database):
         :obj:`bool`
             Whether `password` matches the password in the database for the user.
         """
-        user = self.get_user(username)
-        if not user:
+        self.execute('SELECT key,salt FROM %s WHERE username = ?;' % self.NAME, (username,))
+        key_salt = self._cursor.fetchone()
+        if not key_salt:
             return False
         kdf = PBKDF2HMAC(
             algorithm=self._algorithm,
             length=self._length,
-            salt=user[3],
+            salt=key_salt[1],
             iterations=self._iterations,
             backend=default_backend()
         )
         try:
-            kdf.verify(password.encode(), user[2])
+            kdf.verify(password.encode(), key_salt[0])
             return True
         except InvalidKey:
             return False
@@ -510,9 +516,10 @@ class UsersTable(Database):
         :obj:`bool`
             Whether the user has admin rights.
         """
-        user = self.get_user(username)
+        self.execute('SELECT is_admin FROM %s WHERE username = ?;' % self.NAME, (username,))
+        user = self.cursor.fetchone()
         if user:
-            return bool(user[4])
+            return bool(user[0])
         return False
 
     def _ensure_user_exists(self, username, action):
