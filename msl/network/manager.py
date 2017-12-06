@@ -352,7 +352,7 @@ class Manager(Network):
                         self.send_error(writer, e, reader.peer.address)
                 else:
                     # the peer needs administrative rights to send any other request to the Manager
-                    log.info('received an admin request from {reader.peer.network_name}')
+                    log.info(f'received an admin request from {reader.peer.network_name}')
                     if not reader.peer.is_admin:
                         await self.check_user(reader, writer)
                         if not reader.peer.is_admin:
@@ -363,13 +363,11 @@ class Manager(Network):
                             )
                             continue
                     if data['attribute'] == 'shutdown_manager':
-                        # shutting down the Manager needs to be "awaited"
-                        # so it is different from all other admin-type requests
                         log.info(f'received shutdown request from {reader.peer.network_name}')
-                        await self.shutdown_manager()
+                        asyncio.get_event_loop().stop()
                         return
-                    # check for multiple dots "." in the name of the attribute
                     try:
+                        # check for multiple dots "." in the name of the attribute
                         attrib = self
                         for item in data['attribute'].split('.'):
                             attrib = getattr(attrib, item)
@@ -377,8 +375,8 @@ class Manager(Network):
                         log.error(f'{self._network_name} AttributeError: {e}')
                         self.send_error(writer, e, reader.peer.address)
                         continue
-                    # send the reply back to the Client
                     try:
+                        # send the reply back to the Client
                         if callable(attrib):
                             self.send_reply(writer, attrib(*data['args'], **data['kwargs']),
                                             requester=reader.peer.address)  # do not include the uuid
@@ -452,13 +450,17 @@ class Manager(Network):
         self.connections_table.insert(writer.peer, 'disconnected')
 
     async def shutdown_manager(self):
-        """Safely disconnect all :class:`~msl.network.service.Service`\'s and
-        :class:`~msl.network.client.Client`\'s."""
-        for writer, _ in self.client_writers.values():
+        """
+        Safely disconnect all :class:`~msl.network.service.Service`\'s and
+        :class:`~msl.network.client.Client`\'s.
+        """
+        # convert the dict_values to a list since we are modifying the dictionary in remove_peer()
+        for writer, _ in list(self.client_writers.values()):
             await self.close_writer(writer)
-        for writer in self.service_writers.values():
+            self.remove_peer('client', writer)
+        for writer in list(self.service_writers.values()):
             await self.close_writer(writer)
-        asyncio.get_event_loop().stop()
+            self.remove_peer('service', writer)
 
     def identity(self):
         """:obj:`dict`: The :obj:`~msl.network.network.Network.identity` about
@@ -598,6 +600,9 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
 
         if manager.client_writers or manager.service_writers:
             loop.run_until_complete(manager.shutdown_manager())
+
+        for task in asyncio.Task.all_tasks(loop):
+            task.cancel()
 
         log.info('closing server')
         server.close()
