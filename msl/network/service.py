@@ -1,6 +1,7 @@
 """
 Base class for all Services.
 """
+import os
 import time
 import asyncio
 import inspect
@@ -41,6 +42,7 @@ class Service(Network, asyncio.Protocol):
         self._network_name = self.name
         self._buffer = bytearray()
         self._t0 = None  # used for profiling sections of the code
+        self._futures = dict()
 
     @property
     def port(self):
@@ -227,21 +229,26 @@ class Service(Network, asyncio.Protocol):
             return
 
         if callable(attrib):
-            try:
-                reply = attrib(*data['args'], **data['kwargs'])
-            except Exception as e:
-                log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
-                self.send_error(self._transport, e, requester=data['requester'])
-                return
+            uid = os.urandom(16)
+            self._futures[uid] = self._loop.run_in_executor(None, self._function, attrib, data, uid)
         else:
-            reply = attrib
+            self.send_reply(self._transport, attrib, requester=data['requester'], uuid=data['uuid'])
+        log.info(f'{data["requester"]} requested {data["attribute"]} [{len(self._futures)} executing]')
 
-        self.send_reply(self._transport, reply, requester=data['requester'], uuid=data['uuid'])
+    def _function(self, attrib, data, uid):
+        try:
+            reply = attrib(*data['args'], **data['kwargs'])
+            self.send_reply(self._transport, reply, requester=data['requester'], uuid=data['uuid'])
+        except Exception as e:
+            log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
+            self.send_error(self._transport, e, requester=data['requester'])
+        self._futures.pop(uid, None)
 
     def connection_lost(self, exc):
         """Automatically called when the connection to the
         Network :class:`~msl.network.manager.Manager` has been closed."""
         log.info(f'{self} connection lost')
+        self._futures.clear()
         self._transport = None
         self._port = None
         self._address_manager = None
@@ -317,3 +324,4 @@ class Service(Network, asyncio.Protocol):
         finally:
             log.info(f'{self} disconnected')
             self._loop.close()
+            log.info('closed the event loop')

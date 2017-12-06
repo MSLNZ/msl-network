@@ -21,6 +21,7 @@ class Network(object):
     encoding = 'utf-8'
     """:obj:`str`: The encoding to use to convert a :obj:`str` to :obj:`bytes`."""
 
+    _debug = False
     _network_name = None  # helpful for debugging who is sending what to where
     _max_print_size = 256  # the maximum number of characters to display when debugging
 
@@ -111,6 +112,11 @@ class Network(object):
         line : :obj:`bytes`
             The bytes to send (that are already terminated with the line-feed character).
         """
+        if writer is None:
+            # could happen if the writer is for a Service and it was executing a
+            # request when Manager.shutdown_manager() was called
+            return
+
         n = len(line)
 
         if self._debug:
