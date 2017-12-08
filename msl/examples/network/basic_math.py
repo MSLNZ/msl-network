@@ -6,65 +6,55 @@ is running on the same computer (i.e., run ``msl-network start`` in a terminal
 to start the Network :class:`~msl.network.manager.Manager`).
 
 After the ``BasicMath`` :class:`~msl.network.service.Service` starts you can
-:obj:`~msl.network.client.connect` a :class:`~msl.network.client.Client` to the
-Network :class:`~msl.network.manager.Manager` to request the ``BasicMath``
-:class:`~msl.network.service.Service` to perform a task.
+:obj:`~msl.network.client.connect` to the Network :class:`~msl.network.manager.Manager`,
+:meth:`~msl.network.client.Client.link` with the ``BasicMath`` :class:`~msl.network.service.Service`
+and then have the ``BasicMath`` :class:`~msl.network.service.Service` execute tasks.
 """
+import time
+
 from msl.network import Service
 
 
 class BasicMath(Service):
 
-    euler = 2.7182818
+    euler = 2.718281828459045
 
     @property
     def pi(self):
-        return 3.1415926
+        return 3.141592653589793
 
     def add(self, x: int, y: int) -> int:
-        log.info(f'BasicMath.add({x}, {y}) -- sleeping for 1 second')
         time.sleep(1)
         return x + y
 
     def subtract(self, x: int, y: int) -> int:
-        log.info(f'BasicMath.subtract({x}, {y}) -- sleeping for 2 seconds')
         time.sleep(2)
         return x - y
 
     def multiply(self, x: float, y: float) -> float:
-        log.info(f'BasicMath.multiply({x}, {y}) -- sleeping for 3 seconds')
         time.sleep(3)
         return x * y
 
     def divide(self, x: float, y: float) -> float:
-        log.info(f'BasicMath.divide({x}, {y}) -- sleeping for 4 seconds')
         time.sleep(4)
         return x / float(y)
 
     def error_if_negative(self, x: float) -> bool:
-        log.info(f'BasicMath.error_if_negative({x}) -- sleeping for 5 seconds')
         time.sleep(5)
         if x < 0:
             raise ValueError('The value is < 0')
         return True
 
     def power(self, x: float, n: int=2) -> float:
-        log.info(f'BasicMath.power({x}, {n}) -- sleeping for 6 seconds')
         time.sleep(6)
         return x ** n
 
 
 if __name__ == '__main__':
-    import time
     import logging
 
-    debug = True
-
-    log = logging.getLogger('basic_math')
-    logging.basicConfig(
-        level=logging.DEBUG if debug else logging.INFO,
-        format='%(asctime)s [%(levelname)-5s] %(name)s - %(message)s',
-    )
+    # allows for "info" log messages to be visible from the Service
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)-5s] %(name)s - %(message)s', )
 
     service = BasicMath()
-    service.start(debug=debug)
+    service.start()
