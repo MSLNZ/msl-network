@@ -24,9 +24,10 @@ def ensure_root_path(path):
         this function would ensure that the ``/the/path/to/my/test`` directory
         exists creating the intermediate directories if necessary.
     """
-    root = os.path.dirname(path)
-    if root and not os.path.isdir(root):
-        os.makedirs(root)
+    if path is not None:
+        root = os.path.dirname(path)
+        if root and not os.path.isdir(root):
+            os.makedirs(root)
 
 
 def parse_terminal_input(line):
@@ -49,18 +50,24 @@ def parse_terminal_input(line):
         * To identify as a :class:`~msl.network.client.Client` with the name ``My Name``
           enter ``client My Name``.
 
-        * To request the identity of the Network :class:`~msl.network.manager.Manager`
-          enter ``identity``
+        * To request something from the Network :class:`~msl.network.manager.Manager` use
+          the following format ``Manager <attribute> [<arguments>, [<keyword_arguments>]]``
 
-        * You **MUST** request to link the :class:`~msl.network.client.Client` with a
-          :class:`~msl.network.service.Service` so that the response from the
-          :class:`~msl.network.service.Service` can be routed back to the
-          :class:`~msl.network.client.Client`. For example, to link with a
-          :class:`~msl.network.service.Service` that is called ``BasicMath`` or ``String Editor``
-          enter ``link BasicMath`` and ``link String Editor`` respectively.
+          For example,
+
+          To request the :obj:`~msl.network.network.Network.identity` of the
+          Network :class:`~msl.network.manager.Manager` enter ``Manager identity``.
+
+          To check if a user with the name ``n.bohr`` exists in the database of users enter
+          ``Manager users_table.is_user_registered n.bohr``.
+
+          Note, most requests for the Network :class:`~msl.network.manager.Manager` require
+          the request to come from an administrator of the Network :class:`~msl.network.manager.Manager`.
+          If this is the case, then your login credentials will be checked (requested from you)
+          before the Network :class:`~msl.network.manager.Manager` executes the request.
 
         * To request something from a :class:`~msl.network.service.Service` use the following
-          format ``service_name attribute_name key_value_parameters``
+          format ``<service> <attribute> [<arguments>, [<keyword_arguments>]]``
 
           For example,
 
