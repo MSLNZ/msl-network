@@ -93,7 +93,7 @@ class Service(Network, asyncio.Protocol):
             self._identity['type'] = 'service'
             self._identity['name'] = self.name
             self._identity['language'] = 'Python ' + platform.python_version()
-            self._identity['os'] = '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
+            self._identity['os'] = f'{platform.system()} {platform.release()} {platform.machine()}'
             self._identity['attributes'] = dict()
             for item in dir(self):
                 if item.startswith('_') or item in IGNORE_ITEMS:
@@ -257,7 +257,7 @@ class Service(Network, asyncio.Protocol):
             log.error(exc)
             raise exc
 
-    def start(self, host='localhost', port=PORT, username=None, password=None,
+    def start(self, *, host='localhost', port=PORT, username=None, password=None,
               password_manager=None, certificate=None, debug=False):
         """Start the :class:`Service`.
 
@@ -306,7 +306,10 @@ class Service(Network, asyncio.Protocol):
             return
         context.check_hostname = host != HOSTNAME
 
-        self._loop = asyncio.get_event_loop()
+        # create a new event loop, rather than using asyncio.get_event_loop()
+        # (in case the Service does not run in the threading._MainThread)
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
 
         self._loop.run_until_complete(
             self._loop.create_connection(
