@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 from msl.network import utils
 
 
@@ -146,3 +149,28 @@ def test_terminal_parser():
     assert d['args'][2] == 'another arg'
     assert d['kwargs']['x'] == 3
     assert d['kwargs']['y'] == '4'
+
+    d = utils.parse_terminal_input('identity')
+    assert d['service'] == 'Manager'
+    assert d['attribute'] == 'identity'
+
+
+def test_ensure_root():
+    dirname = os.path.join(tempfile.gettempdir(), 'msl', 'network', 'testing')
+
+    path = dirname + '/filename.txt'
+
+    assert not os.path.isfile(path)
+    assert not os.path.isdir(dirname)
+
+    utils.ensure_root_path(path)
+
+    assert os.path.isdir(dirname)
+    assert not os.path.isfile(path)
+
+    os.removedirs(dirname)
+    assert not os.path.isdir(dirname)
+
+    # these should not raise an error (nor create any directories)
+    utils.ensure_root_path(None)
+    utils.ensure_root_path('')
