@@ -14,7 +14,7 @@ from .json import deserialize
 from .utils import localhost_aliases
 from .constants import PORT, HOSTNAME
 from .cryptography import get_ssl_context
-from .exceptions import NetworkManagerError
+from .exceptions import MSLNetworkError
 
 log = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class Client(Network, asyncio.Protocol):
             'type': 'client',
             'name': name,
             'language': 'Python ' + platform.python_version(),
-            'os': '{} {} {}'.format(platform.system(), platform.release(), platform.machine()),
+            'os': f'{platform.system()} {platform.release()} {platform.machine()}'
         }
         self._handshake_finished = False
         self._latest_error = None
@@ -183,9 +183,13 @@ class Client(Network, asyncio.Protocol):
 
         Raises
         ------
-        :class:`~msl.network.exceptions.NetworkManagerError`
+        :class:`~msl.network.exceptions.MSLNetworkError`
             If there is no :class:`~msl.network.service.Service` available
             with the name `service`.
+
+        See Also
+        --------
+        :meth:`send_request`
         """
         if self._debug:
             log.debug(f'preparing to link with {service}')
@@ -283,7 +287,7 @@ class Client(Network, asyncio.Protocol):
         admin_request('users_table.usernames')
         admin_request('users_table.is_user_registered', 'n.bohr')
         admin_request('connections_table.connections', timestamp1='2017-11-29', timestamp2='2017-11-30')
-        admin_request('shutdown_manager')  **WARNING: this will terminate all connections to the Manager**
+        admin_request('shutdown_manager')  **WARNING: this will terminate ALL connections with the Manager**
         """
         reply = self._send_request_for_manager(attrib, *args, **kwargs)
         if 'result' not in reply:
@@ -426,28 +430,36 @@ class Client(Network, asyncio.Protocol):
         :class:`Client`:
             A new Client.
         """
-        return connect(name=name, host=self._host_manager, port=self._port_manager, timeout=self._timeout,
-                       username=self._username, password=self._password, password_manager=self._password_manager,
+        return connect(name=name, host=self._host_manager, port=self._port_manager,
+                       timeout=self._timeout, username=self._username,
+                       password=self._password, password_manager=self._password_manager,
                        certificate=self._certificate, debug=self._debug)
 
     def raise_latest_error(self):
         """
         Raises the latest exception that was received from the Network
-        :class:`~msl.network.manager.Manager` as a :exc:`~msl.network.exception.NetworkManagerError`
+        :class:`~msl.network.manager.Manager` as a :exc:`~msl.network.exception.MSLNetworkError`
         exception.
 
         If there is no error then calling this method does nothing.
         """
         if self._latest_error:
-            raise NetworkManagerError(self._latest_error)
+            # need to clear the latest error message and all futures in case
+            # the Client is connected to the Manager using Python's interactive console
+            msg = self._latest_error
+            self._latest_error = ''
+            self._clear_all_futures()
+            raise MSLNetworkError(msg)
 
     def send_request(self, service, attribute, *args, **kwargs):
         """Send a request to a :class:`~msl.network.service.Service` on the
         Network :class:`~msl.network.manager.Manager`.
 
-        Although a :class:`Client` can call this method directly, it is recommended to create
-        a :meth:`link` with a :class:`~msl.network.service.Service` and to send requests via the
-        :class:`Link` object.
+        Although a :class:`Client` can call this method directly, in general, it is
+        recommended to create a :meth:`link` with a :class:`~msl.network.service.Service`
+        and to send requests via the :class:`Link` object. This allows for using the "."
+        notation for accessing the `attribute` in the :class:`~msl.network.service.Service`
+        class.
 
         Parameters
         ----------
@@ -477,8 +489,28 @@ class Client(Network, asyncio.Protocol):
             has been disconnected.
         ValueError
             If there are asynchronous requests pending and a synchronous request is made.
-        :exc:`~msl.network.exception.NetworkManagerError`
+        :exc:`~msl.network.exception.MSLNetworkError`
             If there was an error executing the request.
+
+        Example
+        -------
+        The following example shows how the :meth:`link` and :meth:`send_request` methods
+        can be used to send a request to a :class:`~msl.network.service.Service`
+        >>> from msl.network import connect  # doctest: +SKIP
+        connect to the Network :class:`~msl.network.manager.Manager` at ``localhost``
+        >>> c = connect()  # doctest: +SKIP
+        using the :meth:`send_request` method to send requests to the :ref:`BasicMath` Service
+        >>> c.send_request('BasicMath', 'add', 2, 3)  # doctest: +SKIP
+        5
+        >>> c.send_request('BasicMath', 'subtract', 2, 3)  # doctest: +SKIP
+        -1
+        using the :meth:`link` method to create a link with the :ref:`BasicMath` Service
+        and then send requests
+        >>> bm = c.link('BasicMath')  # doctest: +SKIP
+        >>> bm.add(2, 3)  # doctest: +SKIP
+        5
+        >>> bm.subtract(2, 3)  # doctest: +SKIP
+        -1
         """
         if self._transport is None:
             raise ConnectionError(f'{self} has been disconnected')
@@ -701,7 +733,14 @@ class Client(Network, asyncio.Protocol):
         uid = self._create_request('Manager', attribute, *args, **kwargs)
         self.send_data(self._transport, self._requests[uid])
         self._wait(uid)
-        result = self._futures[uid].result()
+        if self._futures[uid].cancelled():
+            # this section of the code will be reached if the Manager is using the
+            # users login credentials for authorization and the Client requested
+            # to shutdown the Manager. The connection is lost so
+            self._remove_future(uid)
+            return {'result': None}
+        else:
+            result = self._futures[uid].result()
         self._remove_future(uid)
         return result
 
