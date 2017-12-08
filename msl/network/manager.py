@@ -12,30 +12,70 @@ from .network import Network
 from .json import deserialize
 from .constants import HOSTNAME
 from .utils import parse_terminal_input
-from .database import ConnectionsTable, UsersTable
+from .database import ConnectionsTable, UsersTable, HostnamesTable
 
 log = logging.getLogger(__name__)
 
 
 class Manager(Network):
 
-    def __init__(self, port, password, login, hostnames, connections_table, users_table, debug):
-        """An asynchronous Network Manager.
+    def __init__(self, port, password, login, hostnames, connections_table,
+                 users_table, hostnames_table, debug, loop):
+        """An asynchronous Network :class:`Manager`.
 
         .. attention::
-            Not to be instantiated directly. To be called from the command line.
+            Not to be instantiated directly. Start the Network :class:`Manager`
+            from the command line, see ``$ msl-network start --help`` for more
+            information.
+
+        Parameters
+        ----------
+        port : :obj:`int`
+            The port number that the Network :class:`Manager` is running on.
+        password : :obj:`str` or :obj:`None`
+            The password of the Network :class:`Manager`. Essentially, this can be a
+            thought of as a single password that all :class:`~msl.network.client.Client`\'s
+            and :class:`~msl.network.service.Service`\'s need to specify before the
+            connection to the Network :class:`Manager` is successful.
+        login : :obj:`bool` or :obj:`None`
+            If :obj:`True` then the Network :class:`Manager` checks a users login
+            credentials (the username and password) before a :class:`~msl.network.client.Client`
+            or :class:`~msl.network.service.Service` successfully connects. See also, the
+            `users_table` argument.
+        hostnames : :obj:`list` of :obj:`str` or :obj:`None`
+            A list of trusted hostnames of devices that can connect to the Network
+            :class:`Manager` (only if the Network :class:`Manager` was started using
+            trusted hostnames as the authentication procedure). See also, the
+            `hostnames_table` argument.
+        connections_table : :class:`~msl.network.database.ConnectionsTable`
+            The table in the database that keeps the records for the devices that connected
+            to the Network :class:`Manager`.
+        users_table : :class:`~msl.network.database.UsersTable`
+            The table in the database that keeps the records of the users that can connect
+            to the Network :class:`Manager`.
+        hostnames_table : :class:`~msl.network.database.HostnamesTable`
+            The table in the database that keeps the records of the trusted hostnames that
+            can connect to the Network :class:`Manager`.
+        debug : :obj:`bool`
+            Whether debug logging messages are displayed.
+        loop : :class:`asyncio.AbstractEventLoop`
+            The event loop that the Network :class:`Manager` is running in.
         """
         self._debug = debug
         self._network_name = f'{HOSTNAME}:{port}'
-        self.password = password
-        self.login = login
-        self.allowed_hostnames = hostnames
-        self.connections_table = connections_table
-        self.users_table = users_table
-        self.clients = dict()
-        self.services = dict()
-        self.service_writers = dict()
-        self.client_writers = dict()
+        self.port = port
+        self.loop = loop  # asyncio.AbstractEventLoop
+        self.password = password  # string or None
+        self.login = login  # boolean or None
+        self.hostnames = hostnames  # list of trusted hostnames or None
+        self.connections_table = connections_table  # msl.network.database.ConnectionsTable object
+        self.users_table = users_table  # msl.network.database.UsersTable object
+        self.hostnames_table = hostnames_table  # msl.network.database.HostnamesTable object
+        self.clients = dict()  # keys: Client address, values: the identity dictionary
+        self.services = dict()  # keys: Service name, values: the identity dictionary
+        self.service_writers = dict()  # keys: Service name, values: StreamWriter of the Service
+        self.service_links = dict()  # keys: Service name, values: set() of StreamWriter's of the linked Clients
+        self.client_writers = dict()  # keys: Client address, values: StreamWriter of the Client
 
         self._identity = {
             'hostname': HOSTNAME,
@@ -78,9 +118,9 @@ class Manager(Network):
         if self.password is not None:
             if not await self.check_manager_password(reader, writer):
                 return
-        elif self.allowed_hostnames:
+        elif self.hostnames:
             log.info(f'{self._network_name} verifying hostname of {peer.network_name}')
-            if peer.hostname not in self.allowed_hostnames:
+            if peer.hostname not in self.hostnames:
                 log.info(f'{peer.hostname} is not a trusted hostname, closing connection')
                 self.connections_table.insert(peer, 'rejected: untrusted hostname')
                 self.send_error(writer, ValueError(f'{peer.hostname} is not a trusted hostname.'), self._network_name)
@@ -225,9 +265,7 @@ class Manager(Network):
                     'language': identity.get('language', 'unknown'),
                     'os': identity.get('os', 'unknown'),
                 }
-                # in the following line, "None" will eventually be the address
-                # of the Service that the writer will be linked with
-                self.client_writers[reader.peer.address] = [writer, None]
+                self.client_writers[reader.peer.address] = writer
                 log.info(f'{reader.peer.network_name} is a new Client connection')
             elif typ == 'service':
                 if identity['name'] in self.services:
@@ -239,6 +277,7 @@ class Manager(Network):
                     'os': identity.get('os', 'unknown'),
                 }
                 self.service_writers[identity['name']] = writer
+                self.service_links[identity['name']] = set()
                 log.info(f'{reader.peer.network_name} is a new Service connection')
             else:
                 raise TypeError(f'Unknown connection type "{typ}". Must be "client" or "service"')
@@ -334,12 +373,12 @@ class Manager(Network):
             if 'result' in data:
                 # then data is a reply from a Service so send it back to the Client
                 if data['requester'] is None:
-                    log.error(f'{reader.peer.network_name} was not able to deserialize the bytes')
+                    log.info(f'{reader.peer.network_name} was not able to deserialize the bytes')
                 else:
                     try:
-                        self.send_line(self.client_writers[data['requester']][0], line)
+                        self.send_line(self.client_writers[data['requester']], line)
                     except KeyError:
-                        log.error(f'{self._network_name} Client at {data["requester"]} is no longer available')
+                        log.info(f'{data["requester"]} is no longer available to send the reply to')
             elif data['service'] == 'Manager':
                 # then the Client is requesting something from the Manager
                 if data['attribute'] == 'identity':
@@ -362,9 +401,10 @@ class Manager(Network):
                                 reader.peer.address,
                             )
                             continue
+                    # the peer is an administrator, so execute the request
                     if data['attribute'] == 'shutdown_manager':
                         log.info(f'received shutdown request from {reader.peer.network_name}')
-                        asyncio.get_event_loop().stop()
+                        self.loop.stop()
                         return
                     try:
                         # check for multiple dots "." in the name of the attribute
@@ -378,10 +418,11 @@ class Manager(Network):
                     try:
                         # send the reply back to the Client
                         if callable(attrib):
-                            self.send_reply(writer, attrib(*data['args'], **data['kwargs']),
-                                            requester=reader.peer.address)  # do not include the uuid
+                            reply = attrib(*data['args'], **data['kwargs'])
                         else:
-                            self.send_reply(writer, attrib, requester=reader.peer.address)  # do not include the uuid
+                            reply = attrib
+                        # do not include the uuid in the reply
+                        self.send_reply(writer, reply, requester=reader.peer.address)
                     except Exception as e:
                         log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
                         self.send_error(writer, e, reader.peer.address)
@@ -393,9 +434,12 @@ class Manager(Network):
                 try:
                     data['requester'] = writer.peer.address
                     self.send_data(self.service_writers[data['service']], data)
-                except KeyError as e:
-                    log.error(f'{self._network_name} KeyError: {e}')
-                    self.send_error(writer, e, reader.peer.address)
+                    log.info(f'{writer.peer.address} sent a request to {data["service"]}')
+                except KeyError:
+                    msg = f'the "{data["service"]}" Service is not connected ' \
+                          f'to the Network Manager at {self._network_name}'
+                    log.info(f'{self._network_name} KeyError: {msg}')
+                    self.send_error(writer, KeyError(msg), reader.peer.address)
 
     def remove_peer(self, id_type, writer):
         """Remove this peer from the registry of connected peers.
@@ -413,22 +457,32 @@ class Manager(Network):
                 del self.client_writers[writer.peer.address]
                 log.info(f'{writer.peer.network_name} has been removed from the registry')
             except KeyError:  # ideally this exception should never occur
-                log.error(f'{writer.peer.network_name} is not in the clients dictionary')
+                log.error(f'{writer.peer.network_name} is not in the Client dictionaries')
         else:
             for service in self.services:
                 if self.services[service]['address'] == writer.peer.address:
                     # notify all Clients that are linked with this Service
-                    for w, service_address in self.client_writers.values():
-                        if writer.peer.address == service_address:
-                            self.send_error(
-                                w,
-                                ConnectionAbortedError(f'The {service} service has been disconnected'),
-                                service_address,
-                            )
-                    del self.services[service]
-                    del self.service_writers[service]
-                    log.info(f'{writer.peer.network_name} service has been removed from the registry')
-                    break
+                    for client_address in self.service_links[service]:
+                        try:
+                            client_writer = self.client_writers[client_address]
+                        except KeyError:  # in case the Client already disconnected
+                            continue
+                        self.send_error(
+                            client_writer,
+                            ConnectionAbortedError(f'The "{service}" service has been disconnected'),
+                            self._network_name,
+                        )
+                    try:
+                        del self.service_links[service]
+                        del self.services[service]
+                        del self.service_writers[service]
+                        log.info(f'{writer.peer.network_name} service has been removed from the registry')
+                    except KeyError:  # ideally this exception should never occur
+                        log.error(f'{writer.peer.network_name} is not in the Service dictionaries')
+                    finally:
+                        # must break from the iteration, otherwise will get
+                        # RuntimeError: dictionary changed size during iteration
+                        break
 
     async def close_writer(self, writer):
         """Close the connection to the :class:`asyncio.StreamWriter`.
@@ -451,11 +505,12 @@ class Manager(Network):
 
     async def shutdown_manager(self):
         """
-        Safely disconnect all :class:`~msl.network.service.Service`\'s and
-        :class:`~msl.network.client.Client`\'s.
+        Disconnect all :class:`~msl.network.service.Service`\'s and
+        :class:`~msl.network.client.Client`\'s from the :class:`Manager`
+        and then shutdown the :class:`Manager`.
         """
         # convert the dict_values to a list since we are modifying the dictionary in remove_peer()
-        for writer, _ in list(self.client_writers.values()):
+        for writer in list(self.client_writers.values()):
             await self.close_writer(writer)
             self.remove_peer('client', writer)
         for writer in list(self.service_writers.values()):
@@ -482,10 +537,10 @@ class Manager(Network):
             :class:`~msl.network.client.Client` wants to link with.
         """
         try:
-            address = self.services[service]['address']
-            self.client_writers[writer.peer.address][1] = address
-            log.info(f'linked {writer.peer.network_name} with {service}[{address}]')
-            self.send_reply(writer, self.services[service], requester=writer.peer.address, uuid=uuid)
+            identity = self.services[service]
+            self.service_links[service].add(writer.peer.address)
+            log.info(f'linked {writer.peer.network_name} with {service}')
+            self.send_reply(writer, identity, requester=writer.peer.address, uuid=uuid)
         except KeyError:
             msg = f'{service} service does not exist, could not link with {writer.peer.network_name}'
             log.info(msg)
@@ -516,6 +571,16 @@ class Manager(Network):
             'uuid': '',
             'error': False,
         })
+
+    def set_debug(self, boolean):
+        """Set the debug mode of the Network :class:`Manager`.
+
+        Parameters
+        ----------
+        boolean : :obj:`bool`
+            Whether to enable or disable debug logging messages
+        """
+        self._debug = bool(boolean)
 
 
 class Peer(object):
@@ -557,7 +622,11 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
     conn_table = ConnectionsTable(database=database)
     log.info(f'loaded the {conn_table.NAME} table from {conn_table.path}')
 
-    # load the users table for the login credentials
+    # load the auth_hostnames table
+    hostnames_table = HostnamesTable(database=database)
+    log.info(f'loaded the {hostnames_table.NAME} table from {hostnames_table.path}')
+
+    # load the auth_users table for the login credentials
     users_table = UsersTable(database=database)
     if login and not users_table.users():
         print('The Users Table is empty. You cannot use login credentials for authorisation.')
@@ -574,16 +643,13 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
     else:
         log.debug('not using authentication')
 
-    # create the network manager
-    manager = Manager(port, password, login, hostnames, conn_table, users_table, debug)
+    # create a new event loop, rather than using asyncio.get_event_loop()
+    # (in case the Manager does not run in the threading._MainThread)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
-    # create the event loop
-    #
-    # the documentation suggests that only the ProactorEventLoop supports SSL/TLS
-    # connections but the default SelectorEventLoop seems to also work on Windows
-    #
-    # https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.AbstractEventLoop.create_connection
-    loop = asyncio.get_event_loop()
+    # create the network manager
+    manager = Manager(port, password, login, hostnames, conn_table, users_table, hostnames_table, debug, loop)
 
     server = loop.run_until_complete(
         asyncio.start_server(manager.new_connection, port=port, ssl=context, loop=loop, limit=sys.maxsize)
@@ -604,8 +670,12 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
         for task in asyncio.Task.all_tasks(loop):
             task.cancel()
 
-        log.info('closing server')
+        log.info('closing the server')
         server.close()
         loop.run_until_complete(server.wait_closed())
-        log.info('closing event loop')
+        log.info('closing the event loop')
         loop.close()
+
+        conn_table.close()
+        users_table.close()
+        hostnames_table.close()
