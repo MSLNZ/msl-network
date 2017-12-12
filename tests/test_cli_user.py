@@ -46,7 +46,7 @@ def test_cli_user():
     for user in users:
         table.insert(*user)
 
-    base_command = f'user --database {db} '
+    base_command = 'user --database {} '.format(db)
 
     # action: list
     sys.stdout = open(out, 'w')

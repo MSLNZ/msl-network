@@ -359,7 +359,7 @@ def get_metadata_as_string(cert):
     def justify(hex_string):
         h = hex_string
         n = 75
-        return '    ' + '    \n    '.join(h[i:i+n] for i in range(0, len(h), n)) + '\n'
+        return '    ' + '    \n    '.join(h[i:i+n] for i in range(0, len(h), n))
 
     def to_title(k):
         t = k.replace('_', ' ').title()
@@ -367,47 +367,49 @@ def get_metadata_as_string(cert):
 
     meta = get_metadata(cert)
 
-    details = ''
-    details += f'Version: {meta["version"]}\n'
+    details = list()
 
-    details += f'Serial Number: {meta["serial_number"]}\n'
+    details.append('Version: ' + meta['version'])
 
-    details += 'Issuer:\n'
+    details.append('Serial Number: ' + meta['serial_number'])
+
+    details.append('Issuer:')
     for key, value in meta['issuer'].items():
-        details += ('  {}: {}\n'.format(to_title(key), value))
+        details.append('  {}: {}'.format(to_title(key), value))
 
-    details += 'Validity:\n'
-    details += f'  Not Before: {meta["valid_from"].strftime("%d %B %Y %H:%M:%S GMT")}\n'
-    details += f'  Not After : {meta["valid_to"].strftime("%d %B %Y %H:%M:%S GMT")}\n'
+    details.append('Validity:')
+    details.append('  Not Before: ' + meta['valid_from'].strftime('%d %B %Y %H:%M:%S GMT'))
+    details.append('  Not After : ' + meta['valid_to'].strftime('%d %B %Y %H:%M:%S GMT'))
 
-    details += 'Subject:\n'
+    details.append('Subject:')
     for key, value in meta['subject'].items():
-        details += ('  {}: {}\n'.format(to_title(key), value))
+        details.append('  {}: {}'.format(to_title(key), value))
 
-    details += 'Subject Public Key Info:\n'
+    details.append('Subject Public Key Info:')
     for key, value in meta['key'].items():
         if key in ['key', 'modulus', 'y', 'p', 'q', 'g']:
-            details += '  {}:\n'.format(key.title())
-            details += justify(value)
+            details.append('  {}:'.format(key.title()))
+            details.append(justify(value))
         else:
-            details += ('  {}: {}\n'.format(to_title(key), value))
+            details.append('  {}: {}'.format(to_title(key), value))
 
     if meta['extensions']:
-        details += 'Extensions:\n'
-        details += '  ' + str(meta['extensions']['value']).replace('<', '').replace('>', '') + ':\n'
+        details.append('Extensions:')
+        details.append('  ' + str(meta['extensions']['value']).replace('<', '').replace('>', '') + ':')
         for key, value in meta['extensions'].items():
             if key != 'value':
-                details += '    {}: {}\n'.format(key, value)
+                details.append('    {}: {}'.format(key, value))
 
-    details += 'Signature Algorithm:\n'
-    details += '  oid: {}\n'.format(meta['algorithm']['oid'])
-    details += '  name: {}\n'.format(meta['algorithm']['name'])
-    details += '  value:\n'
-    details += justify(meta['algorithm']['signature'])
+    details.append('Signature Algorithm:')
+    details.append('  oid: ' + meta['algorithm']['oid'])
+    details.append('  name: ' + meta['algorithm']['name'])
+    details.append('  value:')
+    details.append(justify(meta['algorithm']['signature']))
 
-    details += 'Fingerprint (SHA1):\n  {}'.format(get_fingerprint(cert))
+    details.append('Fingerprint (SHA1):')
+    details.append(get_fingerprint(cert))
 
-    return details
+    return '\n'.join(details)
 
 
 def get_ssl_context(*, host=None, port=None, certificate=None):
@@ -444,13 +446,13 @@ def get_ssl_context(*, host=None, port=None, certificate=None):
             fingerprint = get_fingerprint(cert)
             name = cert.signature_algorithm_oid._name
 
-            print(f'The certificate for {host} is not cached in the registry.\n'
-                  f'You have no guarantee that the server is the computer that\n'
-                  f'you think it is.\n\n'
-                  f'The server\'s {name} key fingerprint is\n{fingerprint}\n\n'
-                  f'If you trust this host you can save the certificate in the\n'
-                  f'registry and continue to connect, otherwise this is your\n'
-                  f'final chance to abort.\n')
+            print('The certificate for {host} is not cached in the registry.\n'
+                  'You have no guarantee that the server is the computer that\n'
+                  'you think it is.\n\n'
+                  'The server\'s {name} key fingerprint is\n{fingerprint}\n\n'
+                  'If you trust this host you can save the certificate in the\n'
+                  'registry and continue to connect, otherwise this is your\n'
+                  'final chance to abort.\n'.format(host=host, name=name, fingerprint=fingerprint))
             while True:
                 r = input('Continue? y/n: ').lower()
                 if r.startswith('n'):

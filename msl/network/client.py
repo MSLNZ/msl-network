@@ -95,7 +95,7 @@ class Client(Network, asyncio.Protocol):
             'type': 'client',
             'name': name,
             'language': 'Python ' + platform.python_version(),
-            'os': f'{platform.system()} {platform.release()} {platform.machine()}'
+            'os': '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
         }
         self._handshake_finished = False
         self._latest_error = None
@@ -152,10 +152,10 @@ class Client(Network, asyncio.Protocol):
         # cannot send a request to other Clients
         if name == self._address_manager:
             if self._password_manager is None:
-                self._password_manager = getpass.getpass(f'Enter the password for {name} > ')
+                self._password_manager = getpass.getpass('Enter the password for ' + name + ' > ')
             return self._password_manager
         if self._password is None:
-            self._password = getpass.getpass(f'Enter the password for {name} > ')
+            self._password = getpass.getpass('Enter the password for ' + name + ' > ')
         return self._password
 
     def username(self, name):
@@ -166,7 +166,7 @@ class Client(Network, asyncio.Protocol):
         """
         # see the comment in the Client.password() method and in the Service.username() method
         if self._username is None:
-            self._username = input(f'Enter the username for {name} > ')
+            self._username = input('Enter the username for ' + name + ' > ')
         return self._username
 
     def identity(self):
@@ -198,7 +198,7 @@ class Client(Network, asyncio.Protocol):
         :meth:`send_request`
         """
         if self._debug:
-            log.debug(f'preparing to link with {service}')
+            log.debug('preparing to link with ' + service)
         identity = self._send_request_for_manager('link', service)
         return Link(self, service, identity)
 
@@ -234,37 +234,37 @@ class Client(Network, asyncio.Protocol):
         if not as_yaml:
             return identity
         space = ' ' * indent
-        s = [f'Manager[{identity["hostname"]}:{identity["port"]}]']
+        s = ['Manager[{}:{}]'.format(identity["hostname"], identity["port"])]
         for key in sorted(identity):
             if key in ('clients', 'services', 'hostname', 'port'):
                 pass
             elif key == 'attributes':
                 s.append(space + 'attributes:')
                 for item in sorted(identity[key]):
-                    s.append(2 * space + f'{item}: {identity[key][item]}')
+                    s.append(2 * space + '{}: {}'.format(item, identity[key][item]))
             else:
-                s.append(space + f'{key}: {identity[key]}')
-        s.append(f'Clients [{len(identity["clients"])}]:')
+                s.append(space + '{}: {}'.format(key, identity[key]))
+        s.append('Clients [{}]:'.format(len(identity["clients"])))
         for address in sorted(identity['clients']):
-            s.append(space + f'{identity["clients"][address]["name"]}[{address}]')
+            s.append(space + '{}[{}]'.format(identity["clients"][address]["name"], address))
             keys = identity['clients'][address]
             for key in sorted(keys):
                 if key == 'name':
                     continue
-                s.append(2 * space + f'{key}: {keys[key]}')
-        s.append(f'Services [{len(identity["services"])}]:')
+                s.append(2 * space + '{}: {}'.format(key, keys[key]))
+        s.append('Services [{}]:'.format(len(identity["services"])))
         for name in sorted(identity['services']):
-            s.append(space + f'{name}[{identity["services"][name]["address"]}]')
+            s.append(space + '{}[{}]'.format(name, identity["services"][name]["address"]))
             service = identity['services'][name]
             for key in sorted(service):
                 if key == 'attributes':
                     s.append(2 * space + 'attributes:')
                     for item in sorted(service[key]):
-                        s.append(3 * space + f'{item}: {service[key][item]}')
+                        s.append(3 * space + '{}: {}'.format(item, service[key][item]))
                 elif key == 'address':
                     continue
                 else:
-                    s.append(2 * space + f'{key}: {service[key]}')
+                    s.append(2 * space + '{}: {}'.format(key, service[key]))
         return '\n'.join(s)
 
     def admin_request(self, attrib, *args, **kwargs):
@@ -326,7 +326,7 @@ class Client(Network, asyncio.Protocol):
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self.name, self._port)
         if self._debug:
-            log.debug(f'{self} connection made')
+            log.debug(str(self) + ' connection made')
 
     def data_received(self, reply):
         """
@@ -371,7 +371,7 @@ class Client(Network, asyncio.Protocol):
             self._futures[data['uuid']].set_result(data['result'])
         else:
             # performing an admin_request
-            assert len(self._futures) == 1, f'uuid not defined and {len(self._futures)} futures are available'
+            assert len(self._futures) == 1, 'uuid not defined and {} futures are available'.format(len(self._futures))
             uid = list(self._futures.keys())[0]
             self._futures[uid].set_result(data)
 
@@ -383,7 +383,7 @@ class Client(Network, asyncio.Protocol):
            Call :meth:`disconnect` to close the connection.
         """
         if self._debug:
-            log.debug(f'{self} connection lost')
+            log.debug(str(self) + ' connection lost')
         for future in self._futures.values():
             future.cancel()
         self._transport = None
@@ -496,9 +496,6 @@ class Client(Network, asyncio.Protocol):
         -1
 
         """
-        if self._transport is None:
-            raise ConnectionError(f'{self} has been disconnected')
-
         send_asynchronously = kwargs.pop('async', False)
         if not send_asynchronously and self._futures:
             raise ValueError('Asynchronous requests are pending. '
@@ -529,7 +526,7 @@ class Client(Network, asyncio.Protocol):
         """
         for request in self._requests.values():
             if self._debug:
-                log.debug(f'sending request to {request["service"]}.{request["attribute"]}')
+                log.debug('sending request to {}.{}'.format(request["service"], request["attribute"]))
             self.send_data(self._transport, request)
         self._pending_requests_sent = True
         if wait:
@@ -548,7 +545,7 @@ class Client(Network, asyncio.Protocol):
         self._password = password
         self._password_manager = password_manager
         self._certificate = certificate
-        self._address_manager = f'{host}:{port}'
+        self._address_manager = '{}:{}'.format(host, port)
         self._timeout = timeout
 
         context = get_ssl_context(host=self._host_manager, port=port, certificate=certificate)
@@ -622,7 +619,9 @@ class Client(Network, asyncio.Protocol):
                 requests = []
                 for uid, future in self._futures.items():
                     if not future.done():
-                        requests.append(f'{self._requests[uid]["service"]}.{self._requests[uid]["attribute"]}')
+                        requests.append('{}.{}'.format(
+                            self._requests[uid]["service"], self._requests[uid]["attribute"]
+                        ))
                 err += ', '.join(requests)
                 raise TimeoutError(err)
 
@@ -642,13 +641,13 @@ class Client(Network, asyncio.Protocol):
         uid = str(uuid.uuid4())
         self._futures[uid] = self._loop.create_future()
         if self._debug:
-            log.debug(f'created future[{uid}]')
+            log.debug('created future[{}]'.format(uid))
         return uid
 
     def _remove_future(self, uid):
         del self._futures[uid]
         if self._debug:
-            log.debug(f'removed future[{uid}]; {len(self._futures)} pending')
+            log.debug('removed future[{}]; {} pending'.format(uid, len(self._futures)))
         try:
             # In general, we want to delete the request when the future is deleted.
             # However, the admin_request() method does not create a new self._request[uid]
@@ -664,6 +663,8 @@ class Client(Network, asyncio.Protocol):
             log.debug('removed all futures')
 
     def _create_request(self, service, attribute, *args, **kwargs):
+        if self._transport is None:
+            raise ConnectionError(str(self) + ' has been disconnected')
         uid = self._create_future()
         self._requests[uid] = {
             'service': service,
@@ -674,13 +675,13 @@ class Client(Network, asyncio.Protocol):
             'error': False,
         }
         if self._debug:
-            log.debug(f'created request {service}.{attribute} [{len(self._requests)} pending]')
+            log.debug('created request {}.{} [{} pending]'.format(service, attribute, len(self._requests)))
         return uid
 
     def _send_request_for_manager(self, attribute, *args, **kwargs):
         # the request is for the Manager to handle, not for a Service
         if self._debug:
-            log.debug(f'sending request to Manager.{attribute}')
+            log.debug('sending request to Manager.' + attribute)
         uid = self._create_request('Manager', attribute, *args, **kwargs)
         self.send_data(self._transport, self._requests[uid])
         self._wait(uid)
@@ -709,7 +710,7 @@ class Link(object):
         self._service_name = service
         self._service_identity = identity
         if client._debug:
-            log.debug(f'linked with {service}[{identity["address"]}]')
+            log.debug('linked with {}[{}]'.format(service, identity["address"]))
 
     @property
     def service_name(self):
@@ -738,7 +739,8 @@ class Link(object):
         return self._service_identity['os']
 
     def __repr__(self):
-        return f'<Link with {self.service_name}[{self.service_address}] at Manager[{self._client.address_manager}]>'
+        return '<Link with {}[{}] at Manager[{}]>'.format(
+            self.service_name, self.service_address, self._client.address_manager)
 
     def __getattr__(self, item):
         def service_request(*args, **kwargs):

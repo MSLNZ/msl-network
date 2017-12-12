@@ -90,20 +90,20 @@ def execute(args):
             print('  ' + hostname)
     elif args.action in ['insert', 'add']:
         if not args.names:
-            print(f'No hostnames were {args.action}ed')
+            print('No hostnames were ' + args.action + 'ed')
         else:
             for name in args.names:
                 db.insert(name)
-                print(f'{args.action.title()}ed {name}')
+                print(args.action.title() + 'ed ' + name)
     elif args.action in ['remove', 'delete']:
         if not args.names:
-            print(f'No hostnames were {args.action}d')
+            print('No hostnames were ' + args.action + 'd')
         else:
             for name in args.names:
                 try:
                     db.delete(name)
-                    print(f'{args.action.title()}d {name}')
+                    print(args.action.title() + 'd ' + name)
                 except ValueError as e:
                     print(e)
     else:
-        assert False, f'No action "{args.action}" is implemented'
+        assert False, 'No action "' + args.action + '" is implemented'

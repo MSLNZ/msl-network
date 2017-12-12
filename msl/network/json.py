@@ -34,7 +34,7 @@ elif JSON == JSONPackage.YAJL:
     kwargs_loads = {}
     kwargs_dumps = {}
 else:
-    raise ValueError(f'{JSON} is not a supported JSON Package')
+    raise ValueError('{} is not a supported JSON Package'.format(JSON))
 
 
 def serialize(obj):
@@ -48,6 +48,8 @@ def serialize(obj):
 def deserialize(s):
     """Deserialize `s` to a Python object."""
     t0 = time.perf_counter()
+    if isinstance(s, (bytes, bytearray)):
+        s = s.decode('utf-8', 'surrogatepass')
     data = json.loads(s, **kwargs_loads)
     log.debug('{}.loads took {:.3g} seconds'.format(_PKG, time.perf_counter() - t0))
     return data

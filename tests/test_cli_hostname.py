@@ -27,7 +27,7 @@ def test_cli_hostname():
 
     original_names = table.hostnames()
 
-    base_command = f'hostname --database {db} '
+    base_command = 'hostname --database {} '.format(db)
 
     # action: list
     sys.stdout = open(out, 'w')

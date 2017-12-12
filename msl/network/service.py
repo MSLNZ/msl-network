@@ -78,7 +78,7 @@ class Service(Network, asyncio.Protocol):
         elif self._password is not None:
             return self._password
         else:
-            return getpass.getpass(f'Enter the password for {name} > ')
+            return getpass.getpass('Enter the password for ' + name + ' > ')
 
     def username(self, name):
         """
@@ -90,7 +90,7 @@ class Service(Network, asyncio.Protocol):
             # see the comment in the password() method why we do this self._identity check
             return 'You do not have permission to receive the username'
         if self._username is None:
-            return input(f'Enter the username for {name} > ')
+            return input('Enter the username for ' + name + ' > ')
         return self._username
 
     def identity(self):
@@ -104,7 +104,7 @@ class Service(Network, asyncio.Protocol):
             self._identity['type'] = 'service'
             self._identity['name'] = self.name
             self._identity['language'] = 'Python ' + platform.python_version()
-            self._identity['os'] = f'{platform.system()} {platform.release()} {platform.machine()}'
+            self._identity['os'] = '{} {} {}'.format(platform.system(), platform.release(), platform.machine()),
             self._identity['attributes'] = dict()
             for item in dir(self):
                 if item.startswith('_') or item in IGNORE_ITEMS:
@@ -126,7 +126,7 @@ class Service(Network, asyncio.Protocol):
         self._transport = transport
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self.name, self._port)
-        log.info(f'{self} connection made')
+        log.info(str(self) + ' connection made')
 
     def data_received(self, data):
         """
@@ -162,7 +162,7 @@ class Service(Network, asyncio.Protocol):
         try:
             data = deserialize(buffer_bytes)
         except Exception as e:
-            log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
+            log.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
             self.send_error(self._transport, e, None)
             return
 
@@ -171,18 +171,22 @@ class Service(Network, asyncio.Protocol):
             # Ideally, the Manager is the only device that would send an error to the
             # Service, which could happen during the handshake if the password or identity
             # that the Service provided was invalid.
+            msg = 'Error: Unfortunately, no error message has been provided'
             try:
                 if data['traceback']:
                     msg = '\n'.join(data['traceback'])  # traceback should be a list of strings
             except (TypeError, KeyError):
-                msg = data.get('message', 'Error: Unfortunately, no error message has been provided')
-            log.error(f'{self._network_name} {msg}')
+                try:
+                    msg = data['message']
+                except KeyError:
+                    pass
+            log.error(self._network_name + ' ' + msg)
             return
 
         try:
             attrib = getattr(self, data['attribute'])
         except Exception as e:
-            log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
+            log.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
             self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
             return
 
@@ -191,14 +195,14 @@ class Service(Network, asyncio.Protocol):
             self._futures[uid] = self._loop.run_in_executor(None, self._function, attrib, data, uid)
         else:
             self.send_reply(self._transport, attrib, requester=data['requester'], uuid=data['uuid'])
-        log.info(f'{data["requester"]} requested {data["attribute"]} [{len(self._futures)} executing]')
+        log.info(data['requester'] + ' requested ' + data['attribute'] + ' [{} executing]'.format(len(self._futures)))
 
     def _function(self, attrib, data, uid):
         try:
             reply = attrib(*data['args'], **data['kwargs'])
             self.send_reply(self._transport, reply, requester=data['requester'], uuid=data['uuid'])
         except Exception as e:
-            log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
+            log.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
             self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
         self._futures.pop(uid, None)
 
@@ -208,7 +212,7 @@ class Service(Network, asyncio.Protocol):
            Do not override this method. It is called automatically when the connection
            to the Network :class:`~msl.network.manager.Manager` has been closed.
         """
-        log.info(f'{self} connection lost')
+        log.info(str(self) + ' connection lost')
         self._futures.clear()
         self._transport = None
         self._port = None
@@ -262,9 +266,9 @@ class Service(Network, asyncio.Protocol):
         """
         if host in localhost_aliases():
             host = HOSTNAME
-            self._address_manager = f'localhost:{port}'
+            self._address_manager = 'localhost:{}'.format(port)
         else:
-            self._address_manager = f'{host}:{port}'
+            self._address_manager = '{}:{}'.format(host, port)
 
         self._debug = bool(debug)
         self._username = username
@@ -295,6 +299,6 @@ class Service(Network, asyncio.Protocol):
         except KeyboardInterrupt:
             log.info('CTRL+C keyboard interrupt received')
         finally:
-            log.info(f'{self} disconnected')
+            log.info(str(self) + ' disconnected')
             self._loop.close()
             log.info('closed the event loop')

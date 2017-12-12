@@ -9,9 +9,9 @@ from msl.network import cryptography
 
 def test_cryo():
     filename = 'msl-network-testing'
-    key_path = os.path.join(tempfile.gettempdir(), f'{filename}.key')
-    cert_path = os.path.join(tempfile.gettempdir(), f'{filename}.crt')
-    dump_path = os.path.join(tempfile.gettempdir(), f'{filename}.txt')
+    key_path = os.path.join(tempfile.gettempdir(), filename + '.key')
+    cert_path = os.path.join(tempfile.gettempdir(), filename + '.crt')
+    dump_path = os.path.join(tempfile.gettempdir(), filename + '.txt')
 
     cryptography.generate_key(path=key_path)
     with pytest.raises(TypeError):

@@ -116,11 +116,11 @@ def execute(args):
         print('Username'.ljust(width) + ' Administrator')
         print('='*width + ' =============')
         for name, admin in users:
-            print(name.ljust(width) + f' {admin}')
+            print(name.ljust(width) + ' ' + str(admin))
         return
 
     if args.username is None:
-        print(f'ValueError: You must enter a username to {args.action}')
+        print('ValueError: You must enter a username to ' + args.action)
         return
 
     password = None if args.password is None else ' '.join(args.password)
@@ -130,24 +130,24 @@ def execute(args):
 
     if args.action in ['insert', 'add']:
         if args.password is None:
-            print(f'ValueError: You must enter a password for "{args.username}"')
+            print('ValueError: You must enter a password for ' + args.username)
             return
         try:
             db.insert(args.username, password, args.admin)
-            print(f'{args.username} has been {args.action}ed')
+            print(args.username + ' has been ' + args.action + 'ed')
         except ValueError as e:
-            print(f'ValueError: {e}')
+            print('ValueError: ' + str(e))
     elif args.action in ['remove', 'delete']:
         try:
             db.delete(args.username)
-            print(f'{args.username} has been {args.action}d')
+            print(args.username + ' has been ' + args.action + 'd')
         except ValueError as e:
-            print(f'ValueError: {e}')
+            print('ValueError: ' + str(e))
     elif args.action == 'update':
         try:
             db.update(args.username, password=password, is_admin=args.admin)
-            print(f'Updated {args.username}')
+            print('Updated ' + args.username)
         except ValueError as e:
-            print(f'ValueError: {e}')
+            print('ValueError: ' + str(e))
     else:
-        assert False, f'No action "{args.action}" is implemented'
+        assert False, 'No action "' + args.action + '" is implemented'
