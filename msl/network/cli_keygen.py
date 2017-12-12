@@ -1,22 +1,27 @@
 """
 Command line interface for the ``keygen`` command.
+
+To see the help documentation, run the following command in a terminal::
+
+   msl-network keygen --help
+
 """
 import os
 
 from .cryptography import generate_key
 
-HELP = 'Generate a private key to digitally sign a PEM certificate.'
+HELP = 'Generates a private key to digitally sign a PEM certificate.'
 
 DESCRIPTION = HELP + """
 
-The keygen command is similar to the openssl command
+The keygen command is similar to the openssl command::
 
   openssl req -newkey rsa:2048 -nodes -keyout key.pem
     
 """
 
 EPILOG = """
-Examples:
+Examples::
 
   # create a default private key (RSA, 2048-bit, unencrypted)
   # and save it to the default directory
@@ -25,14 +30,17 @@ Examples:
   # create a 3072-bit, encrypted private key using the DSA algorithm
   msl-network keygen dsa --size 3072 --password WhatEVER you wAnt!
 
-See Also: 
+See Also::
+
   msl-network certgen
   
 """
 
+__doc__ += DESCRIPTION + EPILOG
+
 
 def add_parser_keygen(parser):
-    """Add a ``keygen`` command to the parser."""
+    """Add the ``keygen`` command to the `parser`."""
     p = parser.add_parser(
         'keygen',
         help=HELP,

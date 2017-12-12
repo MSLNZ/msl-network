@@ -1,5 +1,10 @@
 """
 Command line interface for the ``start`` command.
+
+To see the help documentation, run the following command in a terminal::
+
+   msl-network start --help
+
 """
 import os
 import sys
@@ -11,18 +16,18 @@ from .utils import ensure_root_path
 from .constants import HOME_DIR, PORT, DATABASE
 from .database import HostnamesTable, UsersTable
 
-HELP = 'Start an asynchronous Network Manager using the TLS protocol.'
+HELP = 'Start a Network Manager using the TLS protocol.'
 
 DESCRIPTION = HELP + """
 """
 
 EPILOG = """
-Examples:
+Examples::
 
-  # start the Network Manager using the default settings
+  # start a Network Manager using the default settings
   msl-network start
 
-  # start the Network Manager on port 8326
+  # start a Network Manager on port 8326
   msl-network start --port 8326
     
   # require an authentication passphrase for Clients and Services 
@@ -32,16 +37,20 @@ Examples:
   # use a specific certificate and key for the secure TLS protocol 
   msl-network start --cert path/to/cert.pem --key path/to/key.pem
     
-See Also:
+See Also::
+
   msl-network keygen
   msl-network certgen
   msl-network hostname
+  msl-network user
   
 """
 
+__doc__ += DESCRIPTION + EPILOG
+
 
 def add_parser_start(parser):
-    """Add a ``start`` command to the parser."""
+    """Add the ``start`` command to the `parser`."""
     p = parser.add_parser(
         'start',
         help=HELP,

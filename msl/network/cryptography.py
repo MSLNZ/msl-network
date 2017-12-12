@@ -344,7 +344,7 @@ def get_metadata(cert):
 
 
 def get_metadata_as_string(cert):
-    """Returns the metadata of the certificate as a human-readable string.
+    """Returns the metadata of the certificate as a *human-readable* string.
 
     Parameters
     ----------
@@ -411,21 +411,22 @@ def get_metadata_as_string(cert):
 
 
 def get_ssl_context(*, host=None, port=None, certificate=None):
-    """Get the SSL context to connect to a server.
+    """Get the SSL context.
 
-    Gets the context either from a remote server or from a file.
+    Gets the context either from connecting to a remote server or from loading
+    it from a file.
 
-    To get the context from a remote server you must specify both
-    `host` and `port`.
+    To get the context from a remote server you must specify both `host`
+    and `port`.
 
     Parameters
     ----------
     host : :obj:`str`, optional
-        The hostname of the remote server to get the certificate of.
+        The hostname of the remote server to connect to.
     port : :obj:`int`, optional
-        The port number of the remote server to get the certificate of.
+        The port number of the remote server to connect to.
     certificate : :obj:`str`, optional
-        The path to the certificate file.
+        The path to the certificate file to load.
 
     Returns
     -------

@@ -1,11 +1,16 @@
 """
 Command line interface for the ``hostname`` command.
+
+To see the help documentation, run the following command in a terminal::
+
+   msl-network hostname --help
+
 """
 from .constants import DATABASE
 from .utils import ensure_root_path
 from .database import HostnamesTable
 
-HELP = 'Add/remove hostname(s) into/from a Hostnames table in a database.'
+HELP = 'Add/remove hostname(s) into/from an auth_hostnames table in a database.'
 
 DESCRIPTION = HELP + """
 
@@ -13,18 +18,18 @@ The Network Manager can be started with the option to use trusted devices
 (based on the hostname of the connecting device) as the authorisation check
 for a Client or Service to be able to connect to the Network Manager.
 
-Each hostname in the Hostnames table is considered as a trusted device 
+Each hostname in the auth_hostnames table is considered as a trusted device 
 and therefore the device can connect to the Network Manager.
 
 To use trusted hostnames as the authentication check, start the Network
-Manager with the --auth-hostname flag:
+Manager with the --auth-hostname flag::
 
   msl-network start --auth-hostname
 
 """
 
 EPILOG = """
-Examples:
+Examples::
   
   # add 'TheHostname' to the list of trusted devices
   msl-network hostname add TheHostname
@@ -35,17 +40,19 @@ Examples:
   # remove 'OtherHostname' from the list of trusted devices
   msl-network hostname remove OtherHostname
 
-  # add 'TheHostname' to the Hostnames table in a specific database 
+  # add 'TheHostname' to the auth_hostnames table in a specific database 
   msl-network hostname add TheHostname --database path/to/database.db 
   
-  # list all trusted hosts
+  # list all trusted hostnames
   msl-network hostname list
 
 """
 
+__doc__ += DESCRIPTION + EPILOG
+
 
 def add_parser_hostname(parser):
-    """Add a ``hostname`` command to the parser."""
+    """Add the ``hostname`` command to the `parser`."""
     p = parser.add_parser(
         'hostname',
         help=HELP,

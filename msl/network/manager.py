@@ -1,5 +1,5 @@
 """
-An asynchronous Network Manager.
+The Network :class:`Manager`.
 """
 import sys
 import ssl
@@ -21,12 +21,12 @@ class Manager(Network):
 
     def __init__(self, port, password, login, hostnames, connections_table,
                  users_table, hostnames_table, debug, loop):
-        """An asynchronous Network :class:`Manager`.
+        """The Network :class:`Manager`.
 
         .. attention::
             Not to be instantiated directly. Start the Network :class:`Manager`
-            from the command line, see ``$ msl-network start --help`` for more
-            information.
+            from the command line. Run ``msl-network start --help`` from a terminal
+            for more information.
 
         Parameters
         ----------
@@ -36,17 +36,17 @@ class Manager(Network):
             The password of the Network :class:`Manager`. Essentially, this can be a
             thought of as a single password that all :class:`~msl.network.client.Client`\'s
             and :class:`~msl.network.service.Service`\'s need to specify before the
-            connection to the Network :class:`Manager` is successful.
+            connection to the Network :class:`Manager` is successful. To use the `password` start
+            the :class:`Manager` with the ``--auth-password`` flag.
         login : :obj:`bool` or :obj:`None`
-            If :obj:`True` then the Network :class:`Manager` checks a users login
-            credentials (the username and password) before a :class:`~msl.network.client.Client`
-            or :class:`~msl.network.service.Service` successfully connects. See also, the
-            `users_table` argument.
+            If :obj:`True` then the Network :class:`Manager` was started with the ``--auth-login`` flag
+            and checks a users login credentials (the username and password) before a
+            :class:`~msl.network.client.Client` or :class:`~msl.network.service.Service` successfully
+            connects.
         hostnames : :obj:`list` of :obj:`str` or :obj:`None`
             A list of trusted hostnames of devices that can connect to the Network
-            :class:`Manager` (only if the Network :class:`Manager` was started using
-            trusted hostnames as the authentication procedure). See also, the
-            `hostnames_table` argument.
+            :class:`Manager` (only if the Network :class:`Manager` was started using the
+            ``--auth-hostname`` flag as the authentication procedure).
         connections_table : :class:`~msl.network.database.ConnectionsTable`
             The table in the database that keeps the records for the devices that connected
             to the Network :class:`Manager`.
@@ -147,7 +147,7 @@ class Manager(Network):
         self.remove_peer(id_type, writer)
 
     async def check_user(self, reader, writer):
-        """Check the login credentials.
+        """Check the login credentials of a user.
 
         Parameters
         ----------
@@ -196,7 +196,7 @@ class Manager(Network):
         return False
 
     async def check_manager_password(self, reader, writer):
-        """Check the password from the connected device.
+        """Check the :class:`Manager`\'s password from the connected device.
 
         Parameters
         ----------
@@ -318,25 +318,13 @@ class Manager(Network):
             # the required JSON format
             return deserialize(data)['result']
         except:
-            # however, if connecting via a terminal, e.g. Putty,  then it is convenient
+            # however, if connecting via a terminal, e.g. openssl s_client,  then it is convenient
             # to not manually type the JSON format and let the Manager parse the raw input
             return data
 
     async def handler(self, reader, writer):
         """Handle requests from the connected :class:`~msl.network.client.Client`\'s and
         replies from connected :class:`~msl.network.service.Service`\'s.
-
-        A :class:`~msl.network.client.Client` that is sending requests to the Network
-        :class:`Manager` **MUST** send a JSON_ object with the following format::
-
-            {
-                'service': string (the name of the Service to process the request)
-                'attribute': string (the name of a method or variable of the Service)
-                'args': array
-                'kwargs': object (key-value pairs to be passed to the Service's method)
-            }
-
-        .. _JSON: http://www.json.org/
 
         Parameters
         ----------
@@ -388,7 +376,7 @@ class Manager(Network):
                         self.link(writer, data.get('uuid', ''), data['args'][0])
                     except Exception as e:
                         log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
-                        self.send_error(writer, e, reader.peer.address)
+                        self.send_error(writer, e, reader.peer.address, uuid=data.get('uuid', ''))
                 else:
                     # the peer needs administrative rights to send any other request to the Manager
                     log.info(f'received an admin request from {reader.peer.network_name}')
@@ -398,7 +386,7 @@ class Manager(Network):
                             self.send_error(
                                 writer,
                                 ValueError('You must be an administrator to send this request to the Manager'),
-                                reader.peer.address,
+                                reader.peer.address
                             )
                             continue
                     # the peer is an administrator, so execute the request
@@ -518,12 +506,12 @@ class Manager(Network):
             self.remove_peer('service', writer)
 
     def identity(self):
-        """:obj:`dict`: The :obj:`~msl.network.network.Network.identity` about
+        """:obj:`dict`: The :obj:`~msl.network.network.Network.identity` of
         the Network :class:`Manager`."""
         return self._identity
 
     def link(self, writer, uuid, service):
-        """A request from the :class:`~msl.network.client.Client` to link it
+        """A request from a :class:`~msl.network.client.Client` to link it
         with a :class:`~msl.network.service.Service`.
 
         Parameters
@@ -544,7 +532,7 @@ class Manager(Network):
         except KeyError:
             msg = f'{service} service does not exist, could not link with {writer.peer.network_name}'
             log.info(msg)
-            self.send_error(writer, KeyError(msg), writer.peer.address)
+            self.send_error(writer, KeyError(msg), writer.peer.address, uuid=uuid)
 
     def send_request(self, writer, attribute, *args, **kwargs):
         """Send a request to a :class:`~msl.network.client.Client` or a
@@ -558,7 +546,7 @@ class Manager(Network):
         attribute : :obj:`str`
             The name of the method to call from the :class:`~msl.network.client.Client`
             or :class:`~msl.network.service.Service`.
-        args : :obj:`dict`, optional
+        args : :obj:`tuple`, optional
             The arguments that the `attribute` method requires.
         kwargs : :obj:`dict`, optional
             The key-value pairs that the `attribute` method requires.
@@ -578,7 +566,7 @@ class Manager(Network):
         Parameters
         ----------
         boolean : :obj:`bool`
-            Whether to enable or disable debug logging messages
+            Whether to enable or disable debug logging messages.
         """
         self._debug = bool(boolean)
 
@@ -587,6 +575,10 @@ class Peer(object):
 
     def __init__(self, writer):
         """Metadata about a peer that is connected to the Network :class:`Manager`.
+
+        .. attention::
+            Not to be called directly. To be called when the Network :class:`Manager`
+            receives a :meth:`~Manager.new_connection` request.
 
         Parameters
         ----------

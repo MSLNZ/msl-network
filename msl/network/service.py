@@ -60,8 +60,11 @@ class Service(Network, asyncio.Protocol):
         return '<{} object at {:#x} manager={} port={}>'.format(self.name, id(self), self._address_manager, self._port)
 
     def password(self, name):
-        """:obj:`str`: Returns the password to use to try to connect to the Network
-        :class:`~msl.network.manager.Manager` at `name`."""
+        """
+        .. attention::
+           Do not override this method. It is called automatically when the Network
+           :class:`~msl.network.manager.Manager` requests a password.
+        """
         if self._identity:
             # once the Service sends its identity to the Manager any subsequent password requests
             # can only be from a Client that is linked with the Service and therefore something
@@ -78,8 +81,11 @@ class Service(Network, asyncio.Protocol):
             return getpass.getpass(f'Enter the password for {name} > ')
 
     def username(self, name):
-        """:obj:`str`: The username to use to connect to the Network
-        :class:`~msl.network.manager.Manager` at `name`."""
+        """
+        .. attention::
+           Do not override this method. It is called automatically when the Network
+           :class:`~msl.network.manager.Manager` requests the name of the user.
+        """
         if self._identity:
             # see the comment in the password() method why we do this self._identity check
             return 'You do not have permission to receive the username'
@@ -88,7 +94,12 @@ class Service(Network, asyncio.Protocol):
         return self._username
 
     def identity(self):
-        """:obj:`dict`: The :obj:`~msl.network.network.Network.identity` of the :class:`Service`."""
+        """
+        .. attention::
+           Do not override this method. It is called automatically when the Network
+           :class:`~msl.network.manager.Manager` requests the
+           :obj:`~msl.network.network.Network.identity` of the :class:`Service`
+        """
         if not self._identity:
             self._identity['type'] = 'service'
             self._identity['name'] = self.name
@@ -107,74 +118,21 @@ class Service(Network, asyncio.Protocol):
         return self._identity
 
     def connection_made(self, transport):
-        """Automatically called when the connection to the Network
-        :class:`~msl.network.manager.Manager` has been established."""
+        """
+        .. attention::
+           Do not override this method. It is called automatically when the connection
+           to the Network :class:`~msl.network.manager.Manager` has been established.
+        """
         self._transport = transport
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self.name, self._port)
         log.info(f'{self} connection made')
 
     def data_received(self, data):
-        """New data is received for the :class:`Service`.
-
-        .. _JSON: http://www.json.org/
-
-        Parameters
-        ----------
-        data : :obj:`bytes`
-            A :class:`Service` receives data that will be converted into a JSON_ object.
-            The input data **MUST** have one of the following formats.
-
-            If the input data represents an error from the Network
-            :class:`~msl.network.manager.Manager` then the JSON_ object will be::
-
-                {
-                    'error' : true
-                    'message': string (a short description of the error)
-                    'traceback': list of strings (a detailed stack trace of the error)
-                    'result': null
-                    'requester': string (the address of the device that made the request)
-                }
-
-            If the input data represents a request from a :class:`~msl.network.client.Client`
-            then the JSON_ object will be::
-
-                {
-                    'error': false
-                    'attribute': string (the name of a method or variable to access from the Service)
-                    'args': object (arguments to be passed to the Service's method)
-                    'kwargs': object (keyword arguments to be passed to the Service's method)
-                    'requester': string (the address of the device that made the request)
-                    'uuid' string (the universally unique identifier of the request)
-                }
-
-        Returns
-        -------
-        :obj:`bytes`
-            The reply from the :class:`Service`.
-
-            A :class:`Service` will reply with a JSON_ object in one of the following formats.
-
-            If the :class:`Service` raised an exception then the JSON_ object will be::
-
-                {
-                    'error' : true
-                    'message': string (a short description of the error)
-                    'traceback': list of strings (a detailed stack trace of the error)
-                    'result': null
-                    'requester': string (the address of the device that made the request)
-                }
-
-            If the :class:`Service` successfully processed the request then the JSON_ object
-            will be::
-
-                {
-                    'error' : false
-                    'result': object (the reply is from the Service)
-                    'requester': string (the address of the device that made the request)
-                    'uuid' string (the universally unique identifier of the request)
-                }
-
+        """
+        .. attention::
+           Do not override this method. It is called automatically when data is
+           received from the Network :class:`~msl.network.manager.Manager`.
         """
         if not self._buffer:
             self._t0 = time.perf_counter()
@@ -225,7 +183,7 @@ class Service(Network, asyncio.Protocol):
             attrib = getattr(self, data['attribute'])
         except Exception as e:
             log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
-            self.send_error(self._transport, e, requester=data['requester'])
+            self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
             return
 
         if callable(attrib):
@@ -241,12 +199,15 @@ class Service(Network, asyncio.Protocol):
             self.send_reply(self._transport, reply, requester=data['requester'], uuid=data['uuid'])
         except Exception as e:
             log.error(f'{self._network_name} {e.__class__.__name__}: {e}')
-            self.send_error(self._transport, e, requester=data['requester'])
+            self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
         self._futures.pop(uid, None)
 
     def connection_lost(self, exc):
-        """Automatically called when the connection to the
-        Network :class:`~msl.network.manager.Manager` has been closed."""
+        """
+        .. attention::
+           Do not override this method. It is called automatically when the connection
+           to the Network :class:`~msl.network.manager.Manager` has been closed.
+        """
         log.info(f'{self} connection lost')
         self._futures.clear()
         self._transport = None
@@ -256,6 +217,16 @@ class Service(Network, asyncio.Protocol):
         if exc:
             log.error(exc)
             raise exc
+
+    def set_debug(self, boolean):
+        """Set the debug mode of the :class:`Service`.
+
+        Parameters
+        ----------
+        boolean : :obj:`bool`
+            Whether to enable or disable debug logging messages.
+        """
+        self._debug = bool(boolean)
 
     def start(self, *, host='localhost', port=PORT, username=None, password=None,
               password_manager=None, certificate=None, debug=False):
@@ -275,13 +246,12 @@ class Service(Network, asyncio.Protocol):
             :class:`~msl.network.manager.Manager` requires login credentials to be able
             to connect to it).
         password : :obj:`str`, optional
-            The password that is associated with `username`. Can be specified if the Network
-            :class:`~msl.network.manager.Manager` requires a login to connect to it. If the
-            `password` is not specified then you will be asked for the password if needed.
+            The password that is associated with `username`. If the `password` is not
+            specified then you will be asked for the password if needed.
         password_manager : :obj:`str`, optional
             The password of the Network :class:`~msl.network.manager.Manager`. A Network
             :class:`~msl.network.manager.Manager` can be started with the option to
-            set a global password required which all connecting devices must enter in order
+            set a global password which all connecting devices must enter in order
             to connect to it. If the `password_manager` value is not specified then you will
             be asked for the password if needed.
         certificate : :obj:`str`, optional

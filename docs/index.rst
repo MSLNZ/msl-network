@@ -2,7 +2,27 @@
 MSL-Network
 ===========
 
-Write the documentation for **MSL-Network**.
+**MSL-Network** is composed of three objects -- a Network :class:`~msl.network.manager.Manager`,
+:class:`~msl.network.client.Client`\'s and :class:`~msl.network.service.Service`\'s.
+
+The Network :class:`~msl.network.manager.Manager` allows for multiple :class:`~msl.network.client.Client`\'s
+and :class:`~msl.network.service.Service`\'s to connect to it and it links a :class:`~msl.network.client.Client`\'s
+request to the appropriate :class:`~msl.network.service.Service` to execute the request and then the Network
+:class:`~msl.network.manager.Manager` sends the response from the :class:`~msl.network.service.Service` back
+to the :class:`~msl.network.client.Client`.
+
+The Network :class:`~msl.network.manager.Manager` uses concurrency to handle requests from multiple
+:class:`~msl.network.client.Client`\'s such that multiple requests start, run and complete in overlapping time
+periods and in no specific order. A :class:`~msl.network.client.Client` can send requests synchronously or
+asynchronously to the Network :class:`~msl.network.manager.Manager` for a :class:`~msl.network.service.Service`
+to execute. See :ref:`concurrent-asynchronous` for more details.
+
+`JSON <http://www.json.org/>`_ is used as the data format to exchange information between a
+:class:`~msl.network.client.Client` and a :class:`~msl.network.service.Service`. As such, it is possible to
+implement a :class:`~msl.network.client.Client` or a :class:`~msl.network.service.Service` in any programming
+language to connect to the Network :class:`~msl.network.manager.Manager`. See the :ref:`json-formats` section
+for an overview of the data format. One can even connect to the Network :class:`~msl.network.manager.Manager`
+from a terminal to send requests, see :class:`~msl.network.utils.parse_terminal_input` for more details.
 
 ========
 Contents
@@ -12,7 +32,10 @@ Contents
    :maxdepth: 2
 
    Install <install>
-   API <api_docs>
+   Usage <usage>
+   Concurrency & Asynchronous Programming <concurrency_async>
+   JSON Formats <json_formats>
+   API <api>
    License <license>
    Authors <authors>
    Release Notes <changelog>

@@ -1,6 +1,5 @@
 """
-Main entry point to the asynchronous Network :class:`~msl.network.manager.Manager`
-via the command-line interface (CLI).
+Main entry point to **MSL-Network** via the command-line interface (CLI).
 """
 import sys
 
@@ -8,12 +7,12 @@ from . import __version__
 
 PARSER = None
 
-DESCRIPTION = """An asynchronous Network Manager.
+DESCRIPTION = """A concurrent Network Manager.
 
 The Network Manager allows for multiple Clients and Services to connect to 
 it and links a Client's request to the appropriate Service to handle 
-the request and then the Manager sends the response from the Service back
-to the Client.
+the request and then the Network Manager sends the response from the Service
+back to the Client.
 """
 
 
@@ -63,7 +62,7 @@ def configure_parser():
 
 def main(*args):
     """
-    Main entry point to the asynchronous network manager.
+    Main entry point to **MSL-Network** via the command-line interface (CLI).
     """
     if not args:
         args = sys.argv[1:]

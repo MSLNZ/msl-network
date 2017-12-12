@@ -1,5 +1,5 @@
 """
-Asynchronous network I/O.
+Concurrent network I/O.
 """
 from collections import namedtuple
 

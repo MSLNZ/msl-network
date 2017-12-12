@@ -1,11 +1,16 @@
 """
 Command line interface for the ``certgen`` command.
+
+To see the help documentation, run the following command in a terminal::
+
+   msl-network certgen --help
+
 """
 import os
 
 from . import cryptography
 
-HELP = 'Generate a self-signed PEM certificate.'
+HELP = 'Generates a self-signed PEM certificate.'
 
 DESCRIPTION = HELP + """
 
@@ -13,16 +18,16 @@ The certificate uses the hostname of the computer that this command was
 executed on as the Common Name and as the Issuer Name.
 
 The certgen command is similar to the openssl command to generate a 
-self-signed certificate from a pre-existing private key
+self-signed certificate from a pre-existing private key::
 
   openssl req -key private.key -new -x509 -days 365 -out certificate.crt
  
 """
 
 EPILOG = """
-Examples:
+Examples::
 
-  # create a default certificate using a default private key
+  # create a default certificate using the default private key
   # and save it to the default directory
   msl-network certgen 
 
@@ -30,15 +35,18 @@ Examples:
   # save the certificate to the specified file
   msl-network certgen --key-path /path/to/key.pem /path/to/cert.pem
 
-See Also: 
+See Also::
+
   msl-network keygen
   msl-network certdump
  
 """
 
+__doc__ += DESCRIPTION + EPILOG
+
 
 def add_parser_certgen(parser):
-    """Add a ``certgen`` command to the parser."""
+    """Add the ``certgen`` command to the `parser`."""
     p = parser.add_parser(
         'certgen',
         help=HELP,

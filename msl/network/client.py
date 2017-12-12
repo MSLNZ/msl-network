@@ -21,7 +21,8 @@ log = logging.getLogger(__name__)
 
 def connect(*, name='Client', host='localhost', port=PORT, timeout=None, username=None,
             password=None, password_manager=None, certificate=None, debug=False):
-    """Create a new connection to a Network :class:`~msl.network.manager.Manager`.
+    """Create a new connection to a Network :class:`~msl.network.manager.Manager`
+    as a :class:`Client`.
 
     Parameters
     ----------
@@ -39,22 +40,18 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=None, usernam
         The default is to wait forever (i.e., no timeout).
     username : :obj:`str`, optional
         The username to use to connect to Network :class:`~msl.network.manager.Manager`.
-        If not specified then you will be asked for the username (only if the Network
-        :class:`~msl.network.manager.Manager` requires login credentials to be able
-        to connect to it).
+        If not specified then you will be asked for the `username` when needed.
     password : :obj:`str`, optional
-        The password that is associated with `username`. Can be specified if the Network
-        :class:`~msl.network.manager.Manager` requires a login to connect to it. If the
-        `password_username` value is not specified then you will be asked for the
-        password if needed.
+        The password that is associated with `username`. If not specified then you will
+        be asked for the password when needed.
     password_manager : :obj:`str`, optional
         The password of the Network :class:`~msl.network.manager.Manager`. A Network
         :class:`~msl.network.manager.Manager` can be started with the option to
-        set a global password required which all connecting devices must enter in order
-        to connect to it. If the `password_manager` value is not specified then you will
-        be asked for the password if needed.
+        use a global password that is required for all connecting devices to specify
+        in order for the device to connect to it. If the `password_manager` value is
+        not specified then you will be asked for the password when needed.
     certificate : :obj:`str`, optional
-        The path to the certificate file to use for the TLS connection
+        The path to the certificate file to use for the secure connection
         with the Network :class:`~msl.network.manager.Manager`.
     debug : :obj:`bool`, optional
         Whether to log debug messages for the :class:`Client`.
@@ -65,7 +62,8 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=None, usernam
         A new connection.
     """
     client = Client(name)
-    success = client.start(host, port, timeout, username, password, password_manager, certificate, debug)
+    success = client.start(host, port, timeout, username, password,
+                           password_manager, certificate, debug)
     if not success:
         client.raise_latest_error()
     return client
@@ -110,7 +108,8 @@ class Client(Network, asyncio.Protocol):
 
     @property
     def name(self):
-        """:obj:`str`: The name of this connection on the Network :class:`~msl.network.manager.Manager`."""
+        """:obj:`str`: The name of the :class:`Client` on the Network
+        :class:`~msl.network.manager.Manager`."""
         return self._name
 
     @property
@@ -143,11 +142,14 @@ class Client(Network, asyncio.Protocol):
             self._name, id(self), self._address_manager, self._port)
 
     def password(self, name):
-        """:obj:`str`: The password required to connect to the Network
-        :class:`~msl.network.manager.Manager` at `name`."""
-        # note that a Service has a special check in its password() method, however,
-        # a Client does not need this check because Clients cannot send requests to
-        # other Clients and a Manager will not re-ask for the password
+        """
+        .. attention::
+           Do not call this method. It is called by the Network
+           :class:`~msl.network.manager.Manager` when verifying the login credentials.
+        """
+        # note that a Service has a special check in its password() method so that a password
+        # remains secure, however, a Client does not need this security check because a Client
+        # cannot send a request to other Clients
         if name == self._address_manager:
             if self._password_manager is None:
                 self._password_manager = getpass.getpass(f'Enter the password for {name} > ')
@@ -157,19 +159,23 @@ class Client(Network, asyncio.Protocol):
         return self._password
 
     def username(self, name):
-        """:obj:`str`: The username to use to connect to the Network
-        :class:`~msl.network.manager.Manager` at `name`."""
+        """
+        .. attention::
+           Do not call this method. It is called by the Network
+           :class:`~msl.network.manager.Manager` when verifying the login credentials.
+        """
         # see the comment in the Client.password() method and in the Service.username() method
         if self._username is None:
             self._username = input(f'Enter the username for {name} > ')
         return self._username
 
     def identity(self):
-        """:obj:`dict`: The :obj:`~msl.network.network.Network.identity` of the :class:`Client`."""
+        """:obj:`dict`: Returns the :obj:`~msl.network.network.Network.identity` of the :class:`Client`."""
         return self._identity
 
     def link(self, service):
-        """Link with a :class:`~msl.network.service.Service`.
+        """Link with a :class:`~msl.network.service.Service` on the Network
+        :class:`~msl.network.manager.Manager`.
 
         Parameters
         ----------
@@ -265,17 +271,18 @@ class Client(Network, asyncio.Protocol):
         """Request something from the Network :class:`~msl.network.manager.Manager`
         as an administrator.
 
-        The person that calls this method must have administrative privileges for that
-        Network :class:`~msl.network.manager.Manager`.
+        The user that calls this method must have administrative privileges for that
+        Network :class:`~msl.network.manager.Manager`. See also :mod:`msl.network.cli_user`
+        for details on how to create a user that is an administrator .
 
         Parameters
         ----------
         attrib : :obj:`str`
-            The attribute on the Network :class:`~msl.network.manager.Manager`. Can contain
+            The attribute of the Network :class:`~msl.network.manager.Manager`. Can contain
             dots ``.`` to access sub-attributes.
-        args : :obj:`list`
+        args : :obj:`list`, optional
             The arguments to send to the Network :class:`~msl.network.manager.Manager`.
-        kwargs : :obj:`dict`
+        kwargs : :obj:`dict`, optional
             The keyword arguments to send to the Network :class:`~msl.network.manager.Manager`.
 
         Returns
@@ -284,10 +291,13 @@ class Client(Network, asyncio.Protocol):
 
         Examples
         --------
-        admin_request('users_table.usernames')
-        admin_request('users_table.is_user_registered', 'n.bohr')
-        admin_request('connections_table.connections', timestamp1='2017-11-29', timestamp2='2017-11-30')
-        admin_request('shutdown_manager')  **WARNING: this will terminate ALL connections with the Manager**
+        ``admin_request('users_table.usernames')``
+
+        ``admin_request('users_table.is_user_registered', 'n.bohr')``
+
+        ``admin_request('connections_table.connections', timestamp1='2017-11-29', timestamp2='2017-11-30')``
+
+        ``admin_request('shutdown_manager')``
         """
         reply = self._send_request_for_manager(attrib, *args, **kwargs)
         if 'result' not in reply:
@@ -307,8 +317,11 @@ class Client(Network, asyncio.Protocol):
         return reply['result']
 
     def connection_made(self, transport):
-        """Automatically called when the connection to the Network
-        :class:`~msl.network.manager.Manager` has been established."""
+        """
+        .. attention::
+           Do not call this method. It is called automatically when the connection
+           to the Network :class:`~msl.network.manager.Manager` has been established.
+        """
         self._transport = transport
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self.name, self._port)
@@ -316,51 +329,10 @@ class Client(Network, asyncio.Protocol):
             log.debug(f'{self} connection made')
 
     def data_received(self, reply):
-        """New data is received for the :class:`Client`.
-
-        .. _JSON: http://www.json.org/
-
-        Parameters
-        ----------
-        reply : :obj:`bytes`
-            The reply from the :class:`~msl.network.service.Service` or the
-            Network :class:`~msl.network.manager.Manager`.
-
-            A :class:`Client` receives data that will be converted into a JSON_ object.
-            The input data **MUST** have one of the following formats.
-
-            If the input data represents an error then the JSON_ object will be::
-
-                {
-                    'error' : true
-                    'message': string (a short description of the error)
-                    'traceback': list of strings (a detailed stack trace of the error)
-                    'result': null
-                    'requester': string (the address of the device that made the request)
-                }
-
-            If the input data represents a request from the Network :class:`~msl.network.manager.Manager`
-            then the JSON_ object will be::
-
-                {
-                    'error' : false
-                    'attribute' : string (the name of a method to call from the Client)
-                    'args': object (arguments to be passed to the Client's method)
-                    'kwargs': object (keyword arguments to be passed to the Client's method)
-                    'requester': string (the address of the Network Manager)
-                    'uuid': string (an empty string)
-                }
-
-            If the input data represent a reply from the :class:`~msl.network.service.Service`
-            then the JSON_ object will be::
-
-                {
-                    'error' : false
-                    'result': object (the reply is from the Service)
-                    'requester': string (the address of the Client that made the request)
-                    'uuid' string (the universally unique identifier of the request)
-                }
-
+        """
+        .. attention::
+           Do not call this method. It is called automatically when data is
+           received from the Network :class:`~msl.network.manager.Manager`.
         """
         if not self._buffer:
             self._t0 = time.perf_counter()
@@ -404,8 +376,12 @@ class Client(Network, asyncio.Protocol):
             self._futures[uid].set_result(data)
 
     def connection_lost(self, exc):
-        """Automatically called when the connection to the Network
-        :class:`~msl.network.manager.Manager` has been closed."""
+        """
+        .. attention::
+           Do not call this method. It is called automatically when the connection
+           to the Network :class:`~msl.network.manager.Manager` has been closed.
+           Call :meth:`disconnect` to close the connection.
+        """
         if self._debug:
             log.debug(f'{self} connection lost')
         for future in self._futures.values():
@@ -437,8 +413,8 @@ class Client(Network, asyncio.Protocol):
 
     def raise_latest_error(self):
         """
-        Raises the latest exception that was received from the Network
-        :class:`~msl.network.manager.Manager` as a :exc:`~msl.network.exception.MSLNetworkError`
+        Raises the latest error that was received from the Network
+        :class:`~msl.network.manager.Manager` as a :exc:`~msl.network.exceptions.MSLNetworkError`
         exception.
 
         If there is no error then calling this method does nothing.
@@ -457,8 +433,8 @@ class Client(Network, asyncio.Protocol):
 
         Although a :class:`Client` can call this method directly, in general, it is
         recommended to create a :meth:`link` with a :class:`~msl.network.service.Service`
-        and to send requests via the :class:`Link` object. This allows for using the "."
-        notation for accessing the `attribute` in the :class:`~msl.network.service.Service`
+        and to send requests via the :class:`Link` object. This allows for using the dot
+        notation ``.`` for accessing an `attribute` from the :class:`~msl.network.service.Service`
         class.
 
         Parameters
@@ -468,19 +444,20 @@ class Client(Network, asyncio.Protocol):
         attribute : :obj:`str`
             The name of the property or method of the :class:`~msl.network.service.Service`
             to process the request.
-        args : :obj:`list`
+        args : :obj:`list`, optional
             The arguments that the :class:`~msl.network.service.Service` `attribute`
             requires.
-        kwargs : :obj:`dict`
+        kwargs : :obj:`dict`, optional
             The keyword arguments that the :class:`~msl.network.service.Service`
             `attribute` requires.
 
         Returns
         -------
-        The result from the :class:`~msl.network.service.Service` executing the request or
+        The result from the :class:`~msl.network.service.Service` executing the request, or
         an :class:`asyncio.Future` object if the ``async=True`` keyword argument is specified.
-        If sending asynchronous requests then you must call :meth:`send_pending_requests`
-        to be able to get the result from each :class:`asyncio.Future`.
+
+            If sending asynchronous requests then you must call :meth:`send_pending_requests`
+            to be able to get the result from each :class:`asyncio.Future`.
 
         Raises
         ------
@@ -489,28 +466,35 @@ class Client(Network, asyncio.Protocol):
             has been disconnected.
         ValueError
             If there are asynchronous requests pending and a synchronous request is made.
-        :exc:`~msl.network.exception.MSLNetworkError`
+        :exc:`~msl.network.exceptions.MSLNetworkError`
             If there was an error executing the request.
 
         Example
         -------
         The following example shows how the :meth:`link` and :meth:`send_request` methods
         can be used to send a request to a :class:`~msl.network.service.Service`
+
         >>> from msl.network import connect  # doctest: +SKIP
+
         connect to the Network :class:`~msl.network.manager.Manager` at ``localhost``
+
         >>> c = connect()  # doctest: +SKIP
-        using the :meth:`send_request` method to send requests to the :ref:`BasicMath` Service
+
+        using the :meth:`send_request` method to send requests to the example :ref:`basic-math-service`
+
         >>> c.send_request('BasicMath', 'add', 2, 3)  # doctest: +SKIP
         5
         >>> c.send_request('BasicMath', 'subtract', 2, 3)  # doctest: +SKIP
         -1
-        using the :meth:`link` method to create a link with the :ref:`BasicMath` Service
-        and then send requests
+
+        using the :meth:`link` method to create a link with the :ref:`basic-math-service` and then send requests
+
         >>> bm = c.link('BasicMath')  # doctest: +SKIP
         >>> bm.add(2, 3)  # doctest: +SKIP
         5
         >>> bm.subtract(2, 3)  # doctest: +SKIP
         -1
+
         """
         if self._transport is None:
             raise ConnectionError(f'{self} has been disconnected')
@@ -552,43 +536,10 @@ class Client(Network, asyncio.Protocol):
             self._wait()
 
     def start(self, host, port, timeout, username, password, password_manager, certificate, debug):
-        """Start the connection to a Network :class:`~msl.network.manager.Manager`.
-
+        """
         .. attention::
             Do not call this method directly. Use :meth:`connect` to connect to
             a Network :class:`~msl.network.manager.Manager`.
-
-        Parameters
-        ----------
-        host : :obj:`str`, optional
-            The hostname of the Network :class:`~msl.network.manager.Manager` that the
-            :class:`Client` should connect to.
-        port : :obj:`int`, optional
-            The port number of the Network :class:`~msl.network.manager.Manager` that
-            the :class:`Client` should connect to.
-        timeout : :obj:`float`
-            The maximum number of seconds to wait for a reply from the Network
-            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
-        username : :obj:`str`, optional
-            The username to use to connect to Network :class:`~msl.network.manager.Manager`.
-            If not specified then you will be asked for the username (only if the Network
-            :class:`~msl.network.manager.Manager` requires login credentials to be able
-            to connect to it).
-        password : :obj:`str`, optional
-            The password that is associated with `username`. Can be specified if the Network
-            :class:`~msl.network.manager.Manager` requires a login to connect to it. If the
-            `password` is not specified then you will be asked for the password if needed.
-        password_manager : :obj:`str`, optional
-            The password of the Network :class:`~msl.network.manager.Manager`. A Network
-            :class:`~msl.network.manager.Manager` can be started with the option to
-            set a global password required which all connecting devices must enter in order
-            to connect to it. If the `password_manager` value is not specified then you will
-            be asked for the password if needed.
-        certificate : :obj:`str`, optional
-            The path to the certificate file to use for the TLS connection
-            with the Network :class:`~msl.network.manager.Manager`.
-        debug : :obj:`bool`, optional
-            Whether to log debug messages for the :class:`Client`.
         """
         self._host_manager = HOSTNAME if host in localhost_aliases() else host
         self._port_manager = port
@@ -748,10 +699,10 @@ class Client(Network, asyncio.Protocol):
 class Link(object):
 
     def __init__(self, client, service, identity):
-        """Creates a link with a :class:`~msl.network.service.Service`.
+        """A network link between a :class:`Client` and a :class:`~msl.network.service.Service`.
 
         .. attention::
-            Not to be instantiated directly. A :class:`Client` creates the link
+            Not to be instantiated directly. A :class:`Client` creates a :class:`Link`
             via the :meth:`Client.link` method.
         """
         self._client = client

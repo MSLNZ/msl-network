@@ -1,5 +1,5 @@
 """
-Exceptions used by MSL-Network.
+Exceptions used by **MSL-Network**.
 """
 
 

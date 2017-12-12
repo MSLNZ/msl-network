@@ -1,17 +1,21 @@
 """
-Constants used by the MSL-Network package.
+Constants used by the **MSL-Network** package.
 """
 import os
 import enum
 import socket
 
 PORT = 1875
-""":obj:`int`: The default port number to use (the year that the BIPM was established)."""
+""":obj:`int`: The default port number to use for the Network :class:`~msl.network.manager.Manager` 
+(the year that the `BIPM <https://www.bipm.org/en/about-us/>`_ was established)."""
 
-HOME_DIR = os.environ.get('MSL_HOME', os.path.join(os.path.expanduser('~'), '.msl', 'network'))
+HOSTNAME = socket.gethostname()
+""":obj:`str`: The hostname of the Network :class:`~msl.network.manager.Manager`."""
+
+HOME_DIR = os.environ.get('MSL_NETWORK_HOME', os.path.join(os.path.expanduser('~'), '.msl', 'network'))
 """:obj:`str`: The default $HOME directory where all files are to be located. 
 
-Can be overwritten by specifying a ``MSL_HOME`` environment variable.
+Can be overwritten by specifying a ``MSL_NETWORK_HOME`` environment variable.
 """
 
 CERT_DIR = os.path.join(HOME_DIR, 'certs')
@@ -23,24 +27,30 @@ KEY_DIR = os.path.join(HOME_DIR, 'keys')
 DATABASE = os.path.join(HOME_DIR, 'manager.db')
 """:obj:`str`: The default database path."""
 
-HOSTNAME = socket.gethostname()
-""":obj:`str`: The hostname of the Network Manager."""
 
+class JSONPackage(enum.Enum):
+    """
+    Python packages for (de)serializing `JSON <http://www.json.org/>`_ data.
 
-class JSONPackage(enum.IntEnum):
-    """Python packages for (de)serializing `JSON <http://www.json.org/>`_ data."""
-    BUILTIN = 0
-    ULTRA = 1  #: `UltraJSON <https://pypi.python.org/pypi/ujson>`_
-    RAPID = 2  #: `RapidJSON <https://pypi.python.org/pypi/python-rapidjson>`_
-    SIMPLE = 3  #: `simplejson <https://pypi.python.org/pypi/simplejson>`_
-    YAJL = 4  #: `Yet-Another-Json-Library <https://pypi.python.org/pypi/yajl>`_
+    .. _UltraJSON: https://pypi.python.org/pypi/ujson
+    .. _RapidJSON: https://pypi.python.org/pypi/python-rapidjson
+    .. _simplejson: https://pypi.python.org/pypi/simplejson
+    .. _Yet-Another-Json-Library: https://pypi.python.org/pypi/yajl
+    """
+    BUILTIN = 'BUILTIN'
+    ULTRA = 'ULTRA'  #: UltraJSON_
+    RAPID = 'RAPID'  #: RapidJSON_
+    SIMPLE = 'SIMPLE'  #: simplejson_
+    YAJL = 'YAJL'  #: Yet-Another-Json-Library_
 
 
 JSON = JSONPackage[os.environ.get('MSL_NETWORK_JSON', 'BUILTIN').upper()]
-""":obj:`int`: The Python package to use for (de)serializing `JSON <http://www.json.org/>`_ data.
+""":obj:`str`: The Python package to use for (de)serializing JSON_ data.
 
-Can be overwritten by specifying a ``MSL_NETWORK_JSON`` environment variable. 
-Possible values are in :class:`JSONPackage`, for example, the 
-``MSL_NETWORK_JSON`` environment variable can be defined to be ``ULTRA`` to use
-`UltraJSON <https://pypi.python.org/pypi/ujson>`_ to (de)serialize JSON data.
+By default, the builtin :mod:`json` module is used. 
+
+To change which JSON_ package to use you can specify a ``MSL_NETWORK_JSON`` 
+environment variable. Possible values are in :class:`JSONPackage`. For example,
+the ``MSL_NETWORK_JSON`` environment variable can be defined to be ``ULTRA``
+to use UltraJSON_ to (de)serialize JSON_ data.
 """

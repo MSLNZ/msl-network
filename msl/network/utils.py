@@ -21,8 +21,8 @@ def ensure_root_path(path):
         The file path.
         
         For example, if `path` is ``/the/path/to/my/test/file.txt`` then
-        this function would ensure that the ``/the/path/to/my/test`` directory
-        exists creating the intermediate directories if necessary.
+        this function would ensure that ``/the/path/to/my/test`` directory
+        exists (creating the intermediate directories if necessary).
     """
     if path is not None:
         root = os.path.dirname(path)
@@ -33,15 +33,16 @@ def ensure_root_path(path):
 def parse_terminal_input(line):
     """Parse text from a terminal connection.
 
-    This is a convenience method if someone connects through a terminal, e.g. Putty,
-    to manually send requests to the Network :class:`~msl.network.manager.Manager`.
-    so that they do not have to enter the request as very-specific JSON_ strings.
+    This is a convenience function if someone wants to connect to the Network
+    :class:`~msl.network.manager.Manager` through a terminal, e.g. using `openssl s_client`_,
+    to manually send requests to the Network :class:`~msl.network.manager.Manager` so that
+    they do not have to enter a request in the very-specific :ref:`client-format` for the
+    JSON_ string.
 
-    This function is really only convenient for connecting as a :class:`~msl.network.client.Client`
-    since a :class:`~msl.network.service.Service` must format the
-    :obj:`~msl.network.network.Network.identity` and the
-    :class:`replies <msl.network.service.Service.data_received>` to be a properly-formatted
-    JSON_ string. Although, why would you manually connect as a :class:`~msl.network.service.Service`?
+    This function is only convenient for connecting as a :class:`~msl.network.client.Client`.
+    A :class:`~msl.network.service.Service` must enter the :ref:`service-format`
+    for the JSON_ string when it sends a reply. *Although, why would you connect*
+    *as a* :class:`~msl.network.service.Service` *and manually execute requests?*
 
     Some tips for connecting as a :class:`~msl.network.client.Client`:
 
@@ -59,29 +60,37 @@ def parse_terminal_input(line):
           Network :class:`~msl.network.manager.Manager` enter ``Manager identity``.
 
           To check if a user with the name ``n.bohr`` exists in the database of users enter
+
           ``Manager users_table.is_user_registered n.bohr``.
 
-          Note, most requests for the Network :class:`~msl.network.manager.Manager` require
-          the request to come from an administrator of the Network :class:`~msl.network.manager.Manager`.
-          If this is the case, then your login credentials will be checked (requested from you)
-          before the Network :class:`~msl.network.manager.Manager` executes the request.
+          .. note::
+
+              Most requests that are for the Network :class:`~msl.network.manager.Manager` to
+              execute require that the request comes from an administrator of the Network
+              :class:`~msl.network.manager.Manager`. Your login credentials will be checked
+              (requested from you) before the Network :class:`~msl.network.manager.Manager`
+              executes the request.
 
         * To request something from a :class:`~msl.network.service.Service` use the following
           format ``<service> <attribute> [<arguments>, [<keyword_arguments>]]``
 
           For example,
 
-          To request the addition of two numbers from a ``BasicMath.add(x, y)``
-          :class:`~msl.network.service.Service` enter ``BasicMath add 4 10`` or ``BasicMath add x=4 y=10``
+          To request the addition of two numbers from the :ref:`basic-math-service` enter
 
-          To request concatenating two strings from a ``ModifyString.concat(s1, s2)``
-          :class:`~msl.network.service.Service`, but with the :class:`~msl.network.service.Service`
-          being named ``String Editor`` on the Network :class:`~msl.network.manager.Manager`
-          then enter ``"String Editor" concat s1="first string" s2="second string"``
+          ``BasicMath add 4 10`` or ``BasicMath add x=4 y=10``
+
+          To request the concatenation of two strings from a ``ModifyString.concat(s1, s2)``
+          :class:`~msl.network.service.Service`, but with the ``ModifyString``
+          :class:`~msl.network.service.Service` being named ``String Editor`` on the Network
+          :class:`~msl.network.manager.Manager` then enter
+
+          ``"String Editor" concat s1="first string" s2="second string"``
 
         * To exit from the terminal session enter ``disconnect`` or ``exit``.
 
     .. _JSON: http://www.json.org/
+    .. _openssl s_client: https://www.openssl.org/docs/manmaster/man1/s_client.html
 
     Parameters
     ----------

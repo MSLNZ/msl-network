@@ -1,5 +1,10 @@
 """
 Command line interface for the ``user`` command.
+
+To see the help documentation, run the following command in a terminal::
+
+   msl-network user --help
+
 """
 import os
 
@@ -7,7 +12,7 @@ from .constants import DATABASE
 from .database import UsersTable
 from .utils import ensure_root_path
 
-HELP = 'Add/remove a user into/from the Users table in a database.'
+HELP = 'Add/remove a user into/from the auth_users table in a database.'
 
 DESCRIPTION = HELP + """
 
@@ -16,41 +21,43 @@ credentials as the authorisation check for a Client or Service to be able
 to connect to the Network Manager.
 
 To use the login credentials as the authentication check, start the Network
-Manager with the --auth-login flag:
+Manager with the --auth-login flag::
 
   msl-network start --auth-login
   
 """
 
 EPILOG = """
-Examples:
+Examples::
 
-  # add 'j.doe' to the Users table  
+  # add 'j.doe' to the auth_users table  
   msl-network user add j.doe --password a good password
 
-  # add 'a.smith' as an administrator to the Users table  
+  # add 'a.smith' as an administrator to the auth_users table  
   msl-network user add a.smith --password !PaSsWoRd* --admin
 
   # update 'j.doe' to be an administrator  
   msl-network user update j.doe --admin
 
-  # update the password for 'j.doe'  
+  # update the password for 'j.doe' using a password in a file 
   msl-network user update j.doe --password /path/to/my/password.txt
 
-  # remove 'j.doe' from the Users table
+  # remove 'j.doe' from the auth_users table
   msl-network user remove j.doe
 
-  # add 'j.doe' to the Users table in a specific database 
+  # add 'j.doe' to the auth_users table in a specific database 
   msl-network user add j.doe --password The Password To Use --database path/to/database.db 
 
-  # list all users in a Users table
+  # list all users in the auth_users table
   msl-network user list
 
 """
 
+__doc__ += DESCRIPTION + EPILOG
+
 
 def add_parser_user(parser):
-    """Add a ``user`` command to the parser."""
+    """Add the ``user`` command to the `parser`."""
     p = parser.add_parser(
         'user',
         help=HELP,
