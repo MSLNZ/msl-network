@@ -39,7 +39,7 @@ class BasicMath(Service):
         time.sleep(4)
         return x / float(y)
 
-    def error_if_negative(self, x: float) -> bool:
+    def ensure_positive(self, x: float) -> bool:
         time.sleep(5)
         if x < 0:
             raise ValueError('The value is < 0')

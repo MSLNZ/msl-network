@@ -58,9 +58,9 @@ def test_basic_math_synchronous():
     assert bm.subtract(1013, 87245) == 1013 - 87245
     assert bm.multiply(5.3, 5.4) == approx(5.3 * 5.4)
     assert bm.divide(2.2, 6.1) == approx(2.2 / 6.1)
-    assert bm.error_if_negative(1)
+    assert bm.ensure_positive(1)
     with raises(MSLNetworkError):
-        bm.error_if_negative(-1)
+        bm.ensure_positive(-1)
     assert bm.power(-3.14, 5) == approx(-3.14**5)
 
     assert time.perf_counter() - t0 > minimum_dt
@@ -86,7 +86,7 @@ def test_basic_math_asynchronous():
     subtract = bm.subtract(-99.82, -872.45, async=True)
     multiply = bm.multiply(-53.33, 54.44, async=True)
     divide = bm.divide(4.2, 19.3, async=True)
-    err = bm.error_if_negative(10, async=True)
+    err = bm.ensure_positive(10, async=True)
     power = bm.power(123.45, 3, async=True)
 
     t0 = time.perf_counter()
