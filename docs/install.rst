@@ -29,13 +29,14 @@ Dependencies
 
 Optional packages that can be used for (de)serializing JSON_ data:
 
-* UltraJSON_ (see here_ for a pre-built wheel for Windows)
+* UltraJSON_ (see `this link <https://www.lfd.uci.edu/~gohlke/pythonlibs/#ujson>`_ for a pre-built wheel for Windows)
 * RapidJSON_
 * simplejson_
 * yajl_
 
-To use one of these external packages, rather than Python's builtin :mod:`json` module, you must
-specify a ``MSL_NETWORK_JSON`` environment variable. See :obj:`here <msl.network.constants.JSON>`
+To use one of these external JSON_ packages, rather than Python's builtin :mod:`json` module, you must
+specify a ``MSL_NETWORK_JSON`` environment variable. See
+`here <http://msl-network.readthedocs.io/en/latest/_api/msl.network.constants.html#msl.network.constants.JSON>`_
 for more details.
 
 .. _MSL Package Manager: http://msl-package-manager.readthedocs.io/en/latest/?badge=latest
@@ -44,7 +45,6 @@ for more details.
 .. _cryptography: https://pypi.python.org/pypi/cryptography
 .. _JSON: http://www.json.org/
 .. _UltraJSON: https://pypi.python.org/pypi/ujson
-.. _here: https://www.lfd.uci.edu/~gohlke/pythonlibs/#ujson
 .. _RapidJSON: https://pypi.python.org/pypi/python-rapidjson
 .. _simplejson: https://pypi.python.org/pypi/simplejson/
 .. _yajl: https://pypi.python.org/pypi/yajl
