@@ -1,5 +1,5 @@
 """
-This module is used as the JSON (de)serializer.
+This module is used as the `JSON <http://www.json.org/>`_ (de)serializer.
 """
 import time
 import logging

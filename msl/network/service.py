@@ -11,14 +11,14 @@ import platform
 from concurrent.futures import ThreadPoolExecutor
 
 from .network import Network
-from .json import deserialize
+from .json import deserialize, serialize
 from .utils import localhost_aliases
 from .constants import PORT, HOSTNAME
 from .cryptography import get_ssl_context
 
 log = logging.getLogger(__name__)
 
-IGNORE_ITEMS = ['port', 'address_manager', 'username', 'name', 'start', 'password']
+IGNORE_ITEMS = ['port', 'address_manager', 'username', 'name', 'start', 'password', 'set_debug']
 IGNORE_ITEMS += dir(Network) + dir(asyncio.Protocol)
 
 
@@ -107,7 +107,7 @@ class Service(Network, asyncio.Protocol):
             self._identity['type'] = 'service'
             self._identity['name'] = self.name
             self._identity['language'] = 'Python ' + platform.python_version()
-            self._identity['os'] = '{} {} {}'.format(platform.system(), platform.release(), platform.machine()),
+            self._identity['os'] = '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
             self._identity['attributes'] = dict()
             for item in dir(self):
                 if item.startswith('_') or item in IGNORE_ITEMS:
@@ -117,6 +117,12 @@ class Service(Network, asyncio.Protocol):
                     value = str(inspect.signature(attrib))
                 except TypeError:  # then the attribute is not a callable object
                     value = attrib
+                try:
+                    serialize(value)
+                except:
+                    log.warning('The attribute "{0}" is not JSON serializable. '
+                                'Rename it to be "_{0}" to avoid seeing this message'.format(item))
+                    continue
                 self._identity['attributes'][item] = value
         return self._identity
 
