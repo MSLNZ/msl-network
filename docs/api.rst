@@ -7,8 +7,8 @@ MSL-Network API Documentation
 **MSL-Network** has very little functions or classes that need to be accessed in a users application.
 
 Typically, only the :class:`~msl.network.service.Service` class needs to be subclassed and the
-:func:`~msl.network.client.connect` function will be used to connect to the :class:`~msl.network.manager.Manager`
-for most applications using **MSL-Network**.
+:func:`~msl.network.client.connect` function will be called to connect to the
+:class:`~msl.network.manager.Manager` for most applications using **MSL-Network**.
 
 Package Structure
 -----------------

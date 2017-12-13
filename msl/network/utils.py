@@ -1,5 +1,5 @@
 """
-Common functions.
+Common functions used by **MSL-Network**.
 """
 import re
 import os

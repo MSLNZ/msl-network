@@ -5,8 +5,8 @@ Connecting from a Terminal
 
 One can connect to the Network :class:`~msl.network.manager.Manager` from a terminal,
 e.g., using `openssl s_client`_, to manually send requests to the Network
-:class:`~msl.network.manager.Manager` so that they do not have to enter a request in the
-*very-specific* :ref:`client-format` for the JSON_ string.
+:class:`~msl.network.manager.Manager`. So that they do not have to enter a request in the
+*very-specific* :ref:`client-format` for the JSON_ string, the following syntax can be used.
 
 Connecting from a terminal is only convenient when connecting as a
 :class:`~msl.network.client.Client`. A :class:`~msl.network.service.Service` must enter the
@@ -26,9 +26,11 @@ Some tips for connecting as a :class:`~msl.network.client.Client`:
       For example,
 
       To request the :obj:`~msl.network.network.Network.identity` of the
-      Network :class:`~msl.network.manager.Manager` enter ``Manager identity``.
+      Network :class:`~msl.network.manager.Manager` enter ``Manager identity``. *A shortcut is to only enter*
+      ``identity`` *to receive the* :obj:`~msl.network.network.Network.identity` *of the*
+      :class:`~msl.network.manager.Manager`.
 
-      To check if a user with the name ``n.bohr`` exists in the database of users enter
+      To check if a user with the name ``n.bohr`` exists in the database of registered users enter
 
       ``Manager users_table.is_user_registered n.bohr``.
 
