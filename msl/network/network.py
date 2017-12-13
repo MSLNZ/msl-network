@@ -120,7 +120,7 @@ class Network(object):
         n = len(line)
 
         if self._debug:
-            log.debug(f'{self._network_name} is sending {n} bytes...')
+            log.debug(self._network_name + ' is sending {} bytes...'.format(n))
             if n > self._max_print_size:
                 log.debug(line[:self._max_print_size//2] + b' ... ' + line[-self._max_print_size//2:])
             else:

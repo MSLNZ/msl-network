@@ -14,19 +14,17 @@ Alternatively, using the `MSL Package Manager`_ run::
 Compatibility
 -------------
 **MSL-Network** uses coroutines with the ``async`` and ``await`` syntax that were added in
-Python 3.5 (PEP492_) and the *f-string* syntax for literal string interpolation that was added
-in Python 3.6 (PEP498_). Therefore, the Network :class:`~msl.network.manager.Manager` class is
-only compatible with Python 3.6+.
+Python 3.5 (PEP492_). Therefore, the Network :class:`~msl.network.manager.Manager` class is
+only compatible with Python 3.5+.
 
-The :class:`~msl.network.client.Client` and :class:`~msl.network.service.Service` classes
-that come with **MSL-Network** use Python 3.6 syntax; however, these classes can be
+The :class:`~msl.network.client.Client` and :class:`~msl.network.service.Service` classes can be
 implemented in any programming language (and also in previous versions of Python). See the
 :ref:`json-formats` section for how the Network :class:`~msl.network.manager.Manager` exchanges
 information between a :class:`~msl.network.client.Client` and a :class:`~msl.network.service.Service`.
 
 Dependencies
 ------------
-* Python 3.6+
+* Python 3.5+
 * cryptography_
 
 Optional packages that can be used for (de)serializing JSON_ data:

@@ -171,3 +171,15 @@ def test_spawn_basic_math_and_array_asynchronous():
     # shutting down the manager using cxn1 will also disconnect cxn2
     assert cxn2.address_manager is None
     assert cxn2.port is None
+
+
+def test_password_retrieval():
+    services = helper.ServiceStarter((BasicMath,))
+
+    cxn = connect(**services.kwargs)
+    bm = cxn.link('BasicMath')
+
+    assert bm.password('any name') != services.admin_password
+    assert bm._password() != services.admin_password
+
+    services.shutdown(cxn)

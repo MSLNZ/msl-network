@@ -88,7 +88,7 @@ class Database(object):
             log.debug(sql)
             self._cursor.execute(sql)
         else:
-            log.debug(f'{sql} {parameters}')
+            log.debug(sql + ' {}'.format(parameters))
             self._cursor.execute(sql, parameters)
 
     def tables(self):
@@ -281,7 +281,7 @@ class HostnamesTable(Database):
         """
         # want to know if this hostname is not in the table
         if hostname not in self.hostnames():
-            raise ValueError(f'Cannot delete "{hostname}". This hostname is not in the table.')
+            raise ValueError('Cannot delete "{}". This hostname is not in the table.'.format(hostname))
         self.execute('DELETE FROM %s WHERE hostname = ?;' % self.NAME, (hostname,))
         self.connection.commit()
 
@@ -362,7 +362,7 @@ class UsersTable(Database):
         try:
             self.execute('INSERT INTO %s VALUES(NULL, ?, ?, ?, ?);' % self.NAME, (username, key, salt, bool(is_admin)))
         except sqlite3.IntegrityError:
-            raise ValueError(f'A user with the name "{username}" already exists') from None
+            raise ValueError('A user with the name "{}" already exists'.format(username)) from None
         self.connection.commit()
 
     def update(self, username, *, password=None, is_admin=None):
@@ -523,4 +523,4 @@ class UsersTable(Database):
     def _ensure_user_exists(self, username, action):
         # want to know if this user is not in the table
         if username not in self.usernames():
-            raise ValueError(f'Cannot {action} "{username}". This user is not in the table.')
+            raise ValueError('Cannot {} "{}". This user is not in the table.'.format(action, username))

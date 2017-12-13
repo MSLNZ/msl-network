@@ -41,9 +41,9 @@ class ServiceStarter(object):
         self.debug = False
 
         filename = 'msl-network-testing'
-        self.key = tempfile.gettempdir() + f'/{filename}.key'
-        self.cert = tempfile.gettempdir() + f'/{filename}.crt'
-        self.db = tempfile.gettempdir() + f'/{filename}.db'
+        self.key = tempfile.gettempdir() + '/' + filename + '.key'
+        self.cert = tempfile.gettempdir() + '/' + filename + '.crt'
+        self.db = tempfile.gettempdir() + '/' + filename + '.db'
 
         self.cleanup()
 
