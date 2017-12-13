@@ -278,6 +278,9 @@ class Service(Network, asyncio.Protocol):
         debug : :obj:`bool`, optional
             Whether to log debug messages for the :class:`Service`.
         """
+        if self._transport is not None:
+            raise RuntimeError('The Service has already started')
+
         if host in localhost_aliases():
             host = HOSTNAME
             self._address_manager = 'localhost:{}'.format(port)
