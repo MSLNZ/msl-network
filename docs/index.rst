@@ -29,13 +29,14 @@ Contents
 ========
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    Install <install>
    Usage <usage>
    Concurrency & Asynchronous Programming <concurrency_async>
    JSON Formats <json_formats>
    Connecting from a Terminal <terminal_input>
+   Examples <examples>
    API <api>
    License <license>
    Authors <authors>
