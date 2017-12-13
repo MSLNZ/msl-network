@@ -44,7 +44,7 @@ Alternatively, using the `MSL Package Manager`_ run::
 
 .. _Manager: http://msl-network.readthedocs.io/en/latest/_api/msl.network.manager.html
 .. _Client: http://msl-network.readthedocs.io/en/latest/_api/msl.network.client.html#msl.network.client.Client
-.. _Service: http://msl-network.readthedocs.io/en/latest/_api/msl.network.service.html#msl.network.service.Service
+.. _Service: http://msl-network.readthedocs.io/en/latest/_api/msl.network.service.html
 .. _Concurrency and Asynchronous Programming: http://msl-network.readthedocs.io/en/latest/concurrency_async.html#concurrent-asynchronous
 .. _JSON: http://www.json.org/
 .. _JSON Formats: http://msl-network.readthedocs.io/en/latest/json_formats.html#json-formats
