@@ -8,6 +8,7 @@ import inspect
 import logging
 import getpass
 import platform
+from concurrent.futures import ThreadPoolExecutor
 
 from .network import Network
 from .json import deserialize
@@ -134,7 +135,9 @@ class Service(Network, asyncio.Protocol):
         """
         .. attention::
            Do not override this method. It is called automatically when data is
-           received from the Network :class:`~msl.network.manager.Manager`.
+           received from the Network :class:`~msl.network.manager.Manager`. A
+           :class:`Service` will execute a request in a
+           :class:`~concurrent.futures.ThreadPoolExecutor`.
         """
         if not self._buffer:
             self._t0 = time.perf_counter()
@@ -194,7 +197,8 @@ class Service(Network, asyncio.Protocol):
 
         if callable(attrib):
             uid = os.urandom(16)
-            self._futures[uid] = self._loop.run_in_executor(None, self._function, attrib, data, uid)
+            executor = ThreadPoolExecutor(max_workers=1)
+            self._futures[uid] = self._loop.run_in_executor(executor, self._function, attrib, data, uid)
         else:
             if data['attribute'].startswith('_password'):
                 attrib = Service._PASSWORD_MESSAGE
