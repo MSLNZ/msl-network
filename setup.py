@@ -82,7 +82,7 @@ setup(
     author=fetch_init('__author__'),
     author_email='joseph.borbely@measurement.govt.nz',
     url='https://github.com/MSLNZ/msl-network',
-    description='Concurrent network I/O.',
+    description='Concurrent and asynchronous network I/O.',
     long_description=read('README.rst'),
     platforms='any',
     license='MIT',
