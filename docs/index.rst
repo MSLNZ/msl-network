@@ -3,16 +3,16 @@ MSL-Network
 ===========
 
 **MSL-Network** is composed of three objects -- a Network :class:`~msl.network.manager.Manager`,
-:class:`~msl.network.client.Client`\'s and :class:`~msl.network.service.Service`\'s.
+:class:`~msl.network.client.Client`\s and :class:`~msl.network.service.Service`\s.
 
-The Network :class:`~msl.network.manager.Manager` allows for multiple :class:`~msl.network.client.Client`\'s
-and :class:`~msl.network.service.Service`\'s to connect to it and it links a :class:`~msl.network.client.Client`\'s
+The Network :class:`~msl.network.manager.Manager` allows for multiple :class:`~msl.network.client.Client`\s
+and :class:`~msl.network.service.Service`\s to connect to it and it links a :class:`~msl.network.client.Client`\'s
 request to the appropriate :class:`~msl.network.service.Service` to execute the request and then the Network
 :class:`~msl.network.manager.Manager` sends the response from the :class:`~msl.network.service.Service` back
 to the :class:`~msl.network.client.Client`.
 
 The Network :class:`~msl.network.manager.Manager` uses concurrency to handle requests from multiple
-:class:`~msl.network.client.Client`\'s such that multiple requests start, run and complete in overlapping time
+:class:`~msl.network.client.Client`\s such that multiple requests start, run and complete in overlapping time
 periods and in no specific order. A :class:`~msl.network.client.Client` can send requests synchronously or
 asynchronously to the Network :class:`~msl.network.manager.Manager` for a :class:`~msl.network.service.Service`
 to execute. See :ref:`concurrent-asynchronous` for more details.

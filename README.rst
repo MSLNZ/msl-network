@@ -6,13 +6,13 @@ Welcome to MSL-Network
 Purpose
 -------
 **MSL-Network** uses concurrency and asynchronous programming to transfer data across a network. The network
-is composed of three objects -- a Network Manager_, Client_'s and Service_'s.
+is composed of three objects -- a Network Manager_, Client_\s and Service_\s.
 
-The Network Manager_ allows for multiple Client_'s and Service_'s to connect to it and it links a Client_'s
+The Network Manager_ allows for multiple Client_\s and Service_\s to connect to it and it links a Client_'s
 request to the appropriate Service_ to execute the request and then the Network Manager_ sends the response
 from the Service_ back to the Client_.
 
-The Network Manager_ uses concurrency to handle requests from multiple Client_'s such that multiple requests
+The Network Manager_ uses concurrency to handle requests from multiple Client_\s such that multiple requests
 start, run and complete in overlapping time periods and in no specific order. A Client_ can send requests
 synchronously or asynchronously to the Network Manager_ for a Service_ to execute. See
 `Concurrency and Asynchronous Programming`_ for more details.
