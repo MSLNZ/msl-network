@@ -22,7 +22,7 @@ to execute. See :ref:`concurrent-asynchronous` for more details.
 implement a :class:`~msl.network.client.Client` or a :class:`~msl.network.service.Service` in any programming
 language to connect to the Network :class:`~msl.network.manager.Manager`. See the :ref:`json-formats` section
 for an overview of the data format. One can even connect to the Network :class:`~msl.network.manager.Manager`
-from a terminal to send requests, see :class:`~msl.network.utils.parse_terminal_input` for more details.
+from a terminal to send requests, see :ref:`terminal_input` for more details.
 
 ========
 Contents
@@ -35,6 +35,7 @@ Contents
    Usage <usage>
    Concurrency & Asynchronous Programming <concurrency_async>
    JSON Formats <json_formats>
+   Connecting from a Terminal <terminal_input>
    API <api>
    License <license>
    Authors <authors>
