@@ -38,6 +38,11 @@ Alternatively, using the `MSL Package Manager`_ run::
 
    msl install network
 
+Dependencies
+++++++++++++
+* Python 3.5+
+* cryptography_
+
 .. |docs| image:: https://readthedocs.org/projects/msl-network/badge/?version=latest
    :target: http://msl-network.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
@@ -50,3 +55,4 @@ Alternatively, using the `MSL Package Manager`_ run::
 .. _JSON Formats: http://msl-network.readthedocs.io/en/latest/json_formats.html#json-formats
 .. _Connecting from a Terminal: http://msl-network.readthedocs.io/en/latest/terminal_input.html#terminal-input
 .. _MSL Package Manager: http://msl-package-manager.readthedocs.io/en/latest/?badge=latest
+.. _cryptography: https://pypi.python.org/pypi/cryptography
