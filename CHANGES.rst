@@ -2,5 +2,6 @@
 Release Notes
 =============
 
-Version 0.1.0
-=============
+Version 0.1.0 (2017.12.14)
+==========================
+- Initial release
