@@ -597,7 +597,7 @@ class Peer(object):
             self.network_name = '{}:{}'.format(self.hostname, self.port)
 
 
-def start(password, login, hostnames, port, cert, key, key_password, database, debug):
+def start(password, login, hostnames, port, cert, key, key_password, database, disable_tls, debug):
     """Start the asynchronous network manager event loop.
 
     .. attention::
@@ -605,8 +605,10 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
     """
 
     # create the SSL context
-    context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
-    context.load_cert_chain(certfile=cert, keyfile=key, password=key_password)
+    context = None
+    if not disable_tls:
+        context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
+        context.load_cert_chain(certfile=cert, keyfile=key, password=key_password)
 
     log.info('loaded certificate ' + cert)
 
@@ -647,7 +649,8 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
         asyncio.start_server(manager.new_connection, port=port, ssl=context, loop=loop, limit=sys.maxsize)
     )
 
-    log.info('Network Manager running on {}:{} using {}'.format(HOSTNAME, port, context.protocol.name))
+    state = 'ENABLED' if context else 'DISABLED'
+    log.info('Network Manager running on {}:{} (TLS {})'.format(HOSTNAME, port, state))
 
     try:
         loop.run_forever()

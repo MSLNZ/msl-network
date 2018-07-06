@@ -1,6 +1,7 @@
 """
 Connect to a Network :class:`~msl.network.manager.Manager`.
 """
+import ssl
 import time
 import uuid
 import asyncio
@@ -20,7 +21,7 @@ log = logging.getLogger(__name__)
 
 
 def connect(*, name='Client', host='localhost', port=PORT, timeout=None, username=None,
-            password=None, password_manager=None, certificate=None, debug=False):
+            password=None, password_manager=None, certificate=None, disable_tls=False, debug=False):
     """Create a new connection to a Network :class:`~msl.network.manager.Manager`
     as a :class:`Client`.
 
@@ -53,6 +54,9 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=None, usernam
     certificate : :obj:`str`, optional
         The path to the certificate file to use for the secure connection
         with the Network :class:`~msl.network.manager.Manager`.
+    disable_tls : :obj:`bool`, optional
+        Whether to connect to the Network :class:`~msl.network.manager.Manager`
+        without using the TLS protocol.
     debug : :obj:`bool`, optional
         Whether to log debug messages for the :class:`Client`.
 
@@ -63,7 +67,7 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=None, usernam
     """
     client = Client(name)
     success = client.start(host, port, timeout, username, password,
-                           password_manager, certificate, debug)
+                           password_manager, certificate, disable_tls, debug)
     if not success:
         client.raise_latest_error()
     return client
@@ -82,6 +86,7 @@ class Client(Network, asyncio.Protocol):
         self._network_name = name
         self._port = None
         self._loop = None
+        self._disable_tls = False
         self._debug = False
         self._username = None
         self._password = None
@@ -407,9 +412,9 @@ class Client(Network, asyncio.Protocol):
             A new Client.
         """
         return connect(name=name, host=self._host_manager, port=self._port_manager,
-                       timeout=self._timeout, username=self._username,
-                       password=self._password, password_manager=self._password_manager,
-                       certificate=self._certificate, debug=self._debug)
+                       timeout=self._timeout, username=self._username, password=self._password,
+                       password_manager=self._password_manager, certificate=self._certificate,
+                       disable_tls=self._disable_tls, debug=self._debug)
 
     def raise_latest_error(self):
         """
@@ -532,7 +537,7 @@ class Client(Network, asyncio.Protocol):
         if wait:
             self._wait()
 
-    def start(self, host, port, timeout, username, password, password_manager, certificate, debug):
+    def start(self, host, port, timeout, username, password, password_manager, certificate, disable_tls, debug):
         """
         .. attention::
             Do not call this method directly. Use :meth:`connect` to connect to
@@ -540,6 +545,7 @@ class Client(Network, asyncio.Protocol):
         """
         self._host_manager = HOSTNAME if host in localhost_aliases() else host
         self._port_manager = port
+        self._disable_tls = bool(disable_tls)
         self._debug = bool(debug)
         self._username = username
         self._password = password
@@ -548,22 +554,28 @@ class Client(Network, asyncio.Protocol):
         self._address_manager = '{}:{}'.format(host, port)
         self._timeout = timeout
 
-        context = get_ssl_context(host=self._host_manager, port=port, certificate=certificate)
-        if not context:
-            return
-        context.check_hostname = host != HOSTNAME
+        context = None
+        if not self._disable_tls:
+            context = get_ssl_context(host=self._host_manager, port=port, certificate=certificate)
+            if not context:
+                return
+            context.check_hostname = host != HOSTNAME
 
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
-        self._loop.run_until_complete(
-            self._loop.create_connection(
-                lambda: self,
-                host=self._host_manager,
-                port=port,
-                ssl=context,
+        try:
+            self._loop.run_until_complete(
+                self._loop.create_connection(
+                    lambda: self,
+                    host=self._host_manager,
+                    port=port,
+                    ssl=context,
+                )
             )
-        )
+        except ssl.SSLError as e:
+            e.strerror += '\nTry setting disable_tls=True when connecting to the Manager'
+            raise
 
         async def wait_for_handshake():
             while not self._handshake_finished:

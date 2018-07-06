@@ -16,7 +16,7 @@ from .utils import ensure_root_path
 from .constants import HOME_DIR, PORT, DATABASE
 from .database import HostnamesTable, UsersTable
 
-HELP = 'Start a Network Manager using the TLS protocol.'
+HELP = 'Start the MSL Network Manager.'
 
 DESCRIPTION = HELP + """
 """
@@ -126,6 +126,12 @@ def add_parser_start(parser):
              'omitted then the default database is used.'
     )
     p.add_argument(
+        '--disable-tls',
+        action='store_true',
+        default=False,
+        help='Start the Network Manager without using the TLS protocol.'
+    )
+    p.add_argument(
         '--debug',
         action='store_true',
         default=False,
@@ -220,4 +226,4 @@ def execute(args):
         return
 
     # start the network manager
-    manager.start(password, login, hostnames, port, cert, key, key_password, database, args.debug)
+    manager.start(password, login, hostnames, port, cert, key, key_password, database, args.disable_tls, args.debug)
