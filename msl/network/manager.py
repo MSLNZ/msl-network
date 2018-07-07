@@ -307,8 +307,9 @@ class Manager(Network):
         """
         try:
             data = (await reader.readline()).decode(self.encoding).rstrip()
-        except (ConnectionAbortedError, ConnectionResetError):
-            # then most likely the connection was for a certificate request
+        except (ConnectionAbortedError, ConnectionResetError, UnicodeDecodeError):
+            # then most likely the connection was for a certificate request, or,
+            # the connection is trying to use a certificate and the Manage has TLS disabled
             log.info(reader.peer.network_name + ' connection closed prematurely')
             self.connections_table.insert(reader.peer, 'connection closed prematurely')
             return None
