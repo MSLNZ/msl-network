@@ -39,6 +39,7 @@ class ServiceStarter(object):
         self.auth_hostname = False
         self.auth_login = True
         self.debug = False
+        self.disable_tls = False
 
         filename = 'msl-network-testing'
         self.key = tempfile.gettempdir() + '/' + filename + '.key'
