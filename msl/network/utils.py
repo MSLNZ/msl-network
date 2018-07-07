@@ -113,8 +113,8 @@ def parse_terminal_input(line):
         if len(items) < 2:  # then the name of the service and/or attribute was not set
             return None
 
-        service = convert_value(items[0])
-        attribute = convert_value(items[1]).replace('"', '')
+        service = items[0].replace('"', '')
+        attribute = items[1].replace('"', '')
         if len(items) == 2:  # no parameters
             return {
                 'service': service,
