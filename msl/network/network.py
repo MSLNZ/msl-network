@@ -17,9 +17,11 @@ class Network(object):
     Base class for all Network :class:`~msl.network.manager.Manager`'\s,
     :class:`~msl.network.service.Service`'\s and :class:`~msl.network.client.Client`'\s.
     """
+    TERMINATION = b'\r\n'
+    """:class:`bytes`: The sequence of bytes that signify the end of the data being sent."""
 
     encoding = 'utf-8'
-    """:obj:`str`: The encoding to use to convert a :obj:`str` to :obj:`bytes`."""
+    """:class:`str`: The encoding to use to convert :class:`str` to :class:`bytes`."""
 
     _debug = False
     _network_name = None  # helpful for debugging who is sending what to where
@@ -110,7 +112,7 @@ class Network(object):
         writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
             The writer to use to send the bytes.
         line : :obj:`bytes`
-            The bytes to send (that are already terminated with the line-feed character, ``\\n``).
+            The bytes to send (that already end with the :attr:`TERMINATION` bytes).
         """
         if writer is None:
             # could happen if the writer is for a Service and it was executing a
@@ -138,11 +140,7 @@ class Network(object):
                 log.debug('{} sent {} bytes in {:.3f} useconds'.format(self._network_name, n, dt*1e6))
 
     def send_data(self, writer, data):
-        """Serialize `data` as JSON_ bytes and send.
-
-        Converts `data` to a JSON_ string, appends the line-feed character (``\\n``),
-        encodes the resultant string to bytes and then sends the bytes
-        through the network.
+        """Serialize `data` as a JSON_ string then send.
 
         .. _JSON: http://www.json.org/
 
@@ -154,11 +152,11 @@ class Network(object):
             Any object that can be serialized into a JSON_ string.
         """
         try:
-            self.send_line(writer, (serialize(data) + '\n').encode(self.encoding))
+            self.send_line(writer, serialize(data).encode(self.encoding) + self.TERMINATION)
         except Exception as e:
             self.send_error(writer, e, data['requester'])
 
-    def send_error(self, writer, error, requester, uuid=''):
+    def send_error(self, writer, error, requester, *, uuid=''):
         """Send an error through the network.
 
         Parameters

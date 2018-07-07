@@ -343,9 +343,9 @@ class Client(Network, asyncio.Protocol):
             self._t0 = time.perf_counter()
 
         # there is a chunk-size limit of 2**14 for each reply
-        # keep reading the data on the stream until the \n character is received
+        # keep reading data on the stream until the TERMINATION bytes are received
         self._buffer.extend(reply)
-        if not reply.endswith(b'\n'):
+        if not reply.endswith(self.TERMINATION):
             return
 
         dt = time.perf_counter() - self._t0
