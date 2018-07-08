@@ -39,3 +39,6 @@ htmlcov/
 .coverage
 junit.xml
 coverage.xml
+
+# ignore all scripts in the junk/ folder
+junk/
