@@ -221,9 +221,9 @@ class Manager(Network):
             log.debug(reader.peer.network_name + ' sent the correct password')
             return True
 
-        log.info(reader.peer.network_name + ' sent the wrong password, closing connection')
-        self.connections_table.insert(reader.peer, 'rejected: wrong password')
-        self.send_error(writer, ValueError('Wrong password'), self._network_name)
+        log.info(reader.peer.network_name + ' sent the wrong Manager password, closing connection')
+        self.connections_table.insert(reader.peer, 'rejected: wrong Manager password')
+        self.send_error(writer, ValueError('Wrong Manager password'), self._network_name)
         await self.close_writer(writer)
         return False
 
