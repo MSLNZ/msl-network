@@ -3,11 +3,15 @@
 Install MSL-Network
 ===================
 
-To install **MSL-Network** run::
+To install **MSL-Network** run:
+
+.. code-block:: console
 
    pip install https://github.com/MSLNZ/msl-network/archive/master.zip
 
-Alternatively, using the `MSL Package Manager`_ run::
+Alternatively, using the `MSL Package Manager`_ run:
+
+.. code-block:: console
 
    msl install network
 

@@ -15,7 +15,9 @@ Start the Network Manager
 -------------------------
 
 The first thing to do is to start the Network :class:`~msl.network.manager.Manager`. Open a
-command prompt (Windows) or a terminal (\*nix) and run::
+command prompt (Windows) or a terminal (\*nix) and run:
+
+.. code-block:: console
 
    msl-network start
 
@@ -27,9 +29,12 @@ Running this command will automatically perform the following default actions:
 * start the Network :class:`~msl.network.manager.Manager` on the default port using the TLS_ protocol
 
 You can override the default actions, for example, use `Elliptic-Curve Cryptography`_ rather than
-RSA_. For more details refer to the help that is available from the command line::
+RSA_. For more details refer to the help that is available from the command line, for example:
+
+.. code-block:: console
 
    msl-network --help
+   msl-network certgen --help
 
 .. _start-service:
 
@@ -90,17 +95,20 @@ BasicMath Service
        bm.start()
 
 To start the :ref:`basic-math-service`, copy and paste the above code in a ``basic_math.py`` module
-and run the following command in a command prompt (Windows)::
+and run the following command in a command prompt (Windows):
+
+.. code-block:: console
 
    python basic_math.py
 
-or, in a terminal (\*nix)::
+or, in a terminal (\*nix):
+
+.. code-block:: console
 
    python3 basic_math.py
 
 This will start the ``BasicMath`` :class:`~msl.network.service.Service` on the Network
-:class:`~msl.network.manager.Manager` that is running on the same computer that the ``BasicMath``
-:class:`~msl.network.service.Service` is running on.
+:class:`~msl.network.manager.Manager` that is running on the same computer.
 
 .. _connect-client:
 
@@ -109,23 +117,31 @@ Connect to the Network Manager as a Client
 
 Now that there is a :ref:`basic-math-service` running on the Network :class:`~msl.network.manager.Manager`
 (which are both running on the same computer that the :class:`~msl.network.client.Client` will be), we can
-:func:`~msl.network.client.connect` to the Network :class:`~msl.network.manager.Manager`::
+:func:`~msl.network.client.connect` to the Network :class:`~msl.network.manager.Manager`:
+
+.. code-block:: pycon
 
    >>> from msl.network import connect
    >>> cxn = connect()
 
-establish a link with the :ref:`basic-math-service`::
+establish a link with the :ref:`basic-math-service`:
+
+.. code-block:: pycon
 
    >>> bm = cxn.link('BasicMath')
 
-and send a request to the :ref:`basic-math-service`::
+and send a request to the :ref:`basic-math-service`:
+
+.. code-block:: pycon
 
    >>> bm.add(1, 2)
    3
 
 *See the* :ref:`asynchronous-programming` *section for an example on how to send requests asynchronously.*
 
-We can find out what devices are currently connected to the :class:`~msl.network.manager.Manager`::
+We can find out what devices are currently connected to the :class:`~msl.network.manager.Manager`:
+
+.. code-block:: pycon
 
    >>> print(cxn.manager(as_yaml=True))
    Manager[localhost:1875]
@@ -153,7 +169,9 @@ We can find out what devices are currently connected to the :class:`~msl.network
 If ``as_yaml=False``, which is the default boolean value, then the returned value would be a
 :class:`dict`, rather than a :class:`str`, containing the same information.
 
-To disconnect from the :class:`~msl.network.manager.Manager`, enter::
+To disconnect from the :class:`~msl.network.manager.Manager`, enter:
+
+.. code-block:: pycon
 
   >>> cxn.disconnect()
 

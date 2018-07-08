@@ -5,7 +5,7 @@ Connecting from a Terminal
 
 One can connect to the Network :class:`~msl.network.manager.Manager` from a terminal,
 e.g., using `openssl s_client`_, to manually send requests to the Network
-:class:`~msl.network.manager.Manager`. So that they do not have to enter a request in the
+:class:`~msl.network.manager.Manager`. So that you do not have to enter a request in the
 *very-specific* :ref:`client-format` for the JSON_ string, the following syntax can be used.
 
 Connecting from a terminal is only convenient when connecting as a
@@ -15,53 +15,90 @@ Connecting from a terminal is only convenient when connecting as a
 
 Some tips for connecting as a :class:`~msl.network.client.Client`:
 
-    * To identify as a :class:`~msl.network.client.Client` enter ``client``.
+  * To identify as a :class:`~msl.network.client.Client` enter
 
-    * To identify as a :class:`~msl.network.client.Client` with the name ``My Name``
-      enter ``client My Name``.
+    .. code-block:: console
 
-    * To request something from the Network :class:`~msl.network.manager.Manager` use
-      the following format ``Manager <attribute> [<arguments>, [<keyword_arguments>]]``
+       client
 
-      For example,
+  * To identify as a :class:`~msl.network.client.Client` with the name ``My Name`` enter
 
-      To request the :obj:`~msl.network.network.Network.identity` of the
-      Network :class:`~msl.network.manager.Manager` enter ``Manager identity``. *A shortcut is to only enter*
-      ``identity`` *to receive the* :obj:`~msl.network.network.Network.identity` *of the*
-      :class:`~msl.network.manager.Manager`.
+    .. code-block:: console
 
-      To check if a user with the name ``n.bohr`` exists in the database of registered users enter
+       client My Name
 
-      ``Manager users_table.is_user_registered n.bohr``.
+  * To request something from the Network :class:`~msl.network.manager.Manager` use the following format
 
-      .. note::
+    .. code-block:: console
 
-          Most requests that are for the Network :class:`~msl.network.manager.Manager` to
-          execute require that the request comes from an administrator of the Network
-          :class:`~msl.network.manager.Manager`. Your login credentials will be checked
-          (requested from you) before the Network :class:`~msl.network.manager.Manager`
-          executes the request.
+       Manager <attribute> [<arguments>, [<keyword_arguments>]]
 
-    * To request something from a :class:`~msl.network.service.Service` use the following
-      format ``<service> <attribute> [<arguments>, [<keyword_arguments>]]``
+    For example, to request the :obj:`~msl.network.network.Network.identity` of the Network
+    :class:`~msl.network.manager.Manager` enter
 
-      For example,
+    .. code-block:: console
 
-      To request the addition of two numbers from the :ref:`basic-math-service` enter
+       Manager identity
 
-      ``BasicMath add 4 10`` or ``BasicMath add x=4 y=10``
+    or, as a shortcut for requesting the :obj:`~msl.network.network.Network.identity` of
+    the :class:`~msl.network.manager.Manager`, you only need to enter
 
-      To request the concatenation of two strings from a ``ModifyString.concat(s1, s2)``
-      :class:`~msl.network.service.Service`, but with the ``ModifyString``
-      :class:`~msl.network.service.Service` being named ``String Editor`` on the Network
-      :class:`~msl.network.manager.Manager` enter
+    .. code-block:: console
 
-      ``"String Editor" concat s1="first string" s2="second string"``
+       identity
 
-    * To disconnect from the Network :class:`~msl.network.manager.Manager` enter
+    To check if a user with the name ``n.bohr`` exists in the database of registered users enter
 
-      ``disconnect`` or ``exit``.
+    .. code-block:: console
+
+      Manager users_table.is_user_registered n.bohr
+
+    .. note::
+
+       Most requests that are for the Network :class:`~msl.network.manager.Manager` to
+       execute require that the request comes from an administrator of the Network
+       :class:`~msl.network.manager.Manager`. Your login credentials will be checked
+       (requested from you) before the Network :class:`~msl.network.manager.Manager`
+       executes the request.
+
+  * To request something from a :class:`~msl.network.service.Service` use the following format
+
+    .. code-block:: console
+
+       <service> <attribute> [<arguments>, [<keyword_arguments>]]
+
+    For example, to request the addition of two numbers from the :ref:`basic-math-service` enter
+
+    .. code-block:: console
+
+      BasicMath add 4 10
+
+    or
+
+    .. code-block:: console
+
+       BasicMath add x=4 y=10
+
+  To request the concatenation of two strings from a ``ModifyString.concat(s1, s2)``
+  :class:`~msl.network.service.Service`, but with the ``ModifyString``
+  :class:`~msl.network.service.Service` being named ``String Editor`` on the Network
+  :class:`~msl.network.manager.Manager` enter
+
+    .. code-block:: console
+
+       "String Editor" concat s1="first string" s2="second string"
+
+  * To disconnect from the Network :class:`~msl.network.manager.Manager` enter
+
+    .. code-block:: console
+
+      disconnect
+
+    or
+
+    .. code-block:: console
+
+       exit
 
 .. _JSON: http://www.json.org/
 .. _openssl s_client: https://www.openssl.org/docs/manmaster/man1/s_client.html
-
