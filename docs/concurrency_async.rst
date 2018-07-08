@@ -151,14 +151,14 @@ computer make sure to :ref:`start-manager` and :ref:`start-service`.
    # start a counter (used to determine the total execution time for getting all results)
    t0 = time.perf_counter()
 
-   # create asynchronous requests by using the async=True keyword argument
+   # create asynchronous requests by using the asynchronous=True keyword argument
    # the returned object is a Future object and not the expected result for each request
-   add = bm.add(1, 2, async=True)
-   subtract = bm.subtract(1, 2, async=True)
-   multiply = bm.multiply(1, 2, async=True)
-   divide = bm.divide(1, 2, async=True)
-   is_positive = bm.ensure_positive(1, async=True)
-   power = bm.power(2, 4, async=True)
+   add = bm.add(1, 2, asynchronous=True)
+   subtract = bm.subtract(1, 2, asynchronous=True)
+   multiply = bm.multiply(1, 2, asynchronous=True)
+   divide = bm.divide(1, 2, asynchronous=True)
+   is_positive = bm.ensure_positive(1, asynchronous=True)
+   power = bm.power(2, 4, asynchronous=True)
 
    # send all requests (this blocks the program until all results are available)
    cxn.send_pending_requests()
@@ -198,16 +198,17 @@ Synchronous vs Asynchronous comparison
 
 Comparing the total execution time for the :ref:`synchronous` and the :ref:`asynchronous` we see that the asynchronous
 program is 3.5 times faster. Choosing whether to send a request synchronously or asynchronously is performed by passing
-in an ``async=False`` or ``async=True`` keyword argument, respectively. Also, in the synchronous example when a request
-is sent the object that is returned is the result of the method from the :ref:`basic-math-service`, whereas in the
-asynchronous example the returned value is a :class:`~asyncio.Future` object that provides the result later.
+in an ``asynchronous=False`` or ``asynchronous=True`` keyword argument, respectively. Also, in the synchronous example
+when a request is sent the object that is returned is the result of the method from the :ref:`basic-math-service`,
+whereas in the asynchronous example the returned value is a :class:`~asyncio.Future` object that provides the result
+later.
 
-+-----------------------------+-----------------------+-----------------------------------+
-|                             |   Synchronous         |   Asynchronous                    |
-+=============================+=======================+===================================+
-| Total execution time        |    21 seconds         |     6 seconds                     |
-+-----------------------------+-----------------------+-----------------------------------+
-| Keyword argument to invoke  | async=False (default) |  async=True                       |
-+-----------------------------+-----------------------+-----------------------------------+
-| Returned value from request |    the result         | a :class:`~asyncio.Future` object |
-+-----------------------------+-----------------------+-----------------------------------+
++-----------------------------+------------------------------+-----------------------------------+
+|                             |   Synchronous                |   Asynchronous                    |
++=============================+==============================+===================================+
+| Total execution time        |    21 seconds                |     6 seconds                     |
++-----------------------------+------------------------------+-----------------------------------+
+| Keyword argument to invoke  | asynchronous=False (default) |  asynchronous=True                |
++-----------------------------+------------------------------+-----------------------------------+
+| Returned value from request |    the result                | a :class:`~asyncio.Future` object |
++-----------------------------+------------------------------+-----------------------------------+

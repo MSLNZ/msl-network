@@ -457,7 +457,7 @@ class Client(Network, asyncio.Protocol):
         Returns
         -------
         The result from the :class:`~msl.network.service.Service` executing the request, or
-        an :class:`asyncio.Future` object if the ``async=True`` keyword argument is specified.
+        an :class:`asyncio.Future` object if the ``asynchronous=True`` keyword argument is specified.
 
             If sending asynchronous requests then you must call :meth:`send_pending_requests`
             to be able to get the result from each :class:`asyncio.Future`.
@@ -499,7 +499,7 @@ class Client(Network, asyncio.Protocol):
         -1
 
         """
-        send_asynchronously = kwargs.pop('async', False)
+        send_asynchronously = kwargs.pop('asynchronous', False)
         if not send_asynchronously and self._futures:
             raise ValueError('Asynchronous requests are pending. '
                              'You must call the wait() method to wait for them to '

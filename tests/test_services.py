@@ -52,7 +52,7 @@ def test_asynchronous_synchronous_simultaneous():
 
     bm = cxn.link('BasicMath')
 
-    add = bm.add(1, 1, async=True)
+    add = bm.add(1, 1, asynchronous=True)
     assert isinstance(add, asyncio.Future)
 
     # send a synchronous request without sending the asynchronous request
@@ -113,14 +113,14 @@ def test_basic_math_asynchronous():
     # picked a number close to 6 seconds
     maximum_dt = 8
 
-    euler = bm.euler(async=True)
-    pi = bm.pi(async=True)
-    add = bm.add(451.57, -745.12, async=True)
-    subtract = bm.subtract(-99.82, -872.45, async=True)
-    multiply = bm.multiply(-53.33, 54.44, async=True)
-    divide = bm.divide(4.2, 19.3, async=True)
-    err = bm.ensure_positive(10, async=True)
-    power = bm.power(123.45, 3, async=True)
+    euler = bm.euler(asynchronous=True)
+    pi = bm.pi(asynchronous=True)
+    add = bm.add(451.57, -745.12, asynchronous=True)
+    subtract = bm.subtract(-99.82, -872.45, asynchronous=True)
+    multiply = bm.multiply(-53.33, 54.44, asynchronous=True)
+    divide = bm.divide(4.2, 19.3, asynchronous=True)
+    err = bm.ensure_positive(10, asynchronous=True)
+    power = bm.power(123.45, 3, asynchronous=True)
 
     t0 = time.perf_counter()
     cxn.send_pending_requests()
@@ -166,8 +166,8 @@ def test_basic_math_and_array_asynchronous():
     bm = cxn.link('BasicMath')
     array = cxn.link('Array')
 
-    power = bm.power(math.pi, math.exp(1), async=True)
-    linspace = array.linspace(0, 1, 1e6, async=True)
+    power = bm.power(math.pi, math.exp(1), asynchronous=True)
+    linspace = array.linspace(0, 1, 1e6, asynchronous=True)
 
     cxn.send_pending_requests()
 
@@ -187,8 +187,8 @@ def test_spawn_basic_math_and_array_asynchronous():
     bm = cxn1.link('BasicMath')
     array = cxn2.link('Array')
 
-    power = bm.power(math.pi, math.exp(1), async=True)
-    linspace = array.linspace(0, 1, 1e6, async=True)
+    power = bm.power(math.pi, math.exp(1), asynchronous=True)
+    linspace = array.linspace(0, 1, 1e6, asynchronous=True)
 
     cxn1.send_pending_requests()
     cxn2.send_pending_requests()
