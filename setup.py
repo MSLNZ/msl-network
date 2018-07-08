@@ -3,6 +3,9 @@ import sys
 from distutils.cmd import Command
 from setuptools import setup, find_packages
 
+if sys.version_info < (3, 5):
+    sys.exit('Python < 3.5 is not supported because the asyncio package is required')
+
 
 class ApiDocs(Command):
     """
