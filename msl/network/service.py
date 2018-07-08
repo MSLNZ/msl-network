@@ -60,7 +60,7 @@ class Service(Network, asyncio.Protocol):
         return self._address_manager
 
     def __repr__(self):
-        return '<{} object at {:#x} manager={} port={}>'.format(self.name, id(self), self._address_manager, self._port)
+        return '<{} service at {:#x} manager={} port={}>'.format(self.name, id(self), self._address_manager, self._port)
 
     def password(self, name):
         """
@@ -246,8 +246,8 @@ class Service(Network, asyncio.Protocol):
         """
         self._debug = bool(boolean)
 
-    def start(self, *, host='localhost', port=PORT, username=None, password=None,
-              password_manager=None, certificate=None, debug=False):
+    def start(self, *, host='localhost', port=PORT, timeout=5.0, username=None, password=None,
+              password_manager=None, certificate=None, disable_tls=False, debug=False):
         """Start the :class:`Service`.
 
         Parameters
@@ -258,6 +258,9 @@ class Service(Network, asyncio.Protocol):
         port : :obj:`int`, optional
             The port number of the Network :class:`~msl.network.manager.Manager` that
             the :class:`Service` should connect to.
+        timeout : :obj:`float`, optional
+            The maximum number of seconds to wait to establish the connection to the
+            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
         username : :obj:`str`, optional
             The username to use to connect to Network :class:`~msl.network.manager.Manager`.
             If not specified then you will be asked for the username (only if the Network
@@ -275,6 +278,9 @@ class Service(Network, asyncio.Protocol):
         certificate : :obj:`str`, optional
             The path to the certificate file to use for the TLS connection
             with the Network :class:`~msl.network.manager.Manager`.
+        disable_tls : :obj:`bool`, optional
+            Whether to connect to the Network :class:`~msl.network.manager.Manager`
+            without using the TLS protocol.
         debug : :obj:`bool`, optional
             Whether to log debug messages for the :class:`Service`.
         """
@@ -292,24 +298,13 @@ class Service(Network, asyncio.Protocol):
         self._password = password
         self._password_manager = password_manager
 
-        context = get_ssl_context(host=host, port=port, certificate=certificate)
-        if not context:
-            return
-        context.check_hostname = host != HOSTNAME
-
         # create a new event loop, rather than using asyncio.get_event_loop()
         # (in case the Service does not run in the threading._MainThread)
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
-        self._loop.run_until_complete(
-            self._loop.create_connection(
-                lambda: self,
-                host=host,
-                port=port,
-                ssl=context,
-            )
-        )
+        if not self._create_connection(host, port, certificate, disable_tls, timeout):
+            return
 
         try:
             self._loop.run_forever()
@@ -319,3 +314,7 @@ class Service(Network, asyncio.Protocol):
             log.info(str(self) + ' disconnected')
             self._loop.close()
             log.info('closed the event loop')
+
+    @property
+    def _identity_successful(self):
+        return self._identity

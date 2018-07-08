@@ -2,12 +2,15 @@
 Base class for all :class:`~msl.network.manager.Manager`'\s,
 :class:`~msl.network.service.Service`'\s and :class:`~msl.network.client.Client`'\s.
 """
+import ssl
 import time
 import asyncio
 import logging
 import traceback
 
 from .json import serialize
+from .constants import HOSTNAME
+from .cryptography import get_ssl_context
 
 log = logging.getLogger(__name__)
 
@@ -200,3 +203,58 @@ class Network(object):
             The universally unique identifier of the request.
         """
         self.send_data(writer, {'result': reply, 'requester': requester, 'uuid': uuid, 'error': False})
+
+    @property
+    def _identity_successful(self):
+        raise NotImplementedError
+
+    def _create_connection(self, host, port, certificate, disable_tls, timeout):
+        # common to both Client and Service to connect to the Manager
+
+        context = None
+        if not disable_tls:
+            context = get_ssl_context(host=host, port=port, certificate=certificate)
+            if not context:
+                return False
+            context.check_hostname = host != HOSTNAME
+
+        try:
+            self._loop.run_until_complete(
+                self._loop.create_connection(
+                    lambda: self,
+                    host=host,
+                    port=port,
+                    ssl=context,
+                ),
+            )
+        except ssl.SSLError as e:
+            if e.reason == 'CERTIFICATE_VERIFY_FAILED':
+                e.strerror += '\nPerhaps the Manager is using a new certificate...\n' \
+                              'If you trust the network connection then you can delete ' \
+                              'the certificate at {}\nand then connect to the Manager ' \
+                              'to create a new trusted certificate'.format(certificate)
+            else:
+                e.strerror += '\nTry setting disable_tls=True when connecting to the Manager'
+            raise
+
+        # Make sure that the Manager registered this Client/Service by requesting its identity.
+        # The following fixed the case where the Manager required TLS but the Client/Service was
+        # started with ``disable_tls=True``. The connection_made() function was called
+        # but the Manager never saw the connection request to register the Client/Service and the
+        # Client/Service never raised an exception but just waited at run_forever().
+        async def check_for_identity_request():
+            t0 = time.perf_counter()
+            while not self._identity_successful:
+                await asyncio.sleep(0.01)
+                if timeout and time.perf_counter() - t0 > timeout:
+                    msg = 'The identity for {} was not requested by the Manager.'.format(self)
+                    if disable_tls:
+                        msg += '\nYou have TLS disabled. Perhaps the Manager is using TLS for the connection.'
+                    raise TimeoutError(msg)
+
+        try:
+            self._loop.run_until_complete(check_for_identity_request())
+        except RuntimeError:  # raised if the authentication step failed
+            return False
+        else:
+            return True

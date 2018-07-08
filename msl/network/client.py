@@ -1,7 +1,6 @@
 """
 Connect to a Network :class:`~msl.network.manager.Manager`.
 """
-import ssl
 import time
 import uuid
 import asyncio
@@ -14,7 +13,6 @@ from .network import Network
 from .json import deserialize
 from .utils import localhost_aliases
 from .constants import PORT, HOSTNAME
-from .cryptography import get_ssl_context
 from .exceptions import MSLNetworkError
 
 log = logging.getLogger(__name__)
@@ -551,39 +549,13 @@ class Client(Network, asyncio.Protocol):
         self._password = password
         self._password_manager = password_manager
         self._certificate = certificate
-        self._address_manager = '{}:{}'.format(host, port)
+        self._address_manager = '{}:{}'.format(self._host_manager, port)
         self._timeout = timeout
-
-        context = None
-        if not self._disable_tls:
-            context = get_ssl_context(host=self._host_manager, port=port, certificate=certificate)
-            if not context:
-                return
-            context.check_hostname = host != HOSTNAME
 
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
-        try:
-            self._loop.run_until_complete(
-                self._loop.create_connection(
-                    lambda: self,
-                    host=self._host_manager,
-                    port=port,
-                    ssl=context,
-                )
-            )
-        except ssl.SSLError as e:
-            e.strerror += '\nTry setting disable_tls=True when connecting to the Manager'
-            raise
-
-        async def wait_for_handshake():
-            while not self._handshake_finished:
-                await asyncio.sleep(0.01)
-
-        try:
-            self._loop.run_until_complete(wait_for_handshake())
-        except RuntimeError:  # raised if the authentication step failed
+        if not self._create_connection(self._host_manager, port, certificate, disable_tls, timeout):
             return False
 
         def run_forever():
@@ -707,6 +679,10 @@ class Client(Network, asyncio.Protocol):
             result = self._futures[uid].result()
         self._remove_future(uid)
         return result
+
+    @property
+    def _identity_successful(self):
+        return self._handshake_finished
 
 
 class Link(object):
