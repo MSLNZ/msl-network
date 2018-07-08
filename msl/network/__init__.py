@@ -6,6 +6,7 @@ from collections import namedtuple
 from .client import connect
 from .service import Service
 from .database import ConnectionsTable, HostnamesTable, UsersTable
+from .exceptions import MSLNetworkError
 
 __author__ = 'Joseph Borbely'
 __copyright__ = '\xa9 2017 - 2018, ' + __author__
