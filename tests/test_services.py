@@ -10,6 +10,39 @@ from msl.network import connect
 from msl.network.exceptions import MSLNetworkError
 from msl.examples.network.basic_math import BasicMath
 from msl.examples.network.array import Array
+from msl.examples.network.echo import Echo
+
+
+def test_echo():
+    services = helper.ServiceStarter((Echo,))
+
+    cxn = connect(**services.kwargs)
+
+    echo = cxn.link('Echo')
+
+    args, kwargs = echo.echo(1, 2, 3)
+    assert len(args) == 3
+    assert args[0] == 1
+    assert args[1] == 2
+    assert args[2] == 3
+    assert len(kwargs) == 0
+
+    args, kwargs = echo.echo(x=4, y=5, z=6)
+    assert len(args) == 0
+    assert kwargs['x'] == 4
+    assert kwargs['y'] == 5
+    assert kwargs['z'] == 6
+
+    args, kwargs = echo.echo(1, 2, 3, x=4, y=5, z=6)
+    assert len(args) == 3
+    assert args[0] == 1
+    assert args[1] == 2
+    assert args[2] == 3
+    assert kwargs['x'] == 4
+    assert kwargs['y'] == 5
+    assert kwargs['z'] == 6
+
+    services.shutdown(cxn)
 
 
 def test_asynchronous_synchronous_simultaneous():
