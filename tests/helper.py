@@ -89,6 +89,7 @@ class ServiceStarter(object):
     def shutdown(self, connection):
         # shutdown the Manager and delete the dummy files that were created
         connection.admin_request('shutdown_manager')
+        connection.disconnect()
         for t in self._service_threads:
             t.join()
         self._manager_thread.join()
