@@ -51,6 +51,5 @@ By default, the builtin :mod:`json` module is used.
 
 To change which JSON_ package to use you can specify a ``MSL_NETWORK_JSON`` 
 environment variable. Possible values are in :class:`JSONPackage`. For example,
-the ``MSL_NETWORK_JSON`` environment variable can be defined to be ``ULTRA``
-to use UltraJSON_ to (de)serialize JSON_ data.
+setting ``MSL_NETWORK_JSON=ULTRA`` would use UltraJSON_ to (de)serialize JSON_ data.
 """
