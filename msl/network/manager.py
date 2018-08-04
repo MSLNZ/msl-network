@@ -30,20 +30,20 @@ class Manager(Network):
 
         Parameters
         ----------
-        port : :obj:`int`
+        port : :class:`int`
             The port number that the Network :class:`Manager` is running on.
-        password : :obj:`str` or :obj:`None`
+        password : :class:`str` or :data:`None`
             The password of the Network :class:`Manager`. Essentially, this can be a
             thought of as a single password that all :class:`~msl.network.client.Client`\'s
             and :class:`~msl.network.service.Service`\'s need to specify before the
             connection to the Network :class:`Manager` is successful. To use the `password` start
             the :class:`Manager` with the ``--auth-password`` flag.
-        login : :obj:`bool` or :obj:`None`
-            If :obj:`True` then the Network :class:`Manager` was started with the ``--auth-login`` flag
+        login : :class:`bool` or :data:`None`
+            If :data:`True` then the Network :class:`Manager` was started with the ``--auth-login`` flag
             and checks a users login credentials (the username and password) before a
             :class:`~msl.network.client.Client` or :class:`~msl.network.service.Service` successfully
             connects.
-        hostnames : :obj:`list` of :obj:`str` or :obj:`None`
+        hostnames : :class:`list` of :class:`str` or :data:`None`
             A list of trusted hostnames of devices that can connect to the Network
             :class:`Manager` (only if the Network :class:`Manager` was started using the
             ``--auth-hostname`` flag as the authentication procedure).
@@ -56,7 +56,7 @@ class Manager(Network):
         hostnames_table : :class:`~msl.network.database.HostnamesTable`
             The table in the database that keeps the records of the trusted hostnames that
             can connect to the Network :class:`Manager`.
-        debug : :obj:`bool`
+        debug : :class:`bool`
             Whether debug logging messages are displayed.
         loop : :class:`asyncio.AbstractEventLoop`
             The event loop that the Network :class:`Manager` is running in.
@@ -158,7 +158,7 @@ class Manager(Network):
 
         Returns
         -------
-        :obj:`bool`
+        :class:`bool`
             Whether the login credentials are valid.
         """
         log.info(self._network_name + ' verifying login credentials from ' + writer.peer.network_name)
@@ -207,12 +207,14 @@ class Manager(Network):
 
         Returns
         -------
-        :obj:`bool`
+        :class:`bool`
             Whether the correct password was received.
         """
         log.info(self._network_name + ' requesting password from ' + writer.peer.network_name)
         self.send_request(writer, 'password', self._network_name)
         password = await self.get_handshake_data(reader)
+
+        print(password)
 
         if not password:  # then the connection closed prematurely
             return False
@@ -239,9 +241,9 @@ class Manager(Network):
 
         Returns
         -------
-        :obj:`str` or :obj:`None`
+        :class:`str` or :data:`None`
             If the identity check was successful then returns the connection type,
-            either ``'client'`` or ``'service'``, otherwise returns :obj:`None`.
+            either ``'client'`` or ``'service'``, otherwise returns :data:`None`.
         """
         log.info(self._network_name + ' requesting identity from ' + writer.peer.network_name)
         self.send_request(writer, 'identity')
@@ -302,7 +304,7 @@ class Manager(Network):
 
         Returns
         -------
-        :obj:`None`, :obj:`str` or :obj:`dict`
+        :data:`None`, :class:`str` or :class:`dict`
             The data.
         """
         try:
@@ -435,7 +437,7 @@ class Manager(Network):
 
         Parameters
         ----------
-        id_type : :obj:`str`
+        id_type : :class:`str`
             The type of the connection, either ``'client'`` or ``'service'``.
         writer : :class:`asyncio.StreamWriter`
             The stream writer of the peer.
@@ -507,7 +509,7 @@ class Manager(Network):
             self.remove_peer('service', writer)
 
     def identity(self):
-        """:obj:`dict`: The :obj:`~msl.network.network.Network.identity` of
+        """:class:`dict`: The :obj:`~msl.network.network.Network.identity` of
         the Network :class:`Manager`."""
         return self._identity
 
@@ -519,9 +521,9 @@ class Manager(Network):
         ----------
         writer : :class:`asyncio.StreamWriter`
             The stream writer of the :class:`~msl.network.client.Client`.
-        uuid : :obj:`str`
+        uuid : :class:`str`
             The universally unique identifier of the request.
-        service : :obj:`str`
+        service : :class:`str`
             The name of the :class:`~msl.network.service.Service` that the
             :class:`~msl.network.client.Client` wants to link with.
         """
@@ -544,12 +546,12 @@ class Manager(Network):
         writer : :class:`asyncio.StreamWriter`
             The stream writer of the :class:`~msl.network.client.Client` or
             :class:`~msl.network.service.Service`.
-        attribute : :obj:`str`
+        attribute : :class:`str`
             The name of the method to call from the :class:`~msl.network.client.Client`
             or :class:`~msl.network.service.Service`.
-        args : :obj:`tuple`, optional
+        args : :class:`tuple`, optional
             The arguments that the `attribute` method requires.
-        kwargs : :obj:`dict`, optional
+        kwargs : :class:`dict`, optional
             The key-value pairs that the `attribute` method requires.
         """
         self.send_data(writer, {
@@ -566,7 +568,7 @@ class Manager(Network):
 
         Parameters
         ----------
-        boolean : :obj:`bool`
+        boolean : :class:`bool`
             Whether to enable or disable debug logging messages.
         """
         self._debug = bool(boolean)
@@ -610,8 +612,7 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
     if not disable_tls:
         context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
         context.load_cert_chain(certfile=cert, keyfile=key, password=key_password)
-
-    log.info('loaded certificate ' + cert)
+        log.info('loaded certificate ' + cert)
 
     # load the connections table
     conn_table = ConnectionsTable(database=database)
@@ -630,13 +631,13 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
     log.info('loaded the ' + users_table.NAME + ' table from ' + users_table.path)
 
     if hostnames:
-        log.debug('using trusted hosts for authentication')
+        log.info('using trusted hosts for authentication')
     elif password:
-        log.debug('using a password for authentication')
+        log.info('using a password for authentication')
     elif login:
-        log.debug('using a login for authentication')
+        log.info('using a login for authentication')
     else:
-        log.debug('not using authentication')
+        log.info('not using authentication')
 
     # create a new event loop, rather than using asyncio.get_event_loop()
     # (in case the Manager does not run in the threading._MainThread)

@@ -54,12 +54,21 @@ def add_parser_certgen(parser):
         epilog=EPILOG,
     )
     p.add_argument(
-        'path',
-        nargs='?',
-        help='The path to where to save the certificate\n'
-             '(e.g., /where/to/save/cert.pem). If omitted then\n'
-             'the default directory and filename is used to\n'
-             'save the certificate file.'
+        '--algorithm',
+        default='SHA256',
+        help='The hash algorithm to use. Default is %(default)s.'
+    )
+    p.add_argument(
+        '--key-password',
+        nargs='+',
+        help='The password to use to decrypt the private key. Only\n'
+             'required if --key-path is specified and it is an encrypted\n'
+             'file. Specify a path to a file if you do not want to type\n'
+             'the password in the terminal (i.e., you do not want the\n'
+             'password to appear in your command history). Whatever is\n'
+             'written on the first line in the file will be used for the\n'
+             'password. WARNING: If you enter a path that does not exist\n'
+             'then the path itself will be used as the password.'
     )
     p.add_argument(
         '--key-path',
@@ -68,22 +77,18 @@ def add_parser_certgen(parser):
              'default key. See also: msl-network keygen'
     )
     p.add_argument(
-        '--key-password',
-        nargs='+',
-        help='The password (passphrase) to use to decrypt the\n'
-             'private key. Only required if --key-path is specified\n'
-             'and it is an encrypted file. Specify a path to a file\n'
-             'if you do not want to type the password in the terminal\n'
-             '(i.e., you do not want the password to appear in your\n'
-             'command history). Whatever is written on the first line\n'
-             'in the file will be used for the password. WARNING: If you\n'
-             'enter a path that does not exist then the path itself will\n'
-             'be used as the password.'
+        'path',
+        nargs='?',
+        help='The path to where to save the certificate\n'
+             '(e.g., /where/to/save/cert.pem). If omitted then\n'
+             'the default directory and filename is used to\n'
+             'save the certificate file.'
     )
     p.add_argument(
-        '--algorithm',
-        default='SHA256',
-        help='The hash algorithm to use. Default is %(default)s.'
+        '--show',
+        action='store_true',
+        default=False,
+        help='Display the details of the newly-created certificate.'
     )
     p.add_argument(
         '--years-valid',
@@ -91,12 +96,6 @@ def add_parser_certgen(parser):
         help='The number of years that the certificate is valid for\n'
              '(e.g., a value of 0.25 would mean that the certificate\n'
              'is valid for 3 months). Default is %(default)s years.'
-    )
-    p.add_argument(
-        '--show',
-        action='store_true',
-        default=False,
-        help='Display the details of the newly-created certificate.'
     )
     p.set_defaults(func=execute)
 
@@ -113,6 +112,7 @@ def execute(args):
 
     key_password = None if args.key_password is None else ' '.join(args.key_password)
     if key_password is not None and os.path.isfile(key_password):
+        print('Reading the password from the file')
         with open(key_password, 'r') as fp:
             key_password = fp.readline().strip()
 

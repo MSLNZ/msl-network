@@ -25,37 +25,37 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=None, usernam
 
     Parameters
     ----------
-    name : :obj:`str`, optional
+    name : :class:`str`, optional
         A name to assign to the :class:`Client`.
-    host : :obj:`str`, optional
+    host : :class:`str`, optional
         The hostname of the Network :class:`~msl.network.manager.Manager`
         that the :class:`~msl.network.client.Client` should connect to.
-    port : :obj:`int`, optional
+    port : :class:`int`, optional
         The port number of the Network :class:`~msl.network.manager.Manager`
         that the :class:`~msl.network.client.Client` should connect to.
-    timeout : :obj:`float`, optional
+    timeout : :class:`float`, optional
         The maximum number of seconds to wait for a reply from the Network
         :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
         The default is to wait forever (i.e., no timeout).
-    username : :obj:`str`, optional
+    username : :class:`str`, optional
         The username to use to connect to Network :class:`~msl.network.manager.Manager`.
         If not specified then you will be asked for the `username` when needed.
-    password : :obj:`str`, optional
+    password : :class:`str`, optional
         The password that is associated with `username`. If not specified then you will
         be asked for the password when needed.
-    password_manager : :obj:`str`, optional
+    password_manager : :class:`str`, optional
         The password of the Network :class:`~msl.network.manager.Manager`. A Network
         :class:`~msl.network.manager.Manager` can be started with the option to
         use a global password that is required for all connecting devices to specify
         in order for the device to connect to it. If the `password_manager` value is
         not specified then you will be asked for the password when needed.
-    certificate : :obj:`str`, optional
+    certificate : :class:`str`, optional
         The path to the certificate file to use for the secure connection
         with the Network :class:`~msl.network.manager.Manager`.
-    disable_tls : :obj:`bool`, optional
+    disable_tls : :class:`bool`, optional
         Whether to connect to the Network :class:`~msl.network.manager.Manager`
         without using the TLS protocol.
-    debug : :obj:`bool`, optional
+    debug : :class:`bool`, optional
         Whether to log debug messages for the :class:`Client`.
 
     Returns
@@ -111,25 +111,25 @@ class Client(Network, asyncio.Protocol):
 
     @property
     def name(self):
-        """:obj:`str`: The name of the :class:`Client` on the Network
+        """:class:`str`: The name of the :class:`Client` on the Network
         :class:`~msl.network.manager.Manager`."""
         return self._name
 
     @property
     def port(self):
-        """:obj:`int`: The port number on ``localhost`` that is being used for the
+        """:class:`int`: The port number on ``localhost`` that is being used for the
         connection to the Network :class:`~msl.network.manager.Manager`."""
         return self._port
 
     @property
     def address_manager(self):
-        """:obj:`str`: The address of the Network :class:`~msl.network.manager.Manager`
+        """:class:`str`: The address of the Network :class:`~msl.network.manager.Manager`
         that this :class:`Client` is connected to."""
         return self._address_manager
 
     @property
     def timeout(self):
-        """:obj:`float` or :obj:`None`: The maximum number of seconds to wait for
+        """:class:`float` or :data:`None`: The maximum number of seconds to wait for
         a reply from the Network :class:`~msl.network.manager.Manager` before
         raising a :exc:`TimeoutError`."""
         return self._timeout
@@ -173,7 +173,7 @@ class Client(Network, asyncio.Protocol):
         return self._username
 
     def identity(self):
-        """:obj:`dict`: Returns the :obj:`~msl.network.network.Network.identity` of the :class:`Client`."""
+        """:class:`dict`: Returns the :obj:`~msl.network.network.Network.identity` of the :class:`Client`."""
         return self._identity
 
     def link(self, service):
@@ -182,7 +182,7 @@ class Client(Network, asyncio.Protocol):
 
         Parameters
         ----------
-        service : :obj:`str`
+        service : :class:`str`
             The name of the :class:`~msl.network.service.Service` to link with.
 
         Returns
@@ -221,15 +221,15 @@ class Client(Network, asyncio.Protocol):
 
         Parameters
         ----------
-        as_yaml : :obj:`bool`, optional
+        as_yaml : :class:`bool`, optional
             Whether to return the information as a YAML_\-style string.
-        indent : :obj:`int`
+        indent : :class:`int`
             The amount of indentation added for each recursive level. Only used if
-            `as_yaml` is :obj:`True`.
+            `as_yaml` is :data:`True`.
 
         Returns
         -------
-        :obj:`dict` or :obj:`str`
+        :class:`dict` or :class:`str`
             The :obj:`~msl.network.network.Network.identity` of the Network
             :class:`~msl.network.manager.Manager`.
         """
@@ -280,12 +280,12 @@ class Client(Network, asyncio.Protocol):
 
         Parameters
         ----------
-        attrib : :obj:`str`
+        attrib : :class:`str`
             The attribute of the Network :class:`~msl.network.manager.Manager`. Can contain
             dots ``.`` to access sub-attributes.
-        args : :obj:`list`, optional
+        args : :class:`list`, optional
             The arguments to send to the Network :class:`~msl.network.manager.Manager`.
-        kwargs : :obj:`dict`, optional
+        kwargs : :class:`dict`, optional
             The keyword arguments to send to the Network :class:`~msl.network.manager.Manager`.
 
         Returns
@@ -401,7 +401,7 @@ class Client(Network, asyncio.Protocol):
 
         Parameters
         ----------
-        name : :obj:`str`, optional
+        name : :class:`str`, optional
             The name to assign to the new :class:`Client`.
 
         Returns
@@ -442,15 +442,15 @@ class Client(Network, asyncio.Protocol):
 
         Parameters
         ----------
-        service : :obj:`str`
+        service : :class:`str`
             The name of the :class:`~msl.network.service.Service`
-        attribute : :obj:`str`
+        attribute : :class:`str`
             The name of the property or method of the :class:`~msl.network.service.Service`
             to process the request.
-        args : :obj:`list`, optional
+        args : :class:`list`, optional
             The arguments that the :class:`~msl.network.service.Service` `attribute`
             requires.
-        kwargs : :obj:`dict`, optional
+        kwargs : :class:`dict`, optional
             The keyword arguments that the :class:`~msl.network.service.Service`
             `attribute` requires.
 
@@ -520,10 +520,10 @@ class Client(Network, asyncio.Protocol):
 
         Parameters
         ----------
-        wait : :obj:`bool`, optional
+        wait : :class:`bool`, optional
             Whether to wait for all pending requests to finish before returning to
-            the calling program. If wait is :obj:`True` then this method will block
-            until all requests are done executing. If wait is :obj:`False` then this
+            the calling program. If wait is :data:`True` then this method will block
+            until all requests are done executing. If wait is :data:`False` then this
             method will return immediately and you must call the :meth:`wait` method
             to ensure that all pending requests have a result.
         """
@@ -702,28 +702,28 @@ class Link(object):
 
     @property
     def service_name(self):
-        """:obj:`str`: The name of the :class:`~msl.network.service.Service` that this object is linked with."""
+        """:class:`str`: The name of the :class:`~msl.network.service.Service` that this object is linked with."""
         return self._service_name
 
     @property
     def service_address(self):
-        """:obj:`str`: The address of the :class:`~msl.network.service.Service` that this object is linked with."""
+        """:class:`str`: The address of the :class:`~msl.network.service.Service` that this object is linked with."""
         return self._service_identity['address']
 
     @property
     def service_attributes(self):
-        """:obj:`dict`: The attributes of the :class:`~msl.network.service.Service`
+        """:class:`dict`: The attributes of the :class:`~msl.network.service.Service`
         that this object is linked with."""
         return self._service_identity['attributes']
 
     @property
     def service_language(self):
-        """:obj:`str`: The programming language that the :class:`~msl.network.service.Service` is running on."""
+        """:class:`str`: The programming language that the :class:`~msl.network.service.Service` is running on."""
         return self._service_identity['language']
 
     @property
     def service_os(self):
-        """:obj:`str`: The operating system that the :class:`~msl.network.service.Service` is running on."""
+        """:class:`str`: The operating system that the :class:`~msl.network.service.Service` is running on."""
         return self._service_identity['os']
 
     def __repr__(self):

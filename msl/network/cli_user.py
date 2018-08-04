@@ -39,6 +39,9 @@ Examples::
   # update 'j.doe' to be an administrator  
   msl-network user update j.doe --admin
 
+  # update 'a.smith' to not be an administrator  
+  msl-network user update a.smith
+
   # update the password for 'j.doe' using a password in a file 
   msl-network user update j.doe --password /path/to/my/password.txt
 
@@ -46,7 +49,7 @@ Examples::
   msl-network user remove j.doe
 
   # add 'j.doe' to the auth_users table in a specific database 
-  msl-network user add j.doe --password The Password To Use --database path/to/database.db 
+  msl-network user add j.doe --password The Password To Use --database /path/to/database.db 
 
   # list all users in the auth_users table
   msl-network user list
@@ -70,9 +73,16 @@ def add_parser_user(parser):
         help='The action to perform.'
     )
     p.add_argument(
-        'username',
-        nargs='?',
-        help='The name of the user.'
+        '-a', '--admin',
+        action='store_true',
+        default=False,
+        help='Pass in this flag if the user is an administrator.\n'
+             'To remove administrative rights for a user run the\n'
+             '"update" command for that user without the --admin flag.'
+    )
+    p.add_argument(
+        '-d', '--database',
+        help='The path to a database file to save the user credentials.'
     )
     p.add_argument(
         '-p', '--password',
@@ -86,16 +96,9 @@ def add_parser_user(parser):
              'path itself will be used as the password.'
     )
     p.add_argument(
-        '-a', '--admin',
-        action='store_true',
-        default=False,
-        help='Pass in this flag if the user is an administrator.\n'
-             'To remove administrative rights for a user run the\n'
-             '"update" command for that user without the --admin flag.'
-    )
-    p.add_argument(
-        '-d', '--database',
-        help='The path to a database file to save the user credentials.'
+        'username',
+        nargs='?',
+        help='The name of the user.'
     )
     p.set_defaults(func=execute)
 
@@ -125,6 +128,7 @@ def execute(args):
 
     password = None if args.password is None else ' '.join(args.password)
     if password is not None and os.path.isfile(password):
+        print('Reading the password from the file')
         with open(password, 'r') as fp:
             password = fp.readline().strip()
 

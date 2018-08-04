@@ -17,7 +17,7 @@ def ensure_root_path(path):
         
     Parameters
     ----------
-    path : :obj:`str`
+    path : :class:`str`
         The file path.
         
         For example, if `path` is ``/the/path/to/my/test/file.txt`` then
@@ -39,12 +39,12 @@ def parse_terminal_input(line):
 
     Parameters
     ----------
-    line : :obj:`str`
+    line : :class:`str`
         The input text from the terminal.
 
     Returns
     -------
-    :obj:`dict`
+    :class:`dict`
         The JSON_ object.
     """
     def convert_value(val):
@@ -143,5 +143,5 @@ def parse_terminal_input(line):
 
 
 def localhost_aliases():
-    """:obj:`tuple` of :obj:`str`: Aliases for ``localhost``."""
+    """:class:`tuple` of :class:`str`: Aliases for ``localhost``."""
     return HOSTNAME, 'localhost', '127.0.0.1', '::1'

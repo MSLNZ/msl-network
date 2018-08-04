@@ -28,29 +28,29 @@ def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve=
 
     Parameters
     ----------
-    path : :obj:`str`, optional
+    path : :class:`str`, optional
         The path to where to save the private key. Example, ``path/to/store/key.pem``.
-        If :obj:`None` then save the key in the default directory with the
+        If :data:`None` then save the key in the default directory with the
         default filename.
-    algorithm : :obj:`str`, optional
+    algorithm : :class:`str`, optional
         The encryption algorithm to use to generate the private key. Options are:
 
         * ``RSA`` - Rivest, Shamir, and Adleman algorithm.
         * ``DSA`` - Digital Signature Algorithm.
         * ``ECC`` - Elliptic Curve Cryptography.
 
-    password : :obj:`str`, optional
+    password : :class:`str`, optional
         The password to use to encrypt the key.
-    size : :obj:`int`, optional
+    size : :class:`int`, optional
         The size (number of bits) of the key. Only used if `algorithm` is ``RSA`` or ``DSA``.
-    curve : :obj:`str`, optional
+    curve : :class:`str`, optional
         The name of the elliptic curve to use. Only used if `algorithm` is ``ECC``.
         See `here <https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ec/#elliptic-curves>`_
         for example elliptic-curve names.
 
     Returns
     -------
-    :obj:`str`
+    :class:`str`
         The path to the private key.
     """
     algorithm_u = algorithm.upper()
@@ -95,9 +95,9 @@ def load_key(path, *, password=None):
 
     Parameters
     ----------
-    path : :obj:`str`
+    path : :class:`str`
         The path to the key file.
-    password : :obj:`str`, optional
+    password : :class:`str`, optional
         The password to use to decrypt the private key.
 
     Returns
@@ -117,29 +117,29 @@ def generate_certificate(*, path=None, key_path=None, key_password=None, algorit
 
     Parameters
     ----------
-    path : :obj:`str`, optional
+    path : :class:`str`, optional
         The path to where to save the certificate. Example, ``path/to/store/certificate.pem``.
-        If :obj:`None` then save the certificate in the default directory with the
+        If :data:`None` then save the certificate in the default directory with the
         default filename.
-    key_path : :obj:`str`, optional
+    key_path : :class:`str`, optional
         The path to where the private key is saved which will be used to
-        digitally sign the certificate. If :obj:`None` then automatically
+        digitally sign the certificate. If :data:`None` then automatically
         generates a new private key (overwriting the default private key
         if one already exists).
-    key_password : :obj:`str`, optional
+    key_password : :class:`str`, optional
         The password to use to decrypt the private key.
-    algorithm : :obj:`str`, optional
+    algorithm : :class:`str`, optional
         The hash algorithm to use. Default is ``SHA256``. See
         `this <https://cryptography.io/en/latest/hazmat/primitives/cryptographic-hashes/#cryptographic-hash-algorithms>`_
         link for example hash-algorithm names.
-    years_valid : :obj:`float`, optional
+    years_valid : :class:`float`, optional
         The number of years that the certificate is valid for. If you want to
         specify that the certificate is valid for 3 months then set `years_valid`
         to be ``0.25``. Default is ``100`` years.
 
     Returns
     -------
-    :obj:`str`
+    :class:`str`
         The path to the self-signed certificate.
     """
     hash_map = {}
@@ -207,9 +207,9 @@ def load_certificate(cert):
 
     Parameters
     ----------
-    cert : :obj:`str` or :obj:`bytes`
-        If :obj:`str` then the path to the certificate file.
-        If :obj:`bytes` then the raw certificate data.
+    cert : :class:`str` or :class:`bytes`
+        If :class:`str` then the path to the certificate file.
+        If :class:`bytes` then the raw certificate data.
 
     Returns
     -------
@@ -219,7 +219,7 @@ def load_certificate(cert):
     Raises
     ------
     TypeError
-        If `cert` is not of type :obj:`str` or :obj:`bytes`.
+        If `cert` is not of type :class:`str` or :class:`bytes`.
     """
     if isinstance(cert, str):
         with open(cert, 'rb') as f:
@@ -233,12 +233,12 @@ def load_certificate(cert):
 
 
 def get_default_cert_path():
-    """:obj:`str`: Returns the default certificate path."""
+    """:class:`str`: Returns the default certificate path."""
     return os.path.join(CERT_DIR, HOSTNAME + '.crt')
 
 
 def get_default_key_path():
-    """:obj:`str`: Returns the default key path."""
+    """:class:`str`: Returns the default key path."""
     return os.path.join(KEY_DIR, HOSTNAME + '.key')
 
 
@@ -254,7 +254,7 @@ def get_fingerprint(cert, *, algorithm=hashes.SHA1):
 
     Returns
     -------
-    :obj:`str`
+    :class:`str`
         The fingerprint as a colon-separated hex string.
     """
     fingerprint = cert.fingerprint(algorithm()).hex()
@@ -271,7 +271,7 @@ def get_metadata(cert):
 
     Returns
     -------
-    :obj:`dict`
+    :class:`dict`
         The metadata of the certificate.
     """
     def to_hex_string(val):
@@ -353,7 +353,7 @@ def get_metadata_as_string(cert):
 
     Returns
     -------
-    :obj:`str`
+    :class:`str`
         The metadata of the certificate.
     """
     def justify(hex_string):
@@ -423,11 +423,11 @@ def get_ssl_context(*, host=None, port=None, certificate=None):
 
     Parameters
     ----------
-    host : :obj:`str`, optional
+    host : :class:`str`, optional
         The hostname of the remote server to connect to.
-    port : :obj:`int`, optional
+    port : :class:`int`, optional
         The port number of the remote server to connect to.
-    certificate : :obj:`str`, optional
+    certificate : :class:`str`, optional
         The path to the certificate file to load.
 
     Returns

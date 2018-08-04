@@ -14,7 +14,6 @@ from .network import Network
 from .json import deserialize, serialize
 from .utils import localhost_aliases
 from .constants import PORT, HOSTNAME
-from .cryptography import get_ssl_context
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ IGNORE_ITEMS += dir(Network) + dir(asyncio.Protocol)
 class Service(Network, asyncio.Protocol):
 
     name = None
-    """:obj:`str`: The name of the Service as it will appear on the Network :class:`~msl.network.manager.Manager`."""
+    """:class:`str`: The name of the Service as it will appear on the Network :class:`~msl.network.manager.Manager`."""
 
     _PASSWORD_MESSAGE = 'You do not have permission to receive the password'
 
@@ -49,13 +48,13 @@ class Service(Network, asyncio.Protocol):
 
     @property
     def port(self):
-        """:obj:`int`: The port number on ``localhost`` that is being used for the
+        """:class:`int`: The port number on ``localhost`` that is being used for the
         connection to the Network :class:`~msl.network.manager.Manager`."""
         return self._port
 
     @property
     def address_manager(self):
-        """:obj:`str`: The address of the Network :class:`~msl.network.manager.Manager`
+        """:class:`str`: The address of the Network :class:`~msl.network.manager.Manager`
         that this :class:`Service` is connected to."""
         return self._address_manager
 
@@ -241,7 +240,7 @@ class Service(Network, asyncio.Protocol):
 
         Parameters
         ----------
-        boolean : :obj:`bool`
+        boolean : :class:`bool`
             Whether to enable or disable debug logging messages.
         """
         self._debug = bool(boolean)
@@ -252,36 +251,36 @@ class Service(Network, asyncio.Protocol):
 
         Parameters
         ----------
-        host : :obj:`str`, optional
+        host : :class:`str`, optional
             The hostname of the Network :class:`~msl.network.manager.Manager` that the
             :class:`Service` should connect to.
-        port : :obj:`int`, optional
+        port : :class:`int`, optional
             The port number of the Network :class:`~msl.network.manager.Manager` that
             the :class:`Service` should connect to.
-        timeout : :obj:`float`, optional
+        timeout : :class:`float`, optional
             The maximum number of seconds to wait to establish the connection to the
             :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
-        username : :obj:`str`, optional
+        username : :class:`str`, optional
             The username to use to connect to Network :class:`~msl.network.manager.Manager`.
             If not specified then you will be asked for the username (only if the Network
             :class:`~msl.network.manager.Manager` requires login credentials to be able
             to connect to it).
-        password : :obj:`str`, optional
+        password : :class:`str`, optional
             The password that is associated with `username`. If the `password` is not
             specified then you will be asked for the password if needed.
-        password_manager : :obj:`str`, optional
+        password_manager : :class:`str`, optional
             The password of the Network :class:`~msl.network.manager.Manager`. A Network
             :class:`~msl.network.manager.Manager` can be started with the option to
             set a global password which all connecting devices must enter in order
             to connect to it. If the `password_manager` value is not specified then you will
             be asked for the password if needed.
-        certificate : :obj:`str`, optional
+        certificate : :class:`str`, optional
             The path to the certificate file to use for the TLS connection
             with the Network :class:`~msl.network.manager.Manager`.
-        disable_tls : :obj:`bool`, optional
+        disable_tls : :class:`bool`, optional
             Whether to connect to the Network :class:`~msl.network.manager.Manager`
             without using the TLS protocol.
-        debug : :obj:`bool`, optional
+        debug : :class:`bool`, optional
             Whether to log debug messages for the :class:`Service`.
         """
         if self._transport is not None:

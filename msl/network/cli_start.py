@@ -24,23 +24,27 @@ DESCRIPTION = HELP + """
 EPILOG = """
 Examples::
 
-  # start a Network Manager using the default settings
+  # start the Network Manager using the default settings
   msl-network start
 
-  # start a Network Manager on port 8326
+  # start the Network Manager on port 8326
   msl-network start --port 8326
     
-  # require an authentication passphrase for Clients and Services 
+  # require an authentication password for Clients and Services 
   # to be able to connect to the Network Manager 
   msl-network start --auth-password abc 123
 
   # use a specific certificate and key for the secure TLS protocol 
-  msl-network start --cert path/to/cert.pem --key path/to/key.pem
+  msl-network start --cert /path/to/cert.pem --key /path/to/key.pem
+
+  # require that a valid username and password are specified for 
+  # Clients and Services to be able to connect to the Network Manager 
+  msl-network start --auth-login
     
 See Also::
 
-  msl-network keygen
   msl-network certgen
+  msl-network keygen
   msl-network hostname
   msl-network user
   
@@ -58,10 +62,18 @@ def add_parser_start(parser):
         epilog=EPILOG,
     )
     p.add_argument(
-        '--port',
-        default=PORT,
-        help='The port number to use for the Network Manager.\n'
-             'Default is %(default)s.'
+        '--auth-hostname',
+        action='store_true',
+        default=False,
+        help='Only connections from trusted hostnames are allowed.\n'
+             'See also: msl-network hostname'
+    )
+    p.add_argument(
+        '--auth-login',
+        action='store_true',
+        default=False,
+        help='Each connection to the Network Manager must login by\n'
+             'specifying a username and password. See also: msl-network user'
     )
     p.add_argument(
         '--auth-password',
@@ -70,8 +82,8 @@ def add_parser_start(parser):
              'connect to the Network Manager. The password can contain\n'
              'spaces. Using this type of authentication can be thought of\n'
              'as using a global password that can easily be changed every\n'
-             'time that the Network Manager starts. Specify a path to a\n'
-             'file if you do not want to type the password in the terminal\n'
+             'time the Network Manager starts. Specify a path to a file\n'
+             'if you do not want to type the password in the terminal\n'
              '(i.e., you do not want the password to appear in your command\n'
              'history). Whatever is written on the first line in the file\n'
              'will be used for the password. WARNING: If you enter a path\n'
@@ -79,24 +91,28 @@ def add_parser_start(parser):
              'password.'
     )
     p.add_argument(
-        '--auth-hostname',
-        action='store_true',
-        default=False,
-        help='Only connections from trusted hostname\'s are allowed.\n'
-             'See also: msl-network hostname'
-    )
-    p.add_argument(
-        '--auth-login',
-        action='store_true',
-        default=False,
-        help='Each connection to the Network Manager must login by using\n'
-             'a username and a password.\n'
-    )
-    p.add_argument(
         '--cert',
         help='The path to a certificate file to use for the secure TLS\n'
              'connection. If omitted then a default certificate is used.\n'
              'See also: msl-network certgen'
+    )
+    p.add_argument(
+        '--database',
+        help='The path to the database to use for logging network connections\n'
+             'and to use for the --auth-hostname and --auth-login flags. If\n'
+             'omitted then the default database is used.'
+    )
+    p.add_argument(
+        '--debug',
+        action='store_true',
+        default=False,
+        help='Enable DEBUG logging messages.'
+    )
+    p.add_argument(
+        '--disable-tls',
+        action='store_true',
+        default=False,
+        help='Start the Network Manager without using the TLS protocol.'
     )
     p.add_argument(
         '--key',
@@ -110,32 +126,19 @@ def add_parser_start(parser):
     p.add_argument(
         '--key-password',
         nargs='+',
-        help='The password (passphrase) to use to decrypt the private key.\n'
-             'Only required if the key file is encrypted. Specify a path to\n'
-             'a file if you do not want to type the password in the terminal\n'
-             '(i.e., you do not want the password to appear in your command\n'
-             'history). Whatever is written on the first line in the file\n'
-             'will be used for the password. WARNING: If you enter a path\n'
-             'that does not exist then the path itself will be used as the\n'
-             'password.'
+        help='The password to use to decrypt the private key. Only required\n'
+             'if the key file is encrypted. Specify a path to a file if you\n'
+             'do not want to type the password in the terminal (i.e., you do\n'
+             'not want the password to appear in your command history).\n'
+             'Whatever is written on the first line in the file will be used\n'
+             'for the password. WARNING: If you enter a path that does not\n'
+             'exist then the path itself will be used as the password.'
     )
     p.add_argument(
-        '--database',
-        help='The path to the database to use for logging network connections\n'
-             'and to use for the --auth-hostname and --auth-login flag. If\n'
-             'omitted then the default database is used.'
-    )
-    p.add_argument(
-        '--disable-tls',
-        action='store_true',
-        default=False,
-        help='Start the Network Manager without using the TLS protocol.'
-    )
-    p.add_argument(
-        '--debug',
-        action='store_true',
-        default=False,
-        help='Enable DEBUG logging messages.'
+        '--port',
+        default=PORT,
+        help='The port number to use for the Network Manager.\n'
+             'Default is %(default)s.'
     )
     p.set_defaults(func=execute)
 
@@ -168,26 +171,29 @@ def execute(args):
         print('ValueError: The port number must be an integer')
         return
 
-    # get the password to decrypt the private key
-    key_password = None if args.key_password is None else ' '.join(args.key_password)
-    if key_password is not None and os.path.isfile(key_password):
-        with open(key_password, 'r') as fp:
-            key_password = fp.readline().strip()
+    if not args.disable_tls:
+        # get the password to decrypt the private key
+        key_password = None if args.key_password is None else ' '.join(args.key_password)
+        if key_password is not None and os.path.isfile(key_password):
+            with open(key_password, 'r') as fp:
+                key_password = fp.readline().strip()
 
-    # get the path to the certificate and to the private key
-    cert, key = args.cert, args.key
-    if cert is None and key is None:
-        key = cryptography.get_default_key_path()
-        if not os.path.isfile(key):
-            cryptography.generate_key(path=key, password=key_password)
-        cert = cryptography.get_default_cert_path()
-        if not os.path.isfile(cert):
-            cryptography.generate_certificate(path=cert, key_path=key, key_password=key_password)
-    elif cert is None and key is not None:
-        # create (or overwrite) the default certificate to match the key
-        cert = cryptography.generate_certificate(key_path=key, key_password=key_password)
-    elif cert is not None and key is None:
-        pass  # assume that the certificate file also contains the private key
+        # get the path to the certificate and to the private key
+        cert, key = args.cert, args.key
+        if cert is None and key is None:
+            key = cryptography.get_default_key_path()
+            if not os.path.isfile(key):
+                cryptography.generate_key(path=key, password=key_password)
+            cert = cryptography.get_default_cert_path()
+            if not os.path.isfile(cert):
+                cryptography.generate_certificate(path=cert, key_path=key, key_password=key_password)
+        elif cert is None and key is not None:
+            # create (or overwrite) the default certificate to match the key
+            cert = cryptography.generate_certificate(key_path=key, key_password=key_password)
+        elif cert is not None and key is None:
+            pass  # assume that the certificate file also contains the private key
+    else:
+        cert, key, key_password = None, None, None
 
     # get the path to the database file
     if args.database is not None and os.path.isfile(args.database):

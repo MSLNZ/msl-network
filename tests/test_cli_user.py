@@ -125,6 +125,7 @@ def test_cli_user():
     args = get_args(base_command + 'update Alice --password ' + pw_file)
     args.func(args)
     sys.stdout.close()
-    line = open(out, 'r').readline().strip()
-    assert line.startswith('Updated') and line.endswith('Alice')
+    lines = [line.strip() for line in open(out, 'r').readlines()]
+    assert lines[0] == 'Reading the password from the file'
+    assert lines[1].startswith('Updated') and line.endswith('Alice')
     assert table.is_password_valid('Alice', password)

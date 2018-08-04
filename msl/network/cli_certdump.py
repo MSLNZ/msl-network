@@ -26,10 +26,10 @@ EPILOG = """
 Examples::
 
   # dump the details to the terminal
-  msl-network certdump path/to/cert.pem 
+  msl-network certdump /path/to/cert.pem 
 
   # dump the details to a file
-  msl-network certdump path/to/cert.pem --out dump.txt
+  msl-network certdump /path/to/cert.pem --out dump.txt
 
 See Also::
 

@@ -50,11 +50,11 @@ def configure_parser():
     # http://stackoverflow.com/a/18283730/1599393
     command_parser.required = True
 
-    add_parser_certgen(command_parser)
     add_parser_certdump(command_parser)
+    add_parser_certgen(command_parser)
+    add_parser_hostname(command_parser)
     add_parser_keygen(command_parser)
     add_parser_start(command_parser)
-    add_parser_hostname(command_parser)
     add_parser_user(command_parser)
 
     return PARSER

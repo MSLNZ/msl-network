@@ -26,10 +26,10 @@ class Database(object):
 
         Parameters
         ----------
-        database : :obj:`str`
+        database : :class:`str`
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
-        kwargs : :obj:`dict`, optional
+        kwargs : :class:`dict`, optional
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
         """
         self._path = database if database is not None else DATABASE
@@ -51,7 +51,7 @@ class Database(object):
 
     @property
     def path(self):
-        """:obj:`str`: The path to the database file."""
+        """:class:`str`: The path to the database file."""
         return self._path
 
     @property
@@ -79,9 +79,9 @@ class Database(object):
 
         Parameters
         ----------
-        sql : :obj:`str`
+        sql : :class:`str`
             The SQL command to execute
-        parameters : :obj:`list`, :obj:`tuple` or :obj:`dict`, optional
+        parameters : :class:`list`, :class:`tuple` or :class:`dict`, optional
             Only required if the `sql` command is parameterized.
         """
         if parameters is None:
@@ -92,7 +92,7 @@ class Database(object):
             self._cursor.execute(sql, parameters)
 
     def tables(self):
-        """:obj:`list` of :obj:`str`: A list of the names of each table that is in the database."""
+        """:class:`list` of :class:`str`: A list of the names of each table that is in the database."""
         self.execute("SELECT name FROM sqlite_master WHERE type='table';")
         return sorted([t[0] for t in self._cursor.fetchall() if t[0] != 'sqlite_sequence'])
 
@@ -101,12 +101,12 @@ class Database(object):
 
         Parameters
         ----------
-        name : :obj:`str`
+        name : :class:`str`
             The name of the table to get the information of.
 
         Returns
         -------
-        :obj:`list` of :obj:`tuple`
+        :class:`list` of :class:`tuple`
             The list of the fields in the table. The indices of each tuple correspond to:
 
             * 0 - id number of the column
@@ -124,12 +124,12 @@ class Database(object):
 
         Parameters
         ----------
-        table_name : :obj:`str`
+        table_name : :class:`str`
             The name of the table.
 
         Returns
         -------
-        :obj:`list` of :obj:`str`
+        :class:`list` of :class:`str`
             A list of the names of each column in the table.
         """
         return [item[1] for item in self.table_info(table_name)]
@@ -139,12 +139,12 @@ class Database(object):
 
         Parameters
         ----------
-        table_name : :obj:`str`
+        table_name : :class:`str`
             The name of the table.
 
         Returns
         -------
-        :obj:`list` of :obj:`str`
+        :class:`list` of :class:`str`
             A list of the datatypes of each column in the table.
         """
         return [item[2] for item in self.table_info(table_name)]
@@ -153,7 +153,7 @@ class Database(object):
 class ConnectionsTable(Database):
 
     NAME = 'connections'
-    """:obj:`str`: The name of the table in the database."""
+    """:class:`str`: The name of the table in the database."""
 
     def __init__(self, *, database=None, as_datetime=False, **kwargs):
         """The database table for devices that have connected to the Network
@@ -161,14 +161,14 @@ class ConnectionsTable(Database):
 
         Parameters
         ----------
-        database : :obj:`str`, optional
+        database : :class:`str`, optional
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
-            If :obj:`None` then loads the default database.
-        as_datetime : :obj:`bool`, optional
+            If :data:`None` then loads the default database.
+        as_datetime : :class:`bool`, optional
             Whether to fetch the timestamps from the database as :class:`datetime.datetime`
-            objects. If :obj:`False` then the timestamps will be of type :obj:`str`.
-        kwargs : :obj:`dict`, optional
+            objects. If :data:`False` then the timestamps will be of type :class:`str`.
+        kwargs : :class:`dict`, optional
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
         """
         if as_datetime and 'detect_types' not in kwargs:
@@ -191,7 +191,7 @@ class ConnectionsTable(Database):
         ----------
         peer : :class:`~msl.network.manager.Peer`
             The peer that connected to the Network :class:`~msl.network.manager.Manager`.
-        message : :obj:`str`
+        message : :class:`str`
             The message about what happened.
         """
         self.execute('INSERT INTO %s VALUES(NULL, ?, ?, ?, ?, ?);' % self.NAME,
@@ -203,16 +203,16 @@ class ConnectionsTable(Database):
 
         Parameters
         ----------
-        timestamp1 : :obj:`datetime.datetime` or :obj:`str`, optional
+        timestamp1 : :class:`datetime.datetime` or :class:`str`, optional
             Include all records that have a timestamp > `timestamp1`. If a
-            :obj:`str` then in the ``yyyy-mm-dd`` or ``yyyy-mm-dd HH:MM:SS`` format.
-        timestamp2 : :obj:`datetime.datetime` or :obj:`str`, optional
+            :class:`str` then in the ``yyyy-mm-dd`` or ``yyyy-mm-dd HH:MM:SS`` format.
+        timestamp2 : :class:`datetime.datetime` or :class:`str`, optional
             Include all records that have a timestamp < `timestamp2`. If a
-            :obj:`str` then in the ``yyyy-mm-dd`` or ``yyyy-mm-dd HH:MM:SS`` format.
+            :class:`str` then in the ``yyyy-mm-dd`` or ``yyyy-mm-dd HH:MM:SS`` format.
 
         Returns
         -------
-        :obj:`list` of :obj:`tuple`
+        :class:`list` of :class:`tuple`
             The connection records.
         """
         if timestamp1 is None and timestamp2 is None:
@@ -230,7 +230,7 @@ class ConnectionsTable(Database):
 class HostnamesTable(Database):
 
     NAME = 'auth_hostnames'
-    """:obj:`str`: The name of the table in the database."""
+    """:class:`str`: The name of the table in the database."""
 
     def __init__(self, *, database=None, **kwargs):
         """The database table for trusted hostname's that are allowed to connect
@@ -238,11 +238,11 @@ class HostnamesTable(Database):
 
         Parameters
         ----------
-        database : :obj:`str`, optional
+        database : :class:`str`, optional
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
-            If :obj:`None` then loads the default database.
-        kwargs : :obj:`dict`, optional
+            If :data:`None` then loads the default database.
+        kwargs : :class:`dict`, optional
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
        """
         super(HostnamesTable, self).__init__(database, **kwargs)
@@ -260,7 +260,7 @@ class HostnamesTable(Database):
 
         Parameters
         ----------
-        hostname : :obj:`str`
+        hostname : :class:`str`
             The trusted hostname.
         """
         self.execute('INSERT OR IGNORE INTO %s VALUES(?);' % self.NAME, (hostname,))
@@ -271,7 +271,7 @@ class HostnamesTable(Database):
 
         Parameters
         ----------
-        hostname : :obj:`str`
+        hostname : :class:`str`
             The trusted hostname.
 
         Raises
@@ -286,7 +286,7 @@ class HostnamesTable(Database):
         self.connection.commit()
 
     def hostnames(self):
-        """:obj:`list` of :obj:`str`: Returns all the trusted hostnames."""
+        """:class:`list` of :class:`str`: Returns all the trusted hostnames."""
         self.execute('SELECT * FROM %s;' % self.NAME)
         return [item[0] for item in self.cursor.fetchall()]
 
@@ -294,7 +294,7 @@ class HostnamesTable(Database):
 class UsersTable(Database):
 
     NAME = 'auth_users'
-    """:obj:`str`: The name of the table in the database."""
+    """:class:`str`: The name of the table in the database."""
 
     def __init__(self, *, database=None, **kwargs):
         """The database table for keeping information about a users login credentials
@@ -302,11 +302,11 @@ class UsersTable(Database):
 
         Parameters
         ----------
-        database : :obj:`str`, optional
+        database : :class:`str`, optional
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
-            If :obj:`None` then loads the default database.
-        kwargs : :obj:`dict`, optional
+            If :data:`None` then loads the default database.
+        kwargs : :class:`dict`, optional
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
         """
         super(UsersTable, self).__init__(database, **kwargs)
@@ -335,11 +335,11 @@ class UsersTable(Database):
 
         Parameters
         ----------
-        username : :obj:`str`
+        username : :class:`str`
             The name of the user.
-        password : :obj:`str`
+        password : :class:`str`
             The password of the user in plain-text format.
-        is_admin : :obj:`bool`
+        is_admin : :class:`bool`
             Does this user have admin rights?
 
         Raises
@@ -370,11 +370,11 @@ class UsersTable(Database):
 
         Parameters
         ----------
-        username : :obj:`str`
+        username : :class:`str`
             The name of the user.
-        password : :obj:`str`, optional
+        password : :class:`str`, optional
             The password of the user in plain-text format.
-        is_admin : :obj:`bool`, optional
+        is_admin : :class:`bool`, optional
             Does this user have admin rights?
 
         Raises
@@ -420,7 +420,7 @@ class UsersTable(Database):
 
         Parameters
         ----------
-        username : :obj:`str`
+        username : :class:`str`
             The name of the user.
 
         Raises
@@ -437,35 +437,35 @@ class UsersTable(Database):
 
         Parameters
         ----------
-        username : :obj:`str`
+        username : :class:`str`
             The name of the user.
 
         Returns
         -------
-        :obj:`tuple`
+        :class:`tuple`
             Returns (pid, username, key, salt, is_admin) for the specified `username`.
         """
         self.execute('SELECT * FROM %s WHERE username = ?;' % self.NAME, (username,))
         return self.cursor.fetchone()
 
     def records(self):
-        """:obj:`list` of :obj:`tuple`: Returns [(pid, username, key, salt, is_admin), ...]
+        """:class:`list` of :class:`tuple`: Returns [(pid, username, key, salt, is_admin), ...]
         for all users."""
         self.execute('SELECT * FROM %s;' % self.NAME)
         return self.cursor.fetchall()
 
     def usernames(self):
-        """:obj:`list` of :class:`str`: Returns the names of all registered users."""
+        """:class:`list` of :class:`str`: Returns the names of all registered users."""
         self.execute('SELECT username FROM %s;' % self.NAME)
         return [item[0] for item in self.cursor.fetchall()]
 
     def users(self):
-        """:obj:`list` of :class:`tuple`: Returns [(username, is_admin), ... ] for all users."""
+        """:class:`list` of :class:`tuple`: Returns [(username, is_admin), ... ] for all users."""
         self.execute('SELECT username,is_admin FROM %s;' % self.NAME)
         return [(item[0], bool(item[1])) for item in self.cursor.fetchall()]
 
     def is_user_registered(self, username):
-        """:obj:`bool`: Whether `username` is a registered user."""
+        """:class:`bool`: Whether `username` is a registered user."""
         self.execute('SELECT count(*) FROM %s WHERE username = ?;' % self.NAME, (username,))
         return bool(self.cursor.fetchone()[0])
 
@@ -474,14 +474,14 @@ class UsersTable(Database):
 
         Parameters
         ----------
-        username : :obj:`str`
+        username : :class:`str`
             The name of the user.
-        password : :obj:`str`
+        password : :class:`str`
             The password to check (in plain-text format).
 
         Returns
         -------
-        :obj:`bool`
+        :class:`bool`
             Whether `password` matches the password in the database for the user.
         """
         self.execute('SELECT key,salt FROM %s WHERE username = ?;' % self.NAME, (username,))
@@ -506,12 +506,12 @@ class UsersTable(Database):
 
         Parameters
         ----------
-        username : :obj:`str`
+        username : :class:`str`
             The name of the user.
 
         Returns
         -------
-        :obj:`bool`
+        :class:`bool`
             Whether the user has admin rights.
         """
         self.execute('SELECT is_admin FROM %s WHERE username = ?;' % self.NAME, (username,))

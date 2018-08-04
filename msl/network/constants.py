@@ -6,26 +6,26 @@ import enum
 import socket
 
 PORT = 1875
-""":obj:`int`: The default port number to use for the Network :class:`~msl.network.manager.Manager` 
+""":class:`int`: The default port number to use for the Network :class:`~msl.network.manager.Manager` 
 (the year that the `BIPM <https://www.bipm.org/en/about-us/>`_ was established)."""
 
 HOSTNAME = socket.gethostname()
-""":obj:`str`: The hostname of the Network :class:`~msl.network.manager.Manager`."""
+""":class:`str`: The hostname of the Network :class:`~msl.network.manager.Manager`."""
 
 HOME_DIR = os.environ.get('MSL_NETWORK_HOME', os.path.join(os.path.expanduser('~'), '.msl', 'network'))
-""":obj:`str`: The default $HOME directory where all files are to be located. 
+""":class:`str`: The default $HOME directory where all files are to be located. 
 
 Can be overwritten by specifying a ``MSL_NETWORK_HOME`` environment variable.
 """
 
 CERT_DIR = os.path.join(HOME_DIR, 'certs')
-""":obj:`str`: The default directory to save PEM certificates."""
+""":class:`str`: The default directory to save PEM certificates."""
 
 KEY_DIR = os.path.join(HOME_DIR, 'keys')
-""":obj:`str`: The default directory to save private PEM keys."""
+""":class:`str`: The default directory to save private PEM keys."""
 
-DATABASE = os.path.join(HOME_DIR, 'manager.db')
-""":obj:`str`: The default database path."""
+DATABASE = os.path.join(HOME_DIR, 'manager.sqlite3')
+""":class:`str`: The default database path."""
 
 
 class JSONPackage(enum.Enum):
@@ -45,7 +45,7 @@ class JSONPackage(enum.Enum):
 
 
 JSON = JSONPackage[os.environ.get('MSL_NETWORK_JSON', 'BUILTIN').upper()]
-""":obj:`str`: The Python package to use for (de)serializing JSON_ data.
+""":class:`str`: The Python package to use for (de)serializing JSON_ data.
 
 By default, the builtin :mod:`json` module is used. 
 

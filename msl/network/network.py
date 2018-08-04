@@ -31,7 +31,7 @@ class Network(object):
     _max_print_size = 256  # the maximum number of characters to display when debugging
 
     def identity(self):
-        """Identify oneself on the network.
+        """The identity of a device on the network.
 
         All devices on the network must be able to identify themselves to any
         other device that is connected to the network. There are 3 possible types
@@ -43,66 +43,110 @@ class Network(object):
 
         * :class:`~msl.network.manager.Manager`
 
-            - hostname : string
-                The name of the device that the Network :class:`~msl.network.manager.Manager` is running on.
+            - hostname: string
+                The name of the device that the Network :class:`~msl.network.manager.Manager`
+                is running on.
 
-            - port : integer
-                The port number that the Network :class:`~msl.network.manager.Manager` is running on.
+            - port: integer
+                The port number that the Network :class:`~msl.network.manager.Manager`
+                is running on.
 
-            - attributes : object
-                An object (a Python :obj:`dict`) of public attributes that the Network
+            - attributes: object
+                An object (a Python :class:`dict`) of public attributes that the Network
                 :class:`~msl.network.manager.Manager` provides. Users who are an administrator of
                 the Network :class:`~msl.network.manager.Manager` can access private attributes.
 
-            - language : string
-                The programming language that the Network :class:`~msl.network.manager.Manager` is running on.
+            - language: string
+                The programming language that the Network :class:`~msl.network.manager.Manager`
+                is running on.
 
-            - os : string
-                The operating system that the :class:`~msl.network.manager.Manager` is running on.
+            - os: string
+                The name of the operating system that the :class:`~msl.network.manager.Manager`
+                is running on.
 
-            - clients : array
-                An object (a Python :obj:`dict`) of :class:`~msl.network.client.Client`\'s that are currently
-                connected to the Network :class:`~msl.network.manager.Manager`.
+            - clients: array
+                An object (a Python :class:`dict`) of :class:`~msl.network.client.Client`\'s that
+                are currently connected to the Network :class:`~msl.network.manager.Manager`.
 
-            - services : object
-                An object (a Python :obj:`dict`) of :class:`~msl.network.service.Service`\'s
+            - services: object
+                An object (a Python :class:`dict`) of :class:`~msl.network.service.Service`\'s
                 that are currently connected to the Network :class:`~msl.network.manager.Manager`.
 
         * :class:`~msl.network.service.Service`
 
-            - type : string
+            - type: string
                 This must be equal to ``'service'`` (case-insensitive).
 
-            - name : string
-                The name to associate with the :class:`~msl.network.service.Service` (can contain spaces).
+            - name: string
+                The name to associate with the :class:`~msl.network.service.Service`
+                (can contain spaces).
 
-            - attributes : object
-                An object (a Python :obj:`dict`) of attributes that the
-                :class:`~msl.network.service.Service` provides.
+            - attributes: object
+                An object (a Python :class:`dict`) of attributes that the
+                :class:`~msl.network.service.Service` provides. The keys are
+                the function names and the values are the function signatures
+                (expressed as a string).
 
-            - language : string, optional
-                The programming language that the :class:`~msl.network.service.Service` is running on.
+                The `attributes` get populated automatically when subclassing
+                :class:`~msl.network.service.Service`. If you are creating a
+                `Service` in another programming language then you can use the
+                following as an example for how to define an `attributes` object::
 
-            - os : string, optional
-                The operating system that the :class:`~msl.network.service.Service` is running on.
+                    {
+                        'pi': '() -> float'
+                        'add_integers': '(x:int, y:int) -> int'
+                        'scalar_multiply': '(a:float, data:*float) -> *float'
+                    }
+
+                This `Service` would provide a function named ``pi`` that takes no
+                inputs and returns a floating-point number, a function named
+                ``add_integers`` that takes parameters named ``x`` and ``y`` as integer
+                inputs and returns an integer, and a function named ``scalar_multiply``
+                that takes parameters named ``a`` as a floating-point number and ``data``
+                as an array of floating-point numbers as inputs and returns an array of
+                floating-point numbers.
+
+                The key **must** be equal to the name of the function that the
+                `Service` provides, however, the value (the function signature) is only
+                used as a helpful guide to let a :class:`~msl.network.client.Client` know
+                what the function takes as inputs and what the function returns. How you
+                express the function signature is up to you. The above example could
+                also be expressed as::
+
+                    {
+                        'pi': '() -> 3.1415926...'
+                        'add_integers': '(x:int32, y:int32) -> x+y'
+                        'scalar_multiply': '(a:float, data:array of floats) -> array of floats'
+                    }
+
+            - language: string, optional
+                The programming language that the :class:`~msl.network.service.Service`
+                is running on.
+
+            - os: string, optional
+                The name of the operating system that the :class:`~msl.network.service.Service`
+                is running on.
 
         * :class:`~msl.network.client.Client`
 
-            - type : string
+            - type: string
                 This must be equal to ``'client'`` (case-insensitive).
 
-            - name : string
-                The name to associate with the :class:`~msl.network.client.Client` (can contain spaces).
+            - name: string
+                The name to associate with the :class:`~msl.network.client.Client`
+                (can contain spaces).
 
-            - language : string, optional
-                The programming language that the :class:`~msl.network.client.Client` is running on.
+            - language: string, optional
+                The programming language that the :class:`~msl.network.client.Client`
+                is running on.
 
-            - os : string, optional
-                The operating system that the :class:`~msl.network.client.Client` is running on.
+            - os: string, optional
+                The name of the operating system that the :class:`~msl.network.client.Client`
+                is running on.
 
         Returns
         -------
-        :obj:`dict`
+        :class:`dict`
             The identity of the network device.
         """
         raise NotImplementedError
@@ -114,7 +158,7 @@ class Network(object):
         ----------
         writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
             The writer to use to send the bytes.
-        line : :obj:`bytes`
+        line : :class:`bytes`
             The bytes to send (that already end with the :attr:`TERMINATION` bytes).
         """
         if writer is None:
@@ -151,7 +195,7 @@ class Network(object):
         ----------
         writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
             The writer to use to send the data.
-        data : :obj:`object`
+        data : :class:`object`
             Any object that can be serialized into a JSON_ string.
         """
         try:
@@ -168,9 +212,9 @@ class Network(object):
             The writer.
         error : :class:`Exception`
             An exception object.
-        requester : :obj:`str`
+        requester : :class:`str`
             The address, ``host:port``, of the device that sent the request.
-        uuid : :obj:`str`, optional
+        uuid : :class:`str`, optional
             The universally unique identifier of the request.
         """
         tb = traceback.format_exc()
@@ -193,13 +237,13 @@ class Network(object):
         ----------
         writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
             The writer.
-        reply : :obj:`object`
+        reply : :class:`object`
             Any object that can be serialized into a JSON_ string.
-        requester : :obj:`str`, optional
+        requester : :class:`str`, optional
             The address, ``host:port``, of the device that sent the request.
             It is only mandatory to specify the address of the `requester` if a
             :class:`~msl.network.service.Service` is sending the reply.
-        uuid : :obj:`str`, optional
+        uuid : :class:`str`, optional
             The universally unique identifier of the request.
         """
         self.send_data(writer, {'result': reply, 'requester': requester, 'uuid': uuid, 'error': False})

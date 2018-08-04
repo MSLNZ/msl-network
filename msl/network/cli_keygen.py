@@ -56,35 +56,35 @@ def add_parser_keygen(parser):
              'key. Default is %(default)s.'
     )
     p.add_argument(
+        '--curve',
+        default='SECP384R1',
+        help='The name of the elliptic curve to use. Only used if the\n'
+             'encryption algorithm is ECC. Default is %(default)s.'
+    )
+    p.add_argument(
         '--password',
         nargs='+',
-        help='The password (passphrase) to use to encrypt the private\n'
-             'key. Can include spaces. Default is None (unencrypted).\n'
-             'Specify a path to a file if you do not want to type the\n'
-             'password in the terminal (i.e., you do not want the\n'
-             'password to appear in your command history). Whatever is\n'
-             'written on the first line in the file will be used for the\n'
-             'password. WARNING: If you enter a path that does not exist\n'
-             'then the path itself will be used as the password.'
+        help='The password to use to encrypt the private key. Can include\n'
+             'spaces. Default is None (unencrypted). Specify a path to a\n'
+             'file if you do not want to type the password in the terminal\n'
+             '(i.e., you do not want the password to appear in your command\n'
+             'history). Whatever is written on the first line in the file\n'
+             'will be used for the password. WARNING: If you enter a path\n'
+             'that does not exist then the path itself will be used as the\n'
+             'password.'
     )
     p.add_argument(
         '--path',
         help='The path to where to save the private key\n'
-             '(e.g., --path where/to/save/key.pem). If omitted then\n'
-             'the default directory and filename is used to\n'
-             'save the private key file.'
+             '(e.g., --path /where/to/save/key.pem). If omitted then\n'
+             'the default directory and filename is used to save the\n'
+             'private key file.'
     )
     p.add_argument(
         '--size',
         default=2048,
         help='The size (number of bits) of the key. Only used if the\n'
              'encryption algorithm is RSA or DSA. Default is %(default)s.'
-    )
-    p.add_argument(
-        '--curve',
-        default='SECP384R1',
-        help='The name of the elliptic curve to use. Only used if the\n'
-             'encryption algorithm is ECC. Default is %(default)s.'
     )
     p.set_defaults(func=execute)
 
@@ -99,6 +99,7 @@ def execute(args):
 
     password = None if args.password is None else ' '.join(args.password)
     if password is not None and os.path.isfile(password):
+        print('Reading the password from the file')
         with open(password, 'r') as fp:
             password = fp.readline().strip()
 
