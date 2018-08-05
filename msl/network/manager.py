@@ -166,6 +166,8 @@ class Manager(Network):
         self.send_request(writer, 'username', self._network_name)
         username = await self.get_handshake_data(reader)
         if not username:  # then the connection closed prematurely
+            log.info(reader.peer.network_name + ' connection closed before receiving the username')
+            self.connections_table.insert(reader.peer, 'connection closed before receiving the username')
             return False
 
         user = self.users_table.is_user_registered(username)
@@ -181,6 +183,8 @@ class Manager(Network):
         password = await self.get_handshake_data(reader)
 
         if not password:  # then the connection closed prematurely
+            log.info(reader.peer.network_name + ' connection closed before receiving the password')
+            self.connections_table.insert(reader.peer, 'connection closed before receiving the password')
             return False
 
         if self.users_table.is_password_valid(username, password):
@@ -213,10 +217,9 @@ class Manager(Network):
         log.info(self._network_name + ' requesting password from ' + writer.peer.network_name)
         self.send_request(writer, 'password', self._network_name)
         password = await self.get_handshake_data(reader)
-
-        print(password)
-
         if not password:  # then the connection closed prematurely
+            log.info(reader.peer.network_name + ' connection closed before receiving the password')
+            self.connections_table.insert(reader.peer, 'connection closed before receiving the password')
             return False
 
         if password == self.password:
