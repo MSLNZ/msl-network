@@ -8,9 +8,7 @@ import helper  # located in the tests folder
 
 from msl.network import connect
 from msl.network.exceptions import MSLNetworkError
-from msl.examples.network.basic_math import BasicMath
-from msl.examples.network.array import Array
-from msl.examples.network.echo import Echo
+from msl.examples.network import BasicMath, MyArray, Echo
 
 
 def test_echo():
@@ -139,11 +137,11 @@ def test_basic_math_asynchronous():
 
 
 def test_array_synchronous():
-    services = helper.ServiceStarter((Array,))
+    services = helper.ServiceStarter((MyArray,))
 
     cxn = connect(**services.kwargs)
 
-    array = cxn.link('Array')
+    array = cxn.link('MyArray')
     out1 = array.linspace(-1, 1, 100)
     assert len(out1) == 100
     assert out1[0] == approx(-1)
@@ -159,12 +157,12 @@ def test_array_synchronous():
 
 def test_basic_math_and_array_asynchronous():
 
-    services = helper.ServiceStarter((BasicMath, Array,))
+    services = helper.ServiceStarter((BasicMath, MyArray,))
 
     cxn = connect(**services.kwargs)
 
     bm = cxn.link('BasicMath')
-    array = cxn.link('Array')
+    array = cxn.link('MyArray')
 
     power = bm.power(math.pi, math.exp(1), asynchronous=True)
     linspace = array.linspace(0, 1, 1e6, asynchronous=True)
@@ -179,13 +177,13 @@ def test_basic_math_and_array_asynchronous():
 
 def test_spawn_basic_math_and_array_asynchronous():
 
-    services = helper.ServiceStarter((BasicMath, Array,))
+    services = helper.ServiceStarter((BasicMath, MyArray,))
 
     cxn1 = connect(**services.kwargs)
     cxn2 = cxn1.spawn()
 
     bm = cxn1.link('BasicMath')
-    array = cxn2.link('Array')
+    array = cxn2.link('MyArray')
 
     power = bm.power(math.pi, math.exp(1), asynchronous=True)
     linspace = array.linspace(0, 1, 1e6, asynchronous=True)
