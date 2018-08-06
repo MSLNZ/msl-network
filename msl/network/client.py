@@ -283,9 +283,9 @@ class Client(Network, asyncio.Protocol):
         attrib : :class:`str`
             The attribute of the Network :class:`~msl.network.manager.Manager`. Can contain
             dots ``.`` to access sub-attributes.
-        args : :class:`list`, optional
+        *args
             The arguments to send to the Network :class:`~msl.network.manager.Manager`.
-        kwargs : :class:`dict`, optional
+        **kwargs
             The keyword arguments to send to the Network :class:`~msl.network.manager.Manager`.
 
         Returns
@@ -447,10 +447,10 @@ class Client(Network, asyncio.Protocol):
         attribute : :class:`str`
             The name of the property or method of the :class:`~msl.network.service.Service`
             to process the request.
-        args : :class:`list`, optional
+        *args
             The arguments that the :class:`~msl.network.service.Service` `attribute`
             requires.
-        kwargs : :class:`dict`, optional
+        **kwargs
             The keyword arguments that the :class:`~msl.network.service.Service`
             `attribute` requires.
 
