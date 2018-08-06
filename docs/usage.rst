@@ -38,8 +38,8 @@ RSA_. For more details refer to the help that is available from the command line
 
 .. _start-service:
 
-Create and start a Service on the Network Manager
--------------------------------------------------
+Start a Service on the Network Manager
+--------------------------------------
 
 Below is a simple, *and terribly inefficient*, :class:`~msl.network.service.Service` that performs some basic
 math operations. In order to create a new :class:`~msl.network.service.Service` just create a class that
@@ -55,60 +55,22 @@ method.
 BasicMath Service
 +++++++++++++++++
 
-.. code-block:: python
+.. literalinclude:: ../msl/examples/network/basic_math.py
 
-   ## basic_math.py
-
-   import time
-   from msl.network import Service
-
-   class BasicMath(Service):
-
-       def add(self, x, y):
-           time.sleep(1)
-           return x + y
-
-       def subtract(self, x, y):
-           time.sleep(2)
-           return x - y
-
-       def multiply(self, x, y):
-           time.sleep(3)
-           return x * y
-
-       def divide(self, x, y):
-           time.sleep(4)
-           return x / y
-
-        def ensure_positive(self, x):
-            time.sleep(5)
-            if x < 0:
-                raise ValueError('The value is < 0')
-            return True
-
-        def power(self, x, n=2):
-            time.sleep(6)
-            return x ** n
-
-   if __name__ == '__main__':
-       bm = BasicMath()
-       bm.start()
-
-To start the :ref:`basic-math-service`, copy and paste the above code in a ``basic_math.py`` module
-and run the following command in a command prompt (Windows):
+To start the :ref:`basic-math-service` run the following command in a command prompt (Windows):
 
 .. code-block:: console
 
-   python basic_math.py
+   python -c "from msl.examples.network import BasicMath; service=BasicMath(); service.start()"
 
 or, in a terminal (\*nix):
 
 .. code-block:: console
 
-   python3 basic_math.py
+   python3 -c "from msl.examples.network import BasicMath; service=BasicMath(); service.start()"
 
-This will start the ``BasicMath`` :class:`~msl.network.service.Service` on the Network
-:class:`~msl.network.manager.Manager` that is running on the same computer.
+This will start the :ref:`basic-math-service` on the Network :class:`~msl.network.manager.Manager`
+that is running on the same computer.
 
 .. _connect-client:
 
@@ -148,23 +110,25 @@ We can find out what devices are currently connected to the :class:`~msl.network
        attributes:
            identity: () -> dict
            link: (service:str) -> bool
-       language: Python 3.6.3
-       os: Windows 7 AMD64
+       language: Python 3.6.2
+       os: Windows 10 AMD64
    Clients [1]:
-       Client[localhost:50621]
-           language: Python 3.6.3
-           os: Windows 7 AMD64
+       Client[localhost:51065]
+           language: Python 3.6.5
+           os: Windows 10 AMD64
    Services [1]:
-       BasicMath[localhost:50602]
+       BasicMath[localhost:51042]
            attributes:
-               add: (x, y)
-               divide: (x, y)
-               ensure_positive: (x)
-               multiply: (x, y)
-               power: (x, n=2)
-               subtract: (x, y)
-           language: Python 3.6.3
-           os: Windows 7 AMD64
+               add: (x:Union[int, float], y:Union[int, float]) -> Union[int, float]
+               divide: (x:Union[int, float], y:Union[int, float]) -> Union[int, float]
+               ensure_positive: (x:Union[int, float]) -> bool
+               euler: 2.718281828459045
+               multiply: (x:Union[int, float], y:Union[int, float]) -> Union[int, float]
+               pi: 3.141592653589793
+               power: (x:Union[int, float], n=2) -> Union[int, float]
+               subtract: (x:Union[int, float], y:Union[int, float]) -> Union[int, float]
+           language: Python 3.6.2
+           os: Windows 10 AMD64
 
 If ``as_yaml=False``, which is the default boolean value, then the returned value would be a
 :class:`dict`, rather than a :class:`str`, containing the same information.

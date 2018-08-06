@@ -6,7 +6,7 @@ Examples
 The following examples illustrate some ideas on how one could use **MSL-Network**.
 
 1. :ref:`digital-multimeter`
-
+2. :ref:`included-examples`
 
 .. _digital-multimeter:
 
@@ -129,5 +129,40 @@ When you are finished sending requests to the :class:`~msl.network.manager.Manag
 from the :class:`~msl.network.manager.Manager`::
 
    >>> c.disconnect()
+
+.. _included-examples:
+
+Included Examples
+-----------------
+The following :class:`~msl.network.service.Service`\'s are included with **MSL-Network**. To start
+any of these :class:`~msl.network.service.Service`\'s, first make sure that you :ref:`start-manager`,
+and then run the following command in a command prompt (Windows) -- here the ``Echo``
+:class:`~msl.network.service.Service` is started:
+
+.. code-block:: console
+
+   python -c "from msl.examples.network import Echo; service=Echo(); service.start()"
+
+or, in a terminal (\*nix):
+
+.. code-block:: console
+
+   python3 -c "from msl.examples.network import Echo; service=Echo(); service.start()"
+
+Echo Service
+++++++++++++
+
+.. literalinclude:: ../msl/examples/network/echo.py
+
+BasicMath Service
++++++++++++++++++
+
+.. literalinclude:: ../msl/examples/network/basic_math.py
+
+MyArray Service
+++++++++++++++++
+
+.. literalinclude:: ../msl/examples/network/array.py
+
 
 .. _MSL-Equipment: http://msl-equipment.readthedocs.io/en/latest/?badge=latest
