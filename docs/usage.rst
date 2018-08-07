@@ -61,13 +61,13 @@ To start the :ref:`basic-math-service` run the following command in a command pr
 
 .. code-block:: console
 
-   python -c "from msl.examples.network import BasicMath; service=BasicMath(); service.start()"
+   python -c "from msl.examples.network import BasicMath; BasicMath().start()"
 
 or, in a terminal (\*nix):
 
 .. code-block:: console
 
-   python3 -c "from msl.examples.network import BasicMath; service=BasicMath(); service.start()"
+   python3 -c "from msl.examples.network import BasicMath; BasicMath().start()"
 
 This will start the :ref:`basic-math-service` on the Network :class:`~msl.network.manager.Manager`
 that is running on the same computer.

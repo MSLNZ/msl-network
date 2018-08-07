@@ -141,13 +141,13 @@ and then run the following command in a command prompt (Windows) -- here the ``E
 
 .. code-block:: console
 
-   python -c "from msl.examples.network import Echo; service=Echo(); service.start()"
+   python -c "from msl.examples.network import Echo; Echo().start()"
 
 or, in a terminal (\*nix):
 
 .. code-block:: console
 
-   python3 -c "from msl.examples.network import Echo; service=Echo(); service.start()"
+   python3 -c "from msl.examples.network import Echo; Echo().start()"
 
 Echo Service
 ++++++++++++
