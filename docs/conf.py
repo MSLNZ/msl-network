@@ -174,7 +174,6 @@ texinfo_documents = [
 ]
 
 
-
 # -- Options for Epub output ----------------------------------------------
 
 # Bibliographic Dublin Core info.
@@ -196,9 +195,16 @@ epub_copyright = copyright
 epub_exclude_files = ['search.html']
 
 
-
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/{}'.format(sys.version_info[0]), None),
+    'python': ('https://docs.python.org/{}'.format(sys.version_info.major), None),
     'cryptography': ('https://cryptography.readthedocs.io/en/stable/', None),
 }
+
+# warn about all broken links
+nitpicky = True
+
+# known bad links
+nitpick_ignore = [
+    ('py:class', 'asyncio.protocols.Protocol'),
+]
