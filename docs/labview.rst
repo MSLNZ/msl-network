@@ -8,6 +8,9 @@ The source code is available to download from the repository_. The VI's have bee
 LabVIEW 2010. The LabVIEW code uses the `i3 JSON Toolkit`_, which is bundled with the code in the repository_,
 to (de)serialize JSON_ data.
 
+.. attention::
+   The :ref:`asynchronous <asynchronous-programming>` aspect of **MSL-Network** is not implemented in the VI's.
+
 The first step is to :ref:`start-manager`. Since LabVIEW does not natively support the TLS_ protocol you must
 start the Network :class:`~msl.network.manager.Manager` with the ``--disable-tls`` flag, and, to simplify the
 examples below, do not use any authentication, i.e., run:
@@ -103,13 +106,13 @@ to the *Adder* Service
    >>> from msl.network import connect
    >>> cxn = connect(host='change to be the hostname of the computer that is running the Manager')
 
-establish a link with the *Adder* Service:
+establish a link with the *Adder* Service
 
 .. code-block:: pycon
 
    >>> adder = cxn.link('Adder')
 
-and send a request to the *Adder* Service:
+and send a request to the *Adder* Service
 
 .. code-block:: pycon
 
