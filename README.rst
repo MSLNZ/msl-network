@@ -1,12 +1,10 @@
-Welcome to MSL-Network
-======================
+MSL-Network
+===========
 
 |docs|
 
-Purpose
--------
-**MSL-Network** uses concurrency and asynchronous programming to transfer data across a network. The network
-is composed of three objects -- a Network Manager_, Client_\s and Service_\s.
+**MSL-Network** uses concurrency and asynchronous programming to transfer data across a network and
+it is composed of three objects -- a Network Manager_, Client_\s and Service_\s.
 
 The Network Manager_ allows for multiple Client_\s and Service_\s to connect to it and it links a Client_'s
 request to the appropriate Service_ to execute the request and then the Network Manager_ sends the response
@@ -22,14 +20,8 @@ possible to implement a Client_ or a Service_ in any programming language to con
 See the `JSON Formats`_ section for an overview of the data format. One can even connect to the Network
 Manager_ from a terminal to send requests, see `Connecting from a Terminal`_ for more details.
 
-Documentation
--------------
-
-The documentation for **MSL-Network** can be found `here <https://msl-network.readthedocs.io/en/latest/index.html>`_.
-
 Install
 -------
-
 To install **MSL-Network** run::
 
    pip install msl-network
@@ -42,6 +34,10 @@ Dependencies
 ++++++++++++
 * Python 3.5+
 * cryptography_
+
+Documentation
+-------------
+The documentation for **MSL-Network** can be found `here <https://msl-network.readthedocs.io/en/latest/index.html>`_.
 
 .. |docs| image:: https://readthedocs.org/projects/msl-network/badge/?version=latest
    :target: https://msl-network.readthedocs.io/en/latest/
