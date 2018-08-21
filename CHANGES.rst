@@ -7,6 +7,7 @@ Version 0.2.0.dev0
 
 - Added
 
+  * example for creating a Client and a Service in LabVIEW
   * the ability to establish a connection to the Network Manager without using TLS
   * a ``timeout`` kwarg to Service.start()
   * an Echo Service to the examples

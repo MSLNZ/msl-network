@@ -1,7 +1,7 @@
-.. _examples:
+.. _network-examples:
 
-Examples
-========
+Python Examples
+===============
 
 The following examples illustrate some ideas on how one could use **MSL-Network**.
 
@@ -62,7 +62,7 @@ to start the digital multimeter :class:`~msl.network.service.Service`.
             command : str
                 The command to write.
             """
-            self._dmm.write(command)
+            return self._dmm.write(command)
 
         def read(self):
             """Read the response from the digital multimeter.
@@ -97,7 +97,7 @@ to start the digital multimeter :class:`~msl.network.service.Service`.
 
         # Allows for the option to provide the path to the MSL-Equipment
         # configuration file from the command line
-        if sys.argv[1:]:
+        if len(sys.argv) > 1:
             cfg = sys.argv[1]
         else:
             cfg = 'config.xml'
@@ -110,25 +110,33 @@ commands on another computer that is on the same network as the :class:`~msl.net
 in order to interact with the digital multimeter from the remote computer.
 
 Connect to the :class:`~msl.network.manager.Manager` by specifying the hostname of the computer that the
-:class:`~msl.network.manager.Manager` is running on::
+:class:`~msl.network.manager.Manager` is running on
+
+.. code-block:: pycon
 
    >>> from msl.network import connect
-   >>> c = connect(host='change to be the hostname of the computer that is running the Manager')
+   >>> cxn = connect(host='change to be the hostname of the computer that is running the Manager')
 
 Since the name of the ``DigitalMultimeter`` :class:`~msl.network.service.Service` was specified to be
 ``'Hewlett Packard 34401A'``, we must link with the correct name of the :class:`~msl.network.service.Service`
 
-   >>> dmm = c.link('Hewlett Packard 34401A')
+.. code-block:: pycon
 
-Now we can send ``write``, ``read`` or ``query`` commands to the digital multimeter::
+   >>> dmm = cxn.link('Hewlett Packard 34401A')
+
+Now we can send ``write``, ``read`` or ``query`` commands to the digital multimeter
+
+.. code-block:: pycon
 
    >>> dmm.query('MEASURE:VOLTAGE:DC?')
    '-6.23954727E-02\n'
 
 When you are finished sending requests to the :class:`~msl.network.manager.Manager` you should disconnect
-from the :class:`~msl.network.manager.Manager`::
+from the :class:`~msl.network.manager.Manager`
 
-   >>> c.disconnect()
+.. code-block:: pycon
+
+   >>> cxn.disconnect()
 
 .. _included-examples:
 
@@ -137,27 +145,33 @@ Included Examples
 The following :class:`~msl.network.service.Service`\'s are included with **MSL-Network**. To start
 any of these :class:`~msl.network.service.Service`\'s, first make sure that you :ref:`start-manager`,
 and then run the following command in a command prompt (Windows) -- here the ``Echo``
-:class:`~msl.network.service.Service` is started:
+:class:`~msl.network.service.Service` is started
 
 .. code-block:: console
 
    python -c "from msl.examples.network import Echo; Echo().start()"
 
-or, in a terminal (\*nix):
+or, in a terminal (\*nix)
 
 .. code-block:: console
 
    python3 -c "from msl.examples.network import Echo; Echo().start()"
+
+.. _echo-service:
 
 Echo Service
 ++++++++++++
 
 .. literalinclude:: ../msl/examples/network/echo.py
 
+.. _basicmath-service:
+
 BasicMath Service
 +++++++++++++++++
 
 .. literalinclude:: ../msl/examples/network/basic_math.py
+
+.. _myarray-service:
 
 MyArray Service
 ++++++++++++++++
@@ -165,4 +179,4 @@ MyArray Service
 .. literalinclude:: ../msl/examples/network/array.py
 
 
-.. _MSL-Equipment: http://msl-equipment.readthedocs.io/en/latest/?badge=latest
+.. _MSL-Equipment: https://msl-equipment.readthedocs.io/en/latest/
