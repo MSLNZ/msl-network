@@ -1,4 +1,4 @@
-.. _terminal_input:
+.. _terminal-input:
 
 Connecting from a Terminal
 ==========================
@@ -100,5 +100,5 @@ Some tips for connecting as a :class:`~msl.network.client.Client`:
 
        exit
 
-.. _JSON: http://www.json.org/
+.. _JSON: https://www.json.org/
 .. _openssl s_client: https://www.openssl.org/docs/manmaster/man1/s_client.html

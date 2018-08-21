@@ -142,4 +142,4 @@ If the :class:`~msl.network.service.Service` successfully executed the request t
       'uuid': string (the universally unique identifier of the request)
     }
 
-.. _JSON: http://www.json.org/
+.. _JSON: https://www.json.org/

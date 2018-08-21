@@ -1,4 +1,4 @@
-.. _usage:
+.. _network-usage:
 
 Usage
 =====
@@ -27,6 +27,8 @@ Running this command will automatically perform the following default actions:
 * create a self-signed certificate using the private key
 * create a SQLite_ database to store information that is needed by the Network :class:`~msl.network.manager.Manager`
 * start the Network :class:`~msl.network.manager.Manager` on the default port using the TLS_ protocol
+* no authentication is required for :class:`~msl.network.client.Client`\'s and :class:`~msl.network.service.Service`\'s
+  to connect to the Network :class:`~msl.network.manager.Manager`
 
 You can override the default actions, for example, use `Elliptic-Curve Cryptography`_ rather than
 RSA_. For more details refer to the help that is available from the command line, for example:

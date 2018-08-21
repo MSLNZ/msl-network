@@ -17,6 +17,7 @@ different from *parallel programming* where multiple tasks can be executed at th
 .. image:: _static/concurrency_vs_parallelism.png
    :scale: 60%
    :align: center
+   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/master/docs/_static/concurrency_vs_parallelism.png
 
 The Network :class:`~msl.network.manager.Manager` uses *concurrent programming*. It runs in a single event loop
 but it can handle multiple :class:`~msl.network.client.Client`\'s and :class:`~msl.network.service.Service`\'s
@@ -38,7 +39,7 @@ of routing requests and replies through the network and it does not actually exe
 :meth:`~msl.network.client.Client.admin_request` *for more details*.
 
 The :class:`~msl.network.manager.Manager` can become slow if it is (de)serializing a large
-`JSON <http://www.json.org/>`_ object or sending a large amount of bytes through the network. For example,
+`JSON <https://www.json.org/>`_ object or sending a large amount of bytes through the network. For example,
 if a reply from a :class:`~msl.network.service.Service` is 1 GB in size and the network speed is 1 Gbps
 (125 MB/s) then it will take at least 8 seconds for the data to be transmitted. During these 8 seconds the
 :class:`~msl.network.manager.Manager` will be unresponsive to other events until it finishes sending all 1 GB of
@@ -64,6 +65,7 @@ time to receive all replies is equal to the time it takes to execute the longest
 .. image:: _static/sync_vs_async.png
    :scale: 60%
    :align: center
+   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/master/docs/_static/sync_vs_async.png
 
 .. _synchronous:
 

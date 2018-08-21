@@ -33,9 +33,9 @@ def ensure_root_path(path):
 def parse_terminal_input(line):
     """Parse text from a terminal connection.
 
-    See, :ref:`terminal_input` for more details.
+    See, :ref:`terminal-input` for more details.
 
-    .. _JSON: http://www.json.org/
+    .. _JSON: https://www.json.org/
 
     Parameters
     ----------

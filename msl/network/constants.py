@@ -30,7 +30,7 @@ DATABASE = os.path.join(HOME_DIR, 'manager.sqlite3')
 
 class JSONPackage(enum.Enum):
     """
-    Python packages for (de)serializing `JSON <http://www.json.org/>`_ data.
+    Python packages for (de)serializing `JSON <https://www.json.org/>`_ data.
 
     .. _UltraJSON: https://pypi.python.org/pypi/ujson
     .. _RapidJSON: https://pypi.python.org/pypi/python-rapidjson

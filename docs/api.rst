@@ -1,4 +1,4 @@
-.. _api:
+.. _network-api:
 
 =============================
 MSL-Network API Documentation

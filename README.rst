@@ -25,14 +25,14 @@ Manager_ from a terminal to send requests, see `Connecting from a Terminal`_ for
 Documentation
 -------------
 
-The documentation for **MSL-Network** can be found `here <http://msl-network.readthedocs.io/en/latest/index.html>`_.
+The documentation for **MSL-Network** can be found `here <https://msl-network.readthedocs.io/en/latest/index.html>`_.
 
 Install
 -------
 
 To install **MSL-Network** run::
 
-   pip install https://github.com/MSLNZ/msl-network/archive/master.zip
+   pip install msl-network
 
 Alternatively, using the `MSL Package Manager`_ run::
 
@@ -44,15 +44,15 @@ Dependencies
 * cryptography_
 
 .. |docs| image:: https://readthedocs.org/projects/msl-network/badge/?version=latest
-   :target: http://msl-network.readthedocs.io/en/latest/?badge=latest
+   :target: https://msl-network.readthedocs.io/en/latest/
    :alt: Documentation Status
 
-.. _Manager: http://msl-network.readthedocs.io/en/latest/_api/msl.network.manager.html
-.. _Client: http://msl-network.readthedocs.io/en/latest/_api/msl.network.client.html#msl.network.client.Client
-.. _Service: http://msl-network.readthedocs.io/en/latest/_api/msl.network.service.html
-.. _Concurrency and Asynchronous Programming: http://msl-network.readthedocs.io/en/latest/concurrency_async.html#concurrent-asynchronous
-.. _JSON: http://www.json.org/
-.. _JSON Formats: http://msl-network.readthedocs.io/en/latest/json_formats.html#json-formats
-.. _Connecting from a Terminal: http://msl-network.readthedocs.io/en/latest/terminal_input.html#terminal-input
-.. _MSL Package Manager: http://msl-package-manager.readthedocs.io/en/latest/?badge=latest
-.. _cryptography: https://pypi.python.org/pypi/cryptography
+.. _Manager: https://msl-network.readthedocs.io/en/latest/_api/msl.network.manager.html
+.. _Client: https://msl-network.readthedocs.io/en/latest/_api/msl.network.client.html#msl.network.client.Client
+.. _Service: https://msl-network.readthedocs.io/en/latest/_api/msl.network.service.html
+.. _Concurrency and Asynchronous Programming: https://msl-network.readthedocs.io/en/latest/concurrency_async.html#concurrent-asynchronous
+.. _JSON: https://www.json.org/
+.. _JSON Formats: https://msl-network.readthedocs.io/en/latest/json_formats.html#json-formats
+.. _Connecting from a Terminal: https://msl-network.readthedocs.io/en/latest/terminal_input.html#terminal-input
+.. _MSL Package Manager: https://msl-package-manager.readthedocs.io/en/latest/
+.. _cryptography: https://cryptography.io/en/latest/

@@ -39,49 +39,49 @@ class Network(object):
         :class:`~msl.network.service.Service`\'s, :class:`~msl.network.client.Client`\'s.
         The member names and JSON_ datatype for each network device is described below.
 
-        .. _JSON: http://www.json.org/
+        .. _JSON: https://www.json.org/
 
         * :class:`~msl.network.manager.Manager`
 
-            - hostname: string
+            hostname: string
                 The name of the device that the Network :class:`~msl.network.manager.Manager`
                 is running on.
 
-            - port: integer
+            port: integer
                 The port number that the Network :class:`~msl.network.manager.Manager`
                 is running on.
 
-            - attributes: object
+            attributes: object
                 An object (a Python :class:`dict`) of public attributes that the Network
                 :class:`~msl.network.manager.Manager` provides. Users who are an administrator of
                 the Network :class:`~msl.network.manager.Manager` can access private attributes.
 
-            - language: string
+            language: string
                 The programming language that the Network :class:`~msl.network.manager.Manager`
                 is running on.
 
-            - os: string
+            os: string
                 The name of the operating system that the :class:`~msl.network.manager.Manager`
                 is running on.
 
-            - clients: array
+            clients: array
                 An object (a Python :class:`dict`) of :class:`~msl.network.client.Client`\'s that
                 are currently connected to the Network :class:`~msl.network.manager.Manager`.
 
-            - services: object
+            services: object
                 An object (a Python :class:`dict`) of :class:`~msl.network.service.Service`\'s
                 that are currently connected to the Network :class:`~msl.network.manager.Manager`.
 
         * :class:`~msl.network.service.Service`
 
-            - type: string
+            type: string
                 This must be equal to ``'service'`` (case-insensitive).
 
-            - name: string
+            name: string
                 The name to associate with the :class:`~msl.network.service.Service`
                 (can contain spaces).
 
-            - attributes: object
+            attributes: object
                 An object (a Python :class:`dict`) of attributes that the
                 :class:`~msl.network.service.Service` provides. The keys are
                 the function names and the values are the function signatures
@@ -119,28 +119,28 @@ class Network(object):
                         'scalar_multiply': '(a:float, data:array of floats) -> array of floats'
                     }
 
-            - language: string, optional
+            language: string, optional
                 The programming language that the :class:`~msl.network.service.Service`
                 is running on.
 
-            - os: string, optional
+            os: string, optional
                 The name of the operating system that the :class:`~msl.network.service.Service`
                 is running on.
 
         * :class:`~msl.network.client.Client`
 
-            - type: string
+            type: string
                 This must be equal to ``'client'`` (case-insensitive).
 
-            - name: string
+            name: string
                 The name to associate with the :class:`~msl.network.client.Client`
                 (can contain spaces).
 
-            - language: string, optional
+            language: string, optional
                 The programming language that the :class:`~msl.network.client.Client`
                 is running on.
 
-            - os: string, optional
+            os: string, optional
                 The name of the operating system that the :class:`~msl.network.client.Client`
                 is running on.
 
@@ -189,7 +189,7 @@ class Network(object):
     def send_data(self, writer, data):
         """Serialize `data` as a JSON_ string then send.
 
-        .. _JSON: http://www.json.org/
+        .. _JSON: https://www.json.org/
 
         Parameters
         ----------
@@ -231,7 +231,7 @@ class Network(object):
     def send_reply(self, writer, reply, *, requester='', uuid=''):
         """Send a reply through the network.
 
-        .. _JSON: http://www.json.org/
+        .. _JSON: https://www.json.org/
 
         Parameters
         ----------

@@ -298,7 +298,7 @@ class Manager(Network):
             return None
 
     async def get_handshake_data(self, reader):
-        """Used by :meth:`check_password`, :meth:`check_identity` and :meth:`check_user`.
+        """Used by :meth:`check_manager_password`, :meth:`check_identity` and :meth:`check_user`.
 
         Parameters
         ----------
