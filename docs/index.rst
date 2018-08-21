@@ -3,9 +3,8 @@
 ===========
 MSL-Network
 ===========
-
-**MSL-Network** is used to send information across a network and it is composed of three objects -- a
-Network :class:`~msl.network.manager.Manager`, :class:`~msl.network.client.Client`\s and
+**MSL-Network** uses concurrency and asynchronous programming to transfer data across a network and it is composed
+of three objects -- a Network :class:`~msl.network.manager.Manager`, :class:`~msl.network.client.Client`\s and
 :class:`~msl.network.service.Service`\s.
 
 The Network :class:`~msl.network.manager.Manager` allows for multiple :class:`~msl.network.client.Client`\s
