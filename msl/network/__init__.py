@@ -11,7 +11,7 @@ from .exceptions import MSLNetworkError
 
 __author__ = 'Joseph Borbely'
 __copyright__ = '\xa9 2017 - 2018, ' + __author__
-__version__ = '0.2.0.final'
+__version__ = '0.2.1.dev0'
 
 _v = re.search('(\d+).(\d+).(\d+)\.?(.*)', __version__).groups()
 
