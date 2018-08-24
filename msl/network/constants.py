@@ -2,6 +2,7 @@
 Constants used by the **MSL-Network** package.
 """
 import os
+import sys
 import enum
 import socket
 
@@ -26,6 +27,9 @@ KEY_DIR = os.path.join(HOME_DIR, 'keys')
 
 DATABASE = os.path.join(HOME_DIR, 'manager.sqlite3')
 """:class:`str`: The default database path."""
+
+IS_WINDOWS = sys.platform in ['win32', 'cygwin']
+""":class:`bool`: Whether the Operating System is Windows."""
 
 
 class JSONPackage(enum.Enum):

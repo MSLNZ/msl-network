@@ -10,7 +10,7 @@ import platform
 
 from .network import Network
 from .json import deserialize
-from .constants import HOSTNAME
+from .constants import HOSTNAME, IS_WINDOWS
 from .utils import parse_terminal_input
 from .database import ConnectionsTable, UsersTable, HostnamesTable
 
@@ -653,6 +653,14 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
     server = loop.run_until_complete(
         asyncio.start_server(manager.new_connection, port=port, ssl=context, loop=loop, limit=sys.maxsize)
     )
+
+    # https://bugs.python.org/issue23057
+    # enable this hack only in debug mode and only on Windows
+    if debug and IS_WINDOWS:
+        async def wakeup():
+            while True:
+                await asyncio.sleep(1)
+        loop.create_task(wakeup())
 
     state = 'ENABLED' if context else 'DISABLED'
     log.info('Network Manager running on {}:{} (TLS {})'.format(HOSTNAME, port, state))

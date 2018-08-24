@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .network import Network
 from .json import deserialize, serialize
 from .utils import localhost_aliases
-from .constants import PORT, HOSTNAME
+from .constants import PORT, HOSTNAME, IS_WINDOWS
 
 log = logging.getLogger(__name__)
 
@@ -304,6 +304,14 @@ class Service(Network, asyncio.Protocol):
 
         if not self._create_connection(host, port, certificate, disable_tls, timeout):
             return
+
+        # https://bugs.python.org/issue23057
+        # enable this hack only in debug mode and only on Windows
+        if debug and IS_WINDOWS:
+            async def wakeup():
+                while True:
+                    await asyncio.sleep(1)
+            self._loop.create_task(wakeup())
 
         try:
             self._loop.run_forever()
