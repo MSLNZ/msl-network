@@ -2,11 +2,13 @@
 Release Notes
 =============
 
-Version 0.2.0.dev0
-==================
+Version 0.2.0 (2018.08.24)
+==========================
 
 - Added
 
+  * a ``wakeup()`` Task in debug mode on Windows (see: https://bugs.python.org/issue23057)
+  * the ``version_info`` named tuple now includes a *releaselevel*
   * example for creating a Client and a Service in LabVIEW
   * the ability to establish a connection to the Network Manager without using TLS
   * a ``timeout`` kwarg to Service.start()
