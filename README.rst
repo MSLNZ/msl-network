@@ -1,7 +1,7 @@
 MSL-Network
 ===========
 
-|docs|
+|docs| |pypi|
 
 **MSL-Network** uses concurrency and asynchronous programming to transfer data across a network and
 it is composed of three objects -- a Network Manager_, Client_\s and Service_\s.
@@ -42,6 +42,9 @@ The documentation for **MSL-Network** can be found `here <https://msl-network.re
 .. |docs| image:: https://readthedocs.org/projects/msl-network/badge/?version=latest
    :target: https://msl-network.readthedocs.io/en/latest/
    :alt: Documentation Status
+
+.. |pypi| image:: https://badge.fury.io/py/msl-network.svg
+   :target: https://badge.fury.io/py/msl-network
 
 .. _Manager: https://msl-network.readthedocs.io/en/latest/_api/msl.network.manager.html
 .. _Client: https://msl-network.readthedocs.io/en/latest/_api/msl.network.client.html#msl.network.client.Client
