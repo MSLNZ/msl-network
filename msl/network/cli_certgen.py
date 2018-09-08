@@ -7,7 +7,6 @@ To see the help documentation, run the following command in a terminal::
 
 """
 import os
-import sys
 
 from . import cryptography
 
@@ -93,7 +92,7 @@ def add_parser_certgen(parser):
     )
     p.add_argument(
         '--years-valid',
-        default=100 if sys.maxsize > 2**32 else 15,  # 19 years is the max allowed for a 32-bit architecture
+        default=cryptography._DEFAULT_YEARS_VALID,
         help='The number of years that the certificate is valid for\n'
              '(e.g., a value of 0.25 would mean that the certificate\n'
              'is valid for 3 months). Default is %(default)s years.'

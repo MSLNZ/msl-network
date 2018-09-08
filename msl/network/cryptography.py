@@ -4,6 +4,7 @@ Functions to create a self-signed certificate for the secure SSL/TLS protocol.
 import os
 import re
 import ssl
+import sys
 import logging
 import inspect
 import datetime
@@ -21,6 +22,8 @@ from .utils import ensure_root_path
 from .constants import KEY_DIR, CERT_DIR, HOSTNAME
 
 log = logging.getLogger(__name__)
+
+_DEFAULT_YEARS_VALID = 100 if sys.maxsize > 2**32 else 15
 
 
 def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve='SECP384R1'):
@@ -112,7 +115,7 @@ def load_key(path, *, password=None):
     return serialization.load_pem_private_key(data=data, password=pw, backend=default_backend())
 
 
-def generate_certificate(*, path=None, key_path=None, key_password=None, algorithm='SHA256', years_valid=100):
+def generate_certificate(*, path=None, key_path=None, key_password=None, algorithm='SHA256', years_valid=None):
     """Generate a self-signed certificate.
 
     Parameters
@@ -135,7 +138,8 @@ def generate_certificate(*, path=None, key_path=None, key_password=None, algorit
     years_valid : :class:`float`, optional
         The number of years that the certificate is valid for. If you want to
         specify that the certificate is valid for 3 months then set `years_valid`
-        to be ``0.25``. Default is ``100`` years.
+        to be ``0.25``. Default is ``100`` years for 64-bit platforms and ``15``
+        years for 32-bit platforms.
 
     Returns
     -------
@@ -179,7 +183,7 @@ def generate_certificate(*, path=None, key_path=None, key_password=None, algorit
 
     now = datetime.datetime.utcnow()
 
-    years_valid = max(0, years_valid)
+    years_valid = _DEFAULT_YEARS_VALID if years_valid is None else max(0, years_valid)
     years = int(years_valid)
     days = int((years_valid - years) * 365)
     expires = now.replace(year=now.year + years)
