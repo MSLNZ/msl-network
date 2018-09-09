@@ -257,7 +257,7 @@ class Network(object):
 
         context = None
         if not disable_tls:
-            context = get_ssl_context(host=host, port=port, certificate=certificate)
+            certificate, context = get_ssl_context(host=host, port=port, certificate=certificate)
             if not context:
                 return False
             context.check_hostname = host != HOSTNAME
@@ -273,9 +273,9 @@ class Network(object):
             )
         except ssl.SSLError as e:
             if e.reason == 'CERTIFICATE_VERIFY_FAILED':
-                e.strerror += '\nPerhaps the Manager is using a new certificate...\n' \
+                e.strerror += '\nPerhaps the Network Manager is using a new certificate...\n' \
                               'If you trust the network connection then you can delete ' \
-                              'the certificate at {}\nand then connect to the Manager ' \
+                              'the certificate at\n{}\nand then re-connect to the Network Manager ' \
                               'to create a new trusted certificate'.format(certificate)
             else:
                 e.strerror += '\nTry setting disable_tls=True when connecting to the Manager'

@@ -436,6 +436,8 @@ def get_ssl_context(*, host=None, port=None, certificate=None):
 
     Returns
     -------
+    :class:`str`
+        The path to the certificate file that was loaded.
     :class:`ssl.SSLContext`
         The SSL context.
     """
@@ -457,10 +459,11 @@ def get_ssl_context(*, host=None, port=None, certificate=None):
                   'If you trust this host you can save the certificate in the\n'
                   'registry and continue to connect, otherwise this is your\n'
                   'final chance to abort.\n'.format(host=host, name=name, fingerprint=fingerprint))
+
             while True:
                 r = input('Continue? y/n: ').lower()
                 if r.startswith('n'):
-                    return
+                    return certificate, None
                 elif r.startswith('y'):
                     break
 
@@ -471,4 +474,4 @@ def get_ssl_context(*, host=None, port=None, certificate=None):
     elif not os.path.isfile(certificate):
         raise IOError('Cannot find certificate ' + certificate)
 
-    return ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=certificate)
+    return certificate, ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=certificate)
