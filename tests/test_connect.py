@@ -1,5 +1,4 @@
 import os
-import ssl
 import time
 import tempfile
 from socket import socket
@@ -60,13 +59,13 @@ def test_default_settings():
     mgr.start()
 
     # test that connecting to the wrong port fails
-    with pytest.raises(OSError):
+    with pytest.raises(MSLNetworkError):
         connect(port=get_available_port())
 
     # test that connecting with the wrong certificate fails
     path = tempfile.gettempdir() + '/msl-network-wrong-certificate.crt'
     cryptography.generate_certificate(path=path)
-    with pytest.raises(ssl.SSLError) as e:
+    with pytest.raises(MSLNetworkError) as e:
         connect(port=mgr.port, certificate=path)
     os.remove(path)
     assert 'CERTIFICATE_VERIFY_FAILED' in str(e.value)
@@ -88,7 +87,7 @@ def test_tls_disabled():
     mgr.start()
 
     # test that connecting with TLS enabled fails
-    with pytest.raises(ssl.SSLError) as e:
+    with pytest.raises(MSLNetworkError) as e:
         connect(port=mgr.port, disable_tls=False)
     assert 'disable_tls=True' in str(e.value)
 
