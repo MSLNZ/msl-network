@@ -45,6 +45,7 @@ class Service(Network, asyncio.Protocol):
         self._buffer = bytearray()
         self._t0 = None  # used for profiling sections of the code
         self._futures = dict()
+        self._connection_successful = False
 
     @property
     def port(self):
@@ -75,6 +76,7 @@ class Service(Network, asyncio.Protocol):
             # of a user in plain-text format. Also, if the getpass function is called it is a
             # blocking function and therefore the Service blocks all other requests until getpass returns
             return Service._PASSWORD_MESSAGE
+        self._connection_successful = True
         if name == self._address_manager and self._password_manager is not None:
             return self._password_manager
         elif self._password is not None:
@@ -91,6 +93,7 @@ class Service(Network, asyncio.Protocol):
         if self._identity:
             # see the comment in the password() method why we do this self._identity check
             return 'You do not have permission to receive the username'
+        self._connection_successful = True
         if self._username is None:
             return input('Enter the username for ' + name + ' > ')
         return self._username
@@ -185,7 +188,9 @@ class Service(Network, asyncio.Protocol):
             try:
                 if data['traceback']:
                     msg = '\n'.join(data['traceback'])  # traceback should be a list of strings
-            except (TypeError, KeyError):
+                else:  # in case the 'traceback' key exists but it is an empty list
+                    msg = data['message']
+            except (TypeError, KeyError):  # in case there is no 'traceback' key
                 try:
                     msg = data['message']
                 except KeyError:
@@ -328,3 +333,7 @@ class Service(Network, asyncio.Protocol):
     @property
     def _identity_successful(self):
         return self._identity
+
+    @property
+    def _connection_established(self):
+        return self._connection_successful

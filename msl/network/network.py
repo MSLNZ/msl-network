@@ -252,6 +252,10 @@ class Network(object):
     def _identity_successful(self):
         raise NotImplementedError
 
+    @property
+    def _connection_established(self):
+        raise NotImplementedError
+
     def _create_connection(self, host, port, certificate, disable_tls, assert_hostname, timeout):
         # common to both Client and Service to connect to the Manager
 
@@ -286,8 +290,7 @@ class Network(object):
                        'the certificate at\n{}\nand then re-connect to the Network Manager ' \
                        'to create a new trusted certificate'.format(certificate)
             elif ('WRONG_VERSION_NUMBER' in err) or ('UNKNOWN_PROTOCOL' in err):
-                err += '\nTry passing the --disable-tls flag from the command line or set ' \
-                       'disable_tls=True in your program'
+                err += '\nTry setting disable_tls=True'
             elif 'Errno 10061' in err:
                 err += '\nMake sure that a Network Manager is running at {}:{}'.format(host, port)
             raise MSLNetworkError(err) from None
@@ -299,13 +302,17 @@ class Network(object):
         # Client/Service never raised an exception but just waited at run_forever().
         async def check_for_identity_request():
             t0 = time.perf_counter()
-            while not self._identity_successful:
+            while True:
                 await asyncio.sleep(0.01)
+                if self._connection_established or self._identity_successful:
+                    break
                 if timeout and time.perf_counter() - t0 > timeout:
-                    msg = 'The identity for {} was not requested by the Manager.'.format(self)
+                    msg = 'The connection to the Network Manager was not established.'
                     if disable_tls:
                         msg += '\nYou have TLS disabled. Perhaps the Manager is using TLS for the connection.'
                     raise TimeoutError(msg)
+            while not self._identity_successful:
+                await asyncio.sleep(0.01)
 
         try:
             self._loop.run_until_complete(check_for_identity_request())

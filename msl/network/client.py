@@ -113,6 +113,7 @@ class Client(Network, asyncio.Protocol):
         self._futures = dict()
         self._pending_requests_sent = False
         self._assert_hostname = True
+        self._connection_successful = False
 
     @property
     def name(self):
@@ -158,6 +159,7 @@ class Client(Network, asyncio.Protocol):
         # note that a Service has a special check in its password() method so that a password
         # remains secure, however, a Client does not need this security check because a Client
         # cannot send a request to other Clients
+        self._connection_successful = True
         if name == self._address_manager:
             if self._password_manager is None:
                 self._password_manager = getpass.getpass('Enter the password for ' + name + ' > ')
@@ -173,6 +175,7 @@ class Client(Network, asyncio.Protocol):
            :class:`~msl.network.manager.Manager` when verifying the login credentials.
         """
         # see the comment in the Client.password() method and in the Service.username() method
+        self._connection_successful = True
         if self._username is None:
             self._username = input('Enter the username for ' + name + ' > ')
         return self._username
@@ -563,7 +566,7 @@ class Client(Network, asyncio.Protocol):
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
-        if not self._create_connection(self._host_manager, port, certificate, disable_tls, assert_hostname, timeout):
+        if not self._create_connection(self._host_manager, port, certificate, disable_tls, assert_hostname, 5.0):
             return False
 
         def run_forever():
@@ -691,6 +694,10 @@ class Client(Network, asyncio.Protocol):
     @property
     def _identity_successful(self):
         return self._handshake_finished
+
+    @property
+    def _connection_established(self):
+        return self._connection_successful
 
 
 class Link(object):
