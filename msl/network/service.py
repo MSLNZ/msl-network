@@ -246,14 +246,14 @@ class Service(Network, asyncio.Protocol):
         self._debug = bool(boolean)
 
     def start(self, *, host='localhost', port=PORT, timeout=5.0, username=None, password=None,
-              password_manager=None, certificate=None, disable_tls=False, debug=False):
+              password_manager=None, certificate=None, disable_tls=False, assert_hostname=True, debug=False):
         """Start the :class:`Service`.
 
         Parameters
         ----------
         host : :class:`str`, optional
-            The hostname of the Network :class:`~msl.network.manager.Manager` that the
-            :class:`Service` should connect to.
+            The hostname (or IP address) of the Network :class:`~msl.network.manager.Manager`
+            that the :class:`Service` should connect to.
         port : :class:`int`, optional
             The port number of the Network :class:`~msl.network.manager.Manager` that
             the :class:`Service` should connect to.
@@ -280,6 +280,9 @@ class Service(Network, asyncio.Protocol):
         disable_tls : :class:`bool`, optional
             Whether to connect to the Network :class:`~msl.network.manager.Manager`
             without using the TLS protocol.
+        assert_hostname : :class:`bool`, optional
+            Whether to force the hostname of the Network :class:`~msl.network.manager.Manager`
+            to match the value of `host`. Default is :data:`True`.
         debug : :class:`bool`, optional
             Whether to log debug messages for the :class:`Service`.
         """
@@ -302,7 +305,7 @@ class Service(Network, asyncio.Protocol):
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
-        if not self._create_connection(host, port, certificate, disable_tls, timeout):
+        if not self._create_connection(host, port, certificate, disable_tls, assert_hostname, timeout):
             return
 
         # https://bugs.python.org/issue23057

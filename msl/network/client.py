@@ -19,7 +19,8 @@ log = logging.getLogger(__name__)
 
 
 def connect(*, name='Client', host='localhost', port=PORT, timeout=None, username=None,
-            password=None, password_manager=None, certificate=None, disable_tls=False, debug=False):
+            password=None, password_manager=None, certificate=None, disable_tls=False,
+            assert_hostname=True, debug=False):
     """Create a new connection to a Network :class:`~msl.network.manager.Manager`
     as a :class:`Client`.
 
@@ -28,7 +29,7 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=None, usernam
     name : :class:`str`, optional
         A name to assign to the :class:`Client`.
     host : :class:`str`, optional
-        The hostname of the Network :class:`~msl.network.manager.Manager`
+        The hostname (or IP address) of the Network :class:`~msl.network.manager.Manager`
         that the :class:`~msl.network.client.Client` should connect to.
     port : :class:`int`, optional
         The port number of the Network :class:`~msl.network.manager.Manager`
@@ -55,6 +56,9 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=None, usernam
     disable_tls : :class:`bool`, optional
         Whether to connect to the Network :class:`~msl.network.manager.Manager`
         without using the TLS protocol.
+    assert_hostname : :class:`bool`, optional
+        Whether to force the hostname of the Network :class:`~msl.network.manager.Manager`
+        to match the value of `host`. Default is :data:`True`.
     debug : :class:`bool`, optional
         Whether to log debug messages for the :class:`Client`.
 
@@ -64,8 +68,8 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=None, usernam
         A new connection.
     """
     client = Client(name)
-    success = client.start(host, port, timeout, username, password,
-                           password_manager, certificate, disable_tls, debug)
+    success = client.start(host, port, timeout, username, password, password_manager,
+                           certificate, disable_tls, assert_hostname, debug)
     if not success:
         client.raise_latest_error()
     return client
@@ -108,6 +112,7 @@ class Client(Network, asyncio.Protocol):
         self._requests = dict()
         self._futures = dict()
         self._pending_requests_sent = False
+        self._assert_hostname = True
 
     @property
     def name(self):
@@ -412,7 +417,8 @@ class Client(Network, asyncio.Protocol):
         return connect(name=name, host=self._host_manager, port=self._port_manager,
                        timeout=self._timeout, username=self._username, password=self._password,
                        password_manager=self._password_manager, certificate=self._certificate,
-                       disable_tls=self._disable_tls, debug=self._debug)
+                       disable_tls=self._disable_tls, assert_hostname=self._assert_hostname,
+                       debug=self._debug)
 
     def raise_latest_error(self):
         """
@@ -535,7 +541,8 @@ class Client(Network, asyncio.Protocol):
         if wait:
             self._wait()
 
-    def start(self, host, port, timeout, username, password, password_manager, certificate, disable_tls, debug):
+    def start(self, host, port, timeout, username, password, password_manager,
+              certificate, disable_tls, assert_hostname, debug):
         """
         .. attention::
             Do not call this method directly. Use :meth:`connect` to connect to
@@ -551,11 +558,12 @@ class Client(Network, asyncio.Protocol):
         self._certificate = certificate
         self._address_manager = '{}:{}'.format(self._host_manager, port)
         self._timeout = timeout
+        self._assert_hostname = bool(assert_hostname)
 
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
-        if not self._create_connection(self._host_manager, port, certificate, disable_tls, timeout):
+        if not self._create_connection(self._host_manager, port, certificate, disable_tls, assert_hostname, timeout):
             return False
 
         def run_forever():

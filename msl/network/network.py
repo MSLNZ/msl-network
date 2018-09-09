@@ -2,7 +2,6 @@
 Base class for all :class:`~msl.network.manager.Manager`'\s,
 :class:`~msl.network.service.Service`'\s and :class:`~msl.network.client.Client`'\s.
 """
-import ssl
 import time
 import asyncio
 import logging
@@ -11,6 +10,7 @@ import traceback
 from .json import serialize
 from .constants import HOSTNAME
 from .cryptography import get_ssl_context
+from .exceptions import MSLNetworkError
 
 log = logging.getLogger(__name__)
 
@@ -252,7 +252,7 @@ class Network(object):
     def _identity_successful(self):
         raise NotImplementedError
 
-    def _create_connection(self, host, port, certificate, disable_tls, timeout):
+    def _create_connection(self, host, port, certificate, disable_tls, assert_hostname, timeout):
         # common to both Client and Service to connect to the Manager
 
         context = None
@@ -260,7 +260,11 @@ class Network(object):
             certificate, context = get_ssl_context(host=host, port=port, certificate=certificate)
             if not context:
                 return False
-            context.check_hostname = host != HOSTNAME
+
+            if not assert_hostname:
+                context.check_hostname = False
+            else:
+                context.check_hostname = host != HOSTNAME
 
         try:
             self._loop.run_until_complete(
@@ -271,15 +275,22 @@ class Network(object):
                     ssl=context,
                 ),
             )
-        except ssl.SSLError as e:
-            if e.reason == 'CERTIFICATE_VERIFY_FAILED':
-                e.strerror += '\nPerhaps the Network Manager is using a new certificate...\n' \
-                              'If you trust the network connection then you can delete ' \
-                              'the certificate at\n{}\nand then re-connect to the Network Manager ' \
-                              'to create a new trusted certificate'.format(certificate)
-            else:
-                e.strerror += '\nTry setting disable_tls=True when connecting to the Manager'
-            raise
+        except Exception as e:
+            err = str(e)
+            if 'match' in err:
+                err += '\nTo disable hostname checking set assert_hostname=False\n' \
+                       'Make sure that you trust the connection if you do this'
+            elif 'CERTIFICATE_VERIFY_FAILED' in err:
+                err += '\nPerhaps the Network Manager is using a new certificate...\n' \
+                       'If you trust the network connection then you can delete ' \
+                       'the certificate at\n{}\nand then re-connect to the Network Manager ' \
+                       'to create a new trusted certificate'.format(certificate)
+            elif ('WRONG_VERSION_NUMBER' in err) or ('UNKNOWN_PROTOCOL' in err):
+                err += '\nTry passing the --disable-tls flag from the command line or set ' \
+                       'disable_tls=True in your program'
+            elif 'Errno 10061' in err:
+                err += '\nMake sure that a Network Manager is running at {}:{}'.format(host, port)
+            raise MSLNetworkError(err) from None
 
         # Make sure that the Manager registered this Client/Service by requesting its identity.
         # The following fixed the case where the Manager required TLS but the Client/Service was
