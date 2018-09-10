@@ -72,7 +72,7 @@ def test_default_settings():
 
     # test that connecting with TLS disabled fails
     with pytest.raises(TimeoutError):
-        connect(port=mgr.port, disable_tls=True, timeout=2.0)
+        connect(port=mgr.port, disable_tls=True)
 
     # shutdown the Manager
     mgr.shutdown()
