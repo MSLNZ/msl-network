@@ -1,6 +1,7 @@
 """
 The Network :class:`Manager`.
 """
+import re
 import sys
 import ssl
 import socket
@@ -15,6 +16,8 @@ from .utils import parse_terminal_input
 from .database import ConnectionsTable, UsersTable, HostnamesTable
 
 log = logging.getLogger(__name__)
+
+_ipv4_regex = re.compile(r'\d+\.\d+\.\d+\.\d+')
 
 
 class Manager(Network):
@@ -594,7 +597,12 @@ class Peer(object):
         self.is_admin = False
         self.ip_address, self.port = writer.get_extra_info('peername')[:2]
         self.domain = socket.getfqdn(self.ip_address)
-        self.hostname = self.domain.split('.')[0]
+
+        if _ipv4_regex.search(self.domain):
+            self.hostname = self.domain
+        else:
+            self.hostname = self.domain.split('.')[0]
+
         if self.hostname == HOSTNAME:
             self.address = 'localhost:{}'.format(self.port)
             self.network_name = 'localhost:{}'.format(self.port)
