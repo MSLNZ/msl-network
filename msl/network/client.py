@@ -18,7 +18,7 @@ from .exceptions import MSLNetworkError
 log = logging.getLogger(__name__)
 
 
-def connect(*, name='Client', host='localhost', port=PORT, timeout=None, username=None,
+def connect(*, name='Client', host='localhost', port=PORT, timeout=5, username=None,
             password=None, password_manager=None, certificate=None, disable_tls=False,
             assert_hostname=True, debug=False):
     """Create a new connection to a Network :class:`~msl.network.manager.Manager`
@@ -35,9 +35,8 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=None, usernam
         The port number of the Network :class:`~msl.network.manager.Manager`
         that the :class:`~msl.network.client.Client` should connect to.
     timeout : :class:`float`, optional
-        The maximum number of seconds to wait for a reply from the Network
+        The maximum number of seconds to wait to establish the connection to the
         :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
-        The default is to wait forever (i.e., no timeout).
     username : :class:`str`, optional
         The username to use to connect to Network :class:`~msl.network.manager.Manager`.
         If not specified then you will be asked for the `username` when needed.
@@ -133,19 +132,6 @@ class Client(Network, asyncio.Protocol):
         that this :class:`Client` is connected to."""
         return self._address_manager
 
-    @property
-    def timeout(self):
-        """:class:`float` or :data:`None`: The maximum number of seconds to wait for
-        a reply from the Network :class:`~msl.network.manager.Manager` before
-        raising a :exc:`TimeoutError`."""
-        return self._timeout
-
-    @timeout.setter
-    def timeout(self, value):
-        if value is not None and value < 0:
-            raise ValueError('The timeout value cannot be negative')
-        self._timeout = value
-
     def __repr__(self):
         return '<{} object at {:#x} manager={} port={}>'.format(
             self._name, id(self), self._address_manager, self._port)
@@ -184,7 +170,7 @@ class Client(Network, asyncio.Protocol):
         """:class:`dict`: Returns the :obj:`~msl.network.network.Network.identity` of the :class:`Client`."""
         return self._identity
 
-    def link(self, service):
+    def link(self, service, *, timeout=None):
         """Link with a :class:`~msl.network.service.Service` on the Network
         :class:`~msl.network.manager.Manager`.
 
@@ -192,6 +178,9 @@ class Client(Network, asyncio.Protocol):
         ----------
         service : :class:`str`
             The name of the :class:`~msl.network.service.Service` to link with.
+        timeout : :class:`float`, optional
+            The maximum number of seconds to wait for the reply from the Network
+            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
 
         Returns
         -------
@@ -200,6 +189,9 @@ class Client(Network, asyncio.Protocol):
 
         Raises
         ------
+        TimeoutError
+            If linking with the :class:`~msl.network.service.Service` takes longer
+            than `timeout` seconds.
         :class:`~msl.network.exceptions.MSLNetworkError`
             If there is no :class:`~msl.network.service.Service` available
             with the name `service`.
@@ -210,7 +202,7 @@ class Client(Network, asyncio.Protocol):
         """
         if self._debug:
             log.debug('preparing to link with ' + service)
-        identity = self._send_request_for_manager('link', service)
+        identity = self._send_request_for_manager('link', service, timeout=timeout)
         return Link(self, service, identity)
 
     def disconnect(self):
@@ -218,10 +210,10 @@ class Client(Network, asyncio.Protocol):
         if self._transport is not None:
             uid = self._create_request('self', '__disconnect__')
             self.send_data(self._transport, self._requests[uid])
-            self._wait(uid)
+            self._wait(uid=uid, timeout=self._timeout)
             self._clear_all_futures()
 
-    def manager(self, *, as_yaml=False, indent=4):
+    def manager(self, *, as_yaml=False, indent=4, timeout=None):
         """Returns the :obj:`~msl.network.network.Network.identity` of the
         Network :class:`~msl.network.manager.Manager`.
 
@@ -231,9 +223,12 @@ class Client(Network, asyncio.Protocol):
         ----------
         as_yaml : :class:`bool`, optional
             Whether to return the information as a YAML_\-style string.
-        indent : :class:`int`
+        indent : :class:`int`, optional
             The amount of indentation added for each recursive level. Only used if
             `as_yaml` is :data:`True`.
+        timeout : :class:`float`, optional
+            The maximum number of seconds to wait for the reply from the Network
+            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
 
         Returns
         -------
@@ -241,11 +236,11 @@ class Client(Network, asyncio.Protocol):
             The :obj:`~msl.network.network.Network.identity` of the Network
             :class:`~msl.network.manager.Manager`.
         """
-        identity = self._send_request_for_manager('identity')
+        identity = self._send_request_for_manager('identity', timeout=timeout)
         if not as_yaml:
             return identity
         space = ' ' * indent
-        s = ['Manager[{}:{}]'.format(identity["hostname"], identity["port"])]
+        s = ['Manager[{}:{}]'.format(identity['hostname'], identity['port'])]
         for key in sorted(identity):
             if key in ('clients', 'services', 'hostname', 'port'):
                 pass
@@ -255,17 +250,17 @@ class Client(Network, asyncio.Protocol):
                     s.append(2 * space + '{}: {}'.format(item, identity[key][item]))
             else:
                 s.append(space + '{}: {}'.format(key, identity[key]))
-        s.append('Clients [{}]:'.format(len(identity["clients"])))
+        s.append('Clients [{}]:'.format(len(identity['clients'])))
         for address in sorted(identity['clients']):
-            s.append(space + '{}[{}]'.format(identity["clients"][address]["name"], address))
+            s.append(space + '{}[{}]'.format(identity['clients'][address]['name'], address))
             keys = identity['clients'][address]
             for key in sorted(keys):
                 if key == 'name':
                     continue
                 s.append(2 * space + '{}: {}'.format(key, keys[key]))
-        s.append('Services [{}]:'.format(len(identity["services"])))
+        s.append('Services [{}]:'.format(len(identity['services'])))
         for name in sorted(identity['services']):
-            s.append(space + '{}[{}]'.format(name, identity["services"][name]["address"]))
+            s.append(space + '{}[{}]'.format(name, identity['services'][name]['address']))
             service = identity['services'][name]
             for key in sorted(service):
                 if key == 'attributes':
@@ -295,6 +290,7 @@ class Client(Network, asyncio.Protocol):
             The arguments to send to the Network :class:`~msl.network.manager.Manager`.
         **kwargs
             The keyword arguments to send to the Network :class:`~msl.network.manager.Manager`.
+            Also accepts a `timeout` parameter as a :class`float`.
 
         Returns
         -------
@@ -310,6 +306,7 @@ class Client(Network, asyncio.Protocol):
 
         ``admin_request('shutdown_manager')``
         """
+        timeout = kwargs.get('timeout', None)
         reply = self._send_request_for_manager(attrib, *args, **kwargs)
         if 'result' not in reply:
             # then we need to send an admin username and password
@@ -320,7 +317,7 @@ class Client(Network, asyncio.Protocol):
                     self.send_reply(self._transport, self.username(reply['requester']))
                 else:
                     self.send_reply(self._transport, self.password(self._username))
-                self._wait(uid)
+                self._wait(uid=uid, timeout=timeout)
                 if method == 'password' and attrib != 'shutdown_manager':
                     result = self._futures[uid].result()['result']
                 self._remove_future(uid)
@@ -461,7 +458,7 @@ class Client(Network, asyncio.Protocol):
             requires.
         **kwargs
             The keyword arguments that the :class:`~msl.network.service.Service`
-            `attribute` requires.
+            `attribute` requires. Also accepts a `timeout` parameter as a :class`float`.
 
         Returns
         -------
@@ -478,6 +475,8 @@ class Client(Network, asyncio.Protocol):
             has been disconnected.
         ValueError
             If there are asynchronous requests pending and a synchronous request is made.
+        TimeoutError
+            If receiving the reply takes longer than `timeout` seconds.
         :exc:`~msl.network.exceptions.MSLNetworkError`
             If there was an error executing the request.
 
@@ -509,6 +508,7 @@ class Client(Network, asyncio.Protocol):
 
         """
         send_asynchronously = kwargs.pop('asynchronous', False)
+        timeout = kwargs.pop('timeout', None)
         if not send_asynchronously and self._futures:
             raise ValueError('Asynchronous requests are pending. '
                              'You must call the wait() method to wait for them to '
@@ -519,12 +519,12 @@ class Client(Network, asyncio.Protocol):
             return self._futures[uid]
         else:
             self.send_data(self._transport, self._requests[uid])
-            self._wait(uid)
+            self._wait(uid=uid, timeout=timeout)
             result = self._futures[uid].result()
             self._remove_future(uid)
             return result
 
-    def send_pending_requests(self, wait=True):
+    def send_pending_requests(self, *, wait=True, timeout=None):
         """Send all pending requests to the Network :class:`~msl.network.manager.Manager`.
 
         Parameters
@@ -535,14 +535,17 @@ class Client(Network, asyncio.Protocol):
             until all requests are done executing. If wait is :data:`False` then this
             method will return immediately and you must call the :meth:`wait` method
             to ensure that all pending requests have a result.
+        timeout : :class:`float`
+            The maximum number of seconds to wait for the reply from the Network
+            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
         """
         for request in self._requests.values():
             if self._debug:
-                log.debug('sending request to {}.{}'.format(request["service"], request["attribute"]))
+                log.debug('sending request to {}.{}'.format(request['service'], request['attribute']))
             self.send_data(self._transport, request)
         self._pending_requests_sent = True
         if wait:
-            self._wait()
+            self._wait(timeout=timeout)
 
     def start(self, host, port, timeout, username, password, password_manager,
               certificate, disable_tls, assert_hostname, debug):
@@ -566,7 +569,7 @@ class Client(Network, asyncio.Protocol):
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
-        if not self._create_connection(self._host_manager, port, certificate, disable_tls, assert_hostname, 5.0):
+        if not self._create_connection(self._host_manager, port, certificate, disable_tls, assert_hostname, timeout):
             return False
 
         def run_forever():
@@ -583,14 +586,21 @@ class Client(Network, asyncio.Protocol):
         thread.start()
         return True
 
-    def wait(self):
-        """This method will not return until all pending requests are done executing."""
+    def wait(self, timeout=None):
+        """This method will not return until all pending requests are done executing.
+
+        Parameters
+        ----------
+        timeout : :class:`float`, optional
+            The maximum number of seconds to wait for the reply from the Network
+            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
+        """
         if not self._pending_requests_sent:
-            self.send_pending_requests(False)
-        self._wait()
+            self.send_pending_requests(wait=False, timeout=timeout)
+        self._wait(timeout=timeout)
         self._pending_requests_sent = False
 
-    def _wait(self, uid=None):
+    def _wait(self, *, uid=None, timeout=None):
         # Do not use asyncio.wait_for and asyncio.wait since they are coroutines.
         # The Client class is considered as a synchronous class by default that
         # has the capability for asynchronous behaviour if the user wants it.
@@ -609,13 +619,13 @@ class Client(Network, asyncio.Protocol):
         t0 = time.perf_counter()
         while not done():
             time.sleep(0.01)
-            if self._timeout and time.perf_counter() - t0 > self._timeout:
+            if timeout and time.perf_counter() - t0 > timeout:
                 err = 'The following requests are still pending: '
                 requests = []
                 for uid, future in self._futures.items():
                     if not future.done():
                         requests.append('{}.{}'.format(
-                            self._requests[uid]["service"], self._requests[uid]["attribute"]
+                            self._requests[uid]['service'], self._requests[uid]['attribute']
                         ))
                 err += ', '.join(requests)
                 raise TimeoutError(err)
@@ -677,9 +687,10 @@ class Client(Network, asyncio.Protocol):
         # the request is for the Manager to handle, not for a Service
         if self._debug:
             log.debug('sending request to Manager.' + attribute)
+        timeout = kwargs.pop('timeout', None)
         uid = self._create_request('Manager', attribute, *args, **kwargs)
         self.send_data(self._transport, self._requests[uid])
-        self._wait(uid)
+        self._wait(uid=uid, timeout=timeout)
         if self._futures[uid].cancelled():
             # this section of the code will be reached if the Manager is using the
             # users login credentials for authorization and the Client requested
@@ -713,7 +724,7 @@ class Link(object):
         self._service_name = service
         self._service_identity = identity
         if client._debug:
-            log.debug('linked with {}[{}]'.format(service, identity["address"]))
+            log.debug('linked with {}[{}]'.format(service, identity['address']))
 
     @property
     def service_name(self):
