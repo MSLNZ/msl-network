@@ -290,7 +290,7 @@ class Client(Network, asyncio.Protocol):
             The arguments to send to the Network :class:`~msl.network.manager.Manager`.
         **kwargs
             The keyword arguments to send to the Network :class:`~msl.network.manager.Manager`.
-            Also accepts a `timeout` parameter as a :class`float`.
+            Also accepts a `timeout` parameter as a :class:`float`.
 
         Returns
         -------
@@ -458,7 +458,7 @@ class Client(Network, asyncio.Protocol):
             requires.
         **kwargs
             The keyword arguments that the :class:`~msl.network.service.Service`
-            `attribute` requires. Also accepts a `timeout` parameter as a :class`float`.
+            `attribute` requires. Also accepts a `timeout` parameter as a :class:`float`.
 
         Returns
         -------
