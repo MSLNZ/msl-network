@@ -306,6 +306,7 @@ class Client(Network, asyncio.Protocol):
 
         ``admin_request('shutdown_manager')``
         """
+        # don't pop() the timeout, _send_request_for_manager uses it also
         timeout = kwargs.get('timeout', None)
         reply = self._send_request_for_manager(attrib, *args, **kwargs)
         if 'result' not in reply:
@@ -458,7 +459,11 @@ class Client(Network, asyncio.Protocol):
             requires.
         **kwargs
             The keyword arguments that the :class:`~msl.network.service.Service`
-            `attribute` requires. Also accepts a `timeout` parameter as a :class:`float`.
+            `attribute` requires. Also accepts an `asynchronous` parameter
+            (as a :class:`bool`) and a `timeout` parameter (as a :class:`float`).
+            The `timeout` parameter is only used when sending synchronous
+            requests. If sending asynchronous requests then specify a `timeout`
+            value when calling :meth:`send_pending_requests`.
 
         Returns
         -------
@@ -476,7 +481,8 @@ class Client(Network, asyncio.Protocol):
         ValueError
             If there are asynchronous requests pending and a synchronous request is made.
         TimeoutError
-            If receiving the reply takes longer than `timeout` seconds.
+            If receiving the reply takes longer than `timeout` seconds for a synchronous
+            request.
         :exc:`~msl.network.exceptions.MSLNetworkError`
             If there was an error executing the request.
 
@@ -535,9 +541,10 @@ class Client(Network, asyncio.Protocol):
             until all requests are done executing. If wait is :data:`False` then this
             method will return immediately and you must call the :meth:`wait` method
             to ensure that all pending requests have a result.
-        timeout : :class:`float`
-            The maximum number of seconds to wait for the reply from the Network
-            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
+        timeout : :class:`float`, optional
+            The maximum number of seconds to wait for all pending requests to be
+            returned from the Network :class:`~msl.network.manager.Manager` before
+            raising a :exc:`TimeoutError`.
         """
         for request in self._requests.values():
             if self._debug:
