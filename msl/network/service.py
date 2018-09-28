@@ -59,9 +59,6 @@ class Service(Network, asyncio.Protocol):
         that this :class:`Service` is connected to."""
         return self._address_manager
 
-    def __repr__(self):
-        return '<{} service at {:#x} manager={} port={}>'.format(self.name, id(self), self._address_manager, self._port)
-
     def password(self, name):
         """
         .. attention::
