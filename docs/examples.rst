@@ -157,6 +157,19 @@ or, in a terminal (\*nix)
 
    python3 -c "from msl.examples.network import Echo; Echo().start()"
 
+You can then send requests to the ``Echo`` :class:`~msl.network.service.Service`
+
+.. code-block:: pycon
+
+   >>> from msl.network import connect
+   >>> cxn = connect()
+   >>> e = cxn.link('Echo')
+   >>> e.echo('hello')
+   [['hello'], {}]
+   >>> e.echo('world!', x=7, array=list(range(10)))
+   [['world!'], {'x': 7, 'array': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}]
+   >>> cxn.disconnect()
+
 .. _echo-service:
 
 Echo Service
