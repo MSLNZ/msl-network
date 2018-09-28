@@ -517,7 +517,7 @@ class Client(Network, asyncio.Protocol):
         if not send_asynchronously and self._futures:
             raise ValueError('Requests are pending. '
                              'You must call the wait() method to wait for them to '
-                             'finish before sending a synchronous request')
+                             'finish before sending another request')
 
         uid = self._create_request(service, attribute, *args, **kwargs)
         if send_asynchronously:
