@@ -133,8 +133,7 @@ class Client(Network, asyncio.Protocol):
         return self._address_manager
 
     def __repr__(self):
-        return '<{} object at {:#x} manager={} port={}>'.format(
-            self._name, id(self), self._address_manager, self._port)
+        return '<{} manager={} port={}>'.format(self._name, self._address_manager, self._port)
 
     def password(self, name):
         """
@@ -516,7 +515,7 @@ class Client(Network, asyncio.Protocol):
         send_asynchronously = kwargs.pop('asynchronous', False)
         timeout = kwargs.pop('timeout', None)
         if not send_asynchronously and self._futures:
-            raise ValueError('Asynchronous requests are pending. '
+            raise ValueError('Requests are pending. '
                              'You must call the wait() method to wait for them to '
                              'finish before sending a synchronous request')
 
