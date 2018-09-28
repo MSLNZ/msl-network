@@ -214,3 +214,51 @@ def test_password_retrieval():
     assert bm._password() != services.admin_password
 
     services.shutdown(cxn)
+
+
+def test_basic_math_timeout_synchronous():
+    services = helper.ServiceStarter((BasicMath,))
+    cxn = connect(**services.kwargs)
+    bm = cxn.link('BasicMath')
+
+    a, b = 2, 10
+
+    # no timeout specified
+    assert bm.add(a, b) == a+b
+    assert bm.power(a, b) == a**b
+
+    # the `add` method sleeps for 1 second -> no timeout expected
+    assert bm.add(a, b, timeout=3) == a+b
+
+    # the `power` method sleeps for 6 seconds -> timeout expected
+    with raises(TimeoutError):
+        bm.power(a, b, timeout=3)
+
+    services.shutdown(cxn)
+
+
+def test_basic_math_timeout_asynchronous():
+    services = helper.ServiceStarter((BasicMath,))
+    cxn = connect(**services.kwargs)
+    bm = cxn.link('BasicMath')
+
+    a, b = 2, 10
+
+    add_1 = bm.add(a, b, asynchronous=True)
+    power_1 = bm.power(a, b, asynchronous=True)
+
+    # no timeout specified
+    cxn.send_pending_requests()
+    assert add_1.result() == a+b
+    assert power_1.result() == a**b
+
+    # the `add` method sleeps for 1 second -> no timeout expected
+    # the `power` method sleeps for 6 seconds -> timeout expected
+
+    add_2 = bm.add(a, b, asynchronous=True)
+    power_2 = bm.power(a, b, asynchronous=True)
+    with raises(TimeoutError):
+        # must wait for all futures to finish, so the `power` method is taking too long
+        cxn.send_pending_requests(timeout=3)
+
+    services.shutdown(cxn)
