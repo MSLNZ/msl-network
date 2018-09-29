@@ -201,7 +201,11 @@ class Network(object):
         try:
             self.send_line(writer, serialize(data).encode(self.encoding) + self.TERMINATION)
         except Exception as e:
-            self.send_error(writer, e, data['requester'])
+            try:
+                self.send_error(writer, e, data['requester'])
+            except KeyError:
+                # fixes Issue #5
+                raise e from None
 
     def send_error(self, writer, error, requester, *, uuid=''):
         """Send an error through the network.

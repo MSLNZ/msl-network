@@ -262,3 +262,54 @@ def test_basic_math_timeout_asynchronous():
         cxn.send_pending_requests(timeout=3)
 
     services.shutdown(cxn)
+
+
+def test_echo_json_not_serializable_synchronous():
+    services = helper.ServiceStarter((Echo,))
+    cxn = connect(**services.kwargs)
+    e = cxn.link('Echo')
+
+    # make sure that this is okay
+    a, k = e.echo('hello', x=1)
+    assert a[0] == 'hello'
+    assert k['x'] == 1
+
+    # send a complex number
+    with raises(TypeError) as exc:
+        e.echo(1+2j)
+    assert str(exc.value).endswith('not JSON serializable')
+
+    # make sure that the cxn._futures dict is empty so that we can send a valid request
+    a, k = e.echo(1)
+    assert a[0] == 1
+    assert not k
+
+    services.shutdown(cxn)
+
+
+def test_echo_json_not_serializable_asynchronous():
+    services = helper.ServiceStarter((Echo,))
+    cxn = connect(**services.kwargs)
+    e = cxn.link('Echo')
+
+    # make sure that this is okay
+    future = e.echo('hello', x=1, asynchronous=True)
+    cxn.send_pending_requests()
+    a, k, = future.result()
+    assert a[0] == 'hello'
+    assert k['x'] == 1
+
+    # send a complex number
+    future = e.echo(1+2j, asynchronous=True)
+    with raises(TypeError) as exc:
+        cxn.send_pending_requests()
+    assert str(exc.value).endswith('not JSON serializable')
+
+    # make sure that the cxn._futures dict is empty so that we can send a valid request
+    future = e.echo(1, asynchronous=True)
+    cxn.send_pending_requests()
+    a, k, = future.result()
+    assert a[0] == 1
+    assert not k
+
+    services.shutdown(cxn)

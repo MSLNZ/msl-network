@@ -523,11 +523,18 @@ class Client(Network, asyncio.Protocol):
         if send_asynchronously:
             return self._futures[uid]
         else:
-            self.send_data(self._transport, self._requests[uid])
-            self._wait(uid=uid, timeout=timeout)
-            result = self._futures[uid].result()
-            self._remove_future(uid)
-            return result
+            try:
+                self.send_data(self._transport, self._requests[uid])
+            except Exception:
+                # fixes Issue #5 for synchronous requests
+                self._futures[uid].cancel()
+                self._remove_future(uid)
+                raise
+            else:
+                self._wait(uid=uid, timeout=timeout)
+                result = self._futures[uid].result()
+                self._remove_future(uid)
+                return result
 
     def send_pending_requests(self, *, wait=True, timeout=None):
         """Send all pending requests to the Network :class:`~msl.network.manager.Manager`.
@@ -548,7 +555,13 @@ class Client(Network, asyncio.Protocol):
         for request in self._requests.values():
             if self._debug:
                 log.debug('sending request to {}.{}'.format(request['service'], request['attribute']))
-            self.send_data(self._transport, request)
+            try:
+                self.send_data(self._transport, request)
+            except Exception:
+                # fixes Issue #5 for asynchronous requests
+                self._futures[request['uuid']].cancel()
+                self._remove_future(request['uuid'])
+                raise
         self._pending_requests_sent = True
         if wait:
             self._wait(timeout=timeout)
