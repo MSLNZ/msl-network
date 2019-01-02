@@ -683,7 +683,15 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
         if manager.client_writers or manager.service_writers:
             loop.run_until_complete(manager.shutdown_manager())
 
-        for task in asyncio.Task.all_tasks(loop):
+        if sys.version_info >= (3, 7):
+            all_tasks = asyncio.all_tasks
+        else:
+            # From the docs:
+            #  This method is deprecated and will be removed in Python 3.9.
+            #  Use the asyncio.all_tasks() function instead.
+            all_tasks = asyncio.Task.all_tasks
+
+        for task in all_tasks(loop=loop):
             task.cancel()
 
         log.info('closing the server')
