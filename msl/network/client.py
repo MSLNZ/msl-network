@@ -173,6 +173,9 @@ class Client(Network, asyncio.Protocol):
         """Link with a :class:`~msl.network.service.Service` on the Network
         :class:`~msl.network.manager.Manager`.
 
+        .. versionchanged:: 0.3
+           Added the `timeout` keyword argument.
+
         Parameters
         ----------
         service : :class:`str`
@@ -215,6 +218,9 @@ class Client(Network, asyncio.Protocol):
     def manager(self, *, as_yaml=False, indent=4, timeout=None):
         """Returns the :obj:`~msl.network.network.Network.identity` of the
         Network :class:`~msl.network.manager.Manager`.
+
+        .. versionchanged:: 0.3
+           Added the `timeout` keyword argument.
 
         .. _YAML: https://en.wikipedia.org/wiki/YAML
 
@@ -279,6 +285,9 @@ class Client(Network, asyncio.Protocol):
         The user that calls this method must have administrative privileges for that
         Network :class:`~msl.network.manager.Manager`. See also :mod:`msl.network.cli_user`
         for details on how to create a user that is an administrator .
+
+        .. versionchanged:: 0.3
+           Added the `timeout` option as one of the `**kwargs`.
 
         Parameters
         ----------
@@ -447,6 +456,9 @@ class Client(Network, asyncio.Protocol):
         notation ``.`` for accessing an `attribute` from the :class:`~msl.network.service.Service`
         class.
 
+        .. versionchanged:: 0.3
+           Added the `timeout` option as one of the `**kwargs`.
+
         Parameters
         ----------
         service : :class:`str`
@@ -538,6 +550,9 @@ class Client(Network, asyncio.Protocol):
     def send_pending_requests(self, *, wait=True, timeout=None):
         """Send all pending requests to the Network :class:`~msl.network.manager.Manager`.
 
+        .. versionchanged:: 0.3
+           Added the `timeout` keyword argument.
+
         Parameters
         ----------
         wait : :class:`bool`, optional
@@ -606,6 +621,9 @@ class Client(Network, asyncio.Protocol):
 
     def wait(self, timeout=None):
         """This method will not return until all pending requests are done executing.
+
+        .. versionchanged:: 0.3
+           Added the `timeout` keyword argument.
 
         Parameters
         ----------
