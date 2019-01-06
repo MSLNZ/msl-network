@@ -2,17 +2,18 @@
 Release Notes
 =============
 
-Version 0.2.1.dev0
-==================
+Version 0.3.0 (2019.01.06)
+==========================
 
 - Added
 
-  * every request for a `Client` can now specify a timeout value
+  * every request from a `Client` can now specify a timeout value
   * the docs now include an example for how to send requests to the ``Echo`` `Service`
 
 - Changed
 
-  * the __repr__ method for a `Client` no longer includes the id as a hex number
+  * the default `timeout` value for connecting to the `Manager` is now 10 seconds
+  * the `__repr__` method for a `Client` no longer includes the id as a hex number
 
 - Fixed
 
@@ -24,7 +25,7 @@ Version 0.2.1.dev0
 
 - Removed
 
-  * the __repr__ method for a `Service`
+  * the `__repr__` method for a `Service`
 
 Version 0.2.0 (2018.08.24)
 ==========================
