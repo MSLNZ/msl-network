@@ -221,7 +221,7 @@ class Client(Network, asyncio.Protocol):
         Parameters
         ----------
         as_yaml : :class:`bool`, optional
-            Whether to return the information as a YAML_\-style string.
+            Whether to return the information as a YAML_ string.
         indent : :class:`int`, optional
             The amount of indentation added for each recursive level. Only used if
             `as_yaml` is :data:`True`.
