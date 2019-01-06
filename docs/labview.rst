@@ -13,7 +13,7 @@ to (de)serialize JSON_ data.
 
 The first step is to :ref:`start-manager`. Since LabVIEW does not natively support the TLS_ protocol you must
 start the Network :class:`~msl.network.manager.Manager` with the ``--disable-tls`` flag, and, to simplify the
-examples below, do not use any authentication, i.e., run:
+examples below, do not use any authentication, i.e., run
 
 .. code-block:: console
 

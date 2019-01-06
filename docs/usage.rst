@@ -15,7 +15,7 @@ Start the Network Manager
 -------------------------
 
 The first thing to do is to start the Network :class:`~msl.network.manager.Manager`. Open a
-command prompt (Windows) or a terminal (\*nix) and run:
+`command prompt`_ (Windows) or a terminal (\*nix) and run:
 
 .. code-block:: console
 
@@ -31,7 +31,7 @@ Running this command will automatically perform the following default actions:
   to connect to the Network :class:`~msl.network.manager.Manager`
 
 You can override the default actions, for example, use `Elliptic-Curve Cryptography`_ rather than
-RSA_. For more details refer to the help that is available from the command line, for example:
+RSA_. For more details refer to the help that is available from the command line, for example
 
 .. code-block:: console
 
@@ -59,17 +59,12 @@ BasicMath Service
 
 .. literalinclude:: ../msl/examples/network/basic_math.py
 
-To start the :ref:`basic-math-service` run the following command in a command prompt (Windows):
+The :ref:`basic-math-service` is included with **MSL-Network**. To start the service run the following
+command in a `command prompt`_ (Windows) or in a terminal (\*nix, replace *python* with *python3*)
 
 .. code-block:: console
 
    python -c "from msl.examples.network import BasicMath; BasicMath().start()"
-
-or, in a terminal (\*nix):
-
-.. code-block:: console
-
-   python3 -c "from msl.examples.network import BasicMath; BasicMath().start()"
 
 This will start the :ref:`basic-math-service` on the Network :class:`~msl.network.manager.Manager`
 that is running on the same computer.
@@ -81,20 +76,20 @@ Connect to the Network Manager as a Client
 
 Now that there is a :ref:`basic-math-service` running on the Network :class:`~msl.network.manager.Manager`
 (which are both running on the same computer that the :class:`~msl.network.client.Client` will be), we can
-:func:`~msl.network.client.connect` to the Network :class:`~msl.network.manager.Manager`:
+:func:`~msl.network.client.connect` to the Network :class:`~msl.network.manager.Manager`
 
 .. code-block:: pycon
 
    >>> from msl.network import connect
    >>> cxn = connect()
 
-establish a link with the :ref:`basic-math-service`:
+establish a link with the :ref:`basic-math-service`
 
 .. code-block:: pycon
 
    >>> bm = cxn.link('BasicMath')
 
-and send a request to the :ref:`basic-math-service`:
+and send a request to the :ref:`basic-math-service`
 
 .. code-block:: pycon
 
@@ -103,7 +98,7 @@ and send a request to the :ref:`basic-math-service`:
 
 *See the* :ref:`asynchronous-programming` *section for an example on how to send requests asynchronously.*
 
-We can find out what devices are currently connected to the :class:`~msl.network.manager.Manager`:
+To find out what devices are currently connected to the :class:`~msl.network.manager.Manager`, execute
 
 .. code-block:: pycon
 
@@ -135,7 +130,7 @@ We can find out what devices are currently connected to the :class:`~msl.network
 If ``as_yaml=False``, which is the default boolean value, then the returned value would be a
 :class:`dict`, rather than a :class:`str`, containing the same information.
 
-To disconnect from the :class:`~msl.network.manager.Manager`, enter:
+To disconnect from the :class:`~msl.network.manager.Manager`, execute
 
 .. code-block:: pycon
 
@@ -145,3 +140,4 @@ To disconnect from the :class:`~msl.network.manager.Manager`, enter:
 .. _TLS: https://en.wikipedia.org/wiki/Transport_Layer_Security
 .. _Elliptic-Curve Cryptography: https://en.wikipedia.org/wiki/Elliptic-curve_cryptography
 .. _SQLite: https://www.sqlite.org/
+.. _command prompt: https://en.wikipedia.org/wiki/Cmd.exe

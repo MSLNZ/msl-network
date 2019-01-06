@@ -144,18 +144,12 @@ Included Examples
 -----------------
 The following :class:`~msl.network.service.Service`\'s are included with **MSL-Network**. To start
 any of these :class:`~msl.network.service.Service`\'s, first make sure that you :ref:`start-manager`,
-and then run the following command in a command prompt (Windows) -- here the ``Echo``
-:class:`~msl.network.service.Service` is started
+and then run the following command in a `command prompt`_ (Windows) or in a terminal (\*nix, replace *python*
+with *python3*). For this example the ``Echo`` :class:`~msl.network.service.Service` is started
 
 .. code-block:: console
 
    python -c "from msl.examples.network import Echo; Echo().start()"
-
-or, in a terminal (\*nix)
-
-.. code-block:: console
-
-   python3 -c "from msl.examples.network import Echo; Echo().start()"
 
 You can then send requests to the ``Echo`` :class:`~msl.network.service.Service`
 
@@ -193,3 +187,4 @@ MyArray Service
 
 
 .. _MSL-Equipment: https://msl-equipment.readthedocs.io/en/latest/
+.. _command prompt: https://en.wikipedia.org/wiki/Cmd.exe
