@@ -18,7 +18,7 @@ from .exceptions import MSLNetworkError
 log = logging.getLogger(__name__)
 
 
-def connect(*, name='Client', host='localhost', port=PORT, timeout=5, username=None,
+def connect(*, name='Client', host='localhost', port=PORT, timeout=10, username=None,
             password=None, password_manager=None, certificate=None, disable_tls=False,
             assert_hostname=True, debug=False):
     """Create a new connection to a Network :class:`~msl.network.manager.Manager`
@@ -59,7 +59,7 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=5, username=N
         Whether to force the hostname of the Network :class:`~msl.network.manager.Manager`
         to match the value of `host`. Default is :data:`True`.
     debug : :class:`bool`, optional
-        Whether to log debug messages for the :class:`Client`.
+        Whether to log :py:ref:`DEBUG <levels>` messages of the :class:`Client`.
 
     Returns
     -------
@@ -297,13 +297,14 @@ class Client(Network, asyncio.Protocol):
 
         Examples
         --------
-        ``admin_request('users_table.usernames')``
+        ::
 
-        ``admin_request('users_table.is_user_registered', 'n.bohr')``
-
-        ``admin_request('connections_table.connections', timestamp1='2017-11-29', timestamp2='2017-11-30')``
-
-        ``admin_request('shutdown_manager')``
+            >>> from msl.network import connect  # doctest: +SKIP
+            >>> cxn = connect()  # doctest: +SKIP
+            >>> unames = cxn.admin_request('users_table.usernames')  # doctest: +SKIP
+            >>> is_niels = cxn.admin_request('users_table.is_user_registered', 'n.bohr')  # doctest: +SKIP
+            >>> conns = cxn.admin_request('connections_table.connections', timestamp1='2017-11-29', timestamp2='2017-11-30')  # doctest: +SKIP
+            >>> cxn.admin_request('shutdown_manager')  # doctest: +SKIP
         """
         # don't pop() the timeout, _send_request_for_manager uses it also
         timeout = kwargs.get('timeout', None)
@@ -488,28 +489,26 @@ class Client(Network, asyncio.Protocol):
         Example
         -------
         The following example shows how the :meth:`link` and :meth:`send_request` methods
-        can be used to send a request to a :class:`~msl.network.service.Service`
+        can be used to send a request to a :class:`~msl.network.service.Service`. Connect to the
+        Network :class:`~msl.network.manager.Manager` at ``localhost``::
 
-        >>> from msl.network import connect  # doctest: +SKIP
+            >>> from msl.network import connect  # doctest: +SKIP
+            >>> cxn = connect()  # doctest: +SKIP
 
-        connect to the Network :class:`~msl.network.manager.Manager` at ``localhost``
+        using the :meth:`send_request` method to send requests to the example :ref:`basic-math-service`::
 
-        >>> c = connect()  # doctest: +SKIP
+            >>> cxn.send_request('BasicMath', 'add', 2, 3)  # doctest: +SKIP
+            5
+            >>> cxn.send_request('BasicMath', 'subtract', 2, 3)  # doctest: +SKIP
+            -1
 
-        using the :meth:`send_request` method to send requests to the example :ref:`basic-math-service`
+        using the :meth:`link` method to create a link with the :ref:`basic-math-service` and then send requests::
 
-        >>> c.send_request('BasicMath', 'add', 2, 3)  # doctest: +SKIP
-        5
-        >>> c.send_request('BasicMath', 'subtract', 2, 3)  # doctest: +SKIP
-        -1
-
-        using the :meth:`link` method to create a link with the :ref:`basic-math-service` and then send requests
-
-        >>> bm = c.link('BasicMath')  # doctest: +SKIP
-        >>> bm.add(2, 3)  # doctest: +SKIP
-        5
-        >>> bm.subtract(2, 3)  # doctest: +SKIP
-        -1
+            >>> bm = cxn.link('BasicMath')  # doctest: +SKIP
+            >>> bm.add(2, 3)  # doctest: +SKIP
+            5
+            >>> bm.subtract(2, 3)  # doctest: +SKIP
+            -1
 
         """
         send_asynchronously = kwargs.pop('asynchronous', False)
@@ -543,8 +542,8 @@ class Client(Network, asyncio.Protocol):
         ----------
         wait : :class:`bool`, optional
             Whether to wait for all pending requests to finish before returning to
-            the calling program. If wait is :data:`True` then this method will block
-            until all requests are done executing. If wait is :data:`False` then this
+            the calling program. If `wait` is :data:`True` then this method will block
+            until all requests are done executing. If `wait` is :data:`False` then this
             method will return immediately and you must call the :meth:`wait` method
             to ensure that all pending requests have a result.
         timeout : :class:`float`, optional

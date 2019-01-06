@@ -243,11 +243,11 @@ class Service(Network, asyncio.Protocol):
         Parameters
         ----------
         boolean : :class:`bool`
-            Whether to enable or disable debug logging messages.
+            Whether to enable or disable :py:ref:`DEBUG <levels>` logging messages.
         """
         self._debug = bool(boolean)
 
-    def start(self, *, host='localhost', port=PORT, timeout=5.0, username=None, password=None,
+    def start(self, *, host='localhost', port=PORT, timeout=10, username=None, password=None,
               password_manager=None, certificate=None, disable_tls=False, assert_hostname=True, debug=False):
         """Start the :class:`Service`.
 

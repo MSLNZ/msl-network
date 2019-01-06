@@ -14,7 +14,7 @@ HOSTNAME = socket.gethostname()
 """:class:`str`: The hostname of the Network :class:`~msl.network.manager.Manager`."""
 
 HOME_DIR = os.environ.get('MSL_NETWORK_HOME', os.path.join(os.path.expanduser('~'), '.msl', 'network'))
-""":class:`str`: The default $HOME directory where all files are to be located. 
+""":class:`str`: The default ``$HOME`` directory where all files are to be located. 
 
 Can be overwritten by specifying a ``MSL_NETWORK_HOME`` environment variable.
 """

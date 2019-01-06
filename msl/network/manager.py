@@ -60,7 +60,7 @@ class Manager(Network):
             The table in the database that keeps the records of the trusted hostnames that
             can connect to the Network :class:`Manager`.
         debug : :class:`bool`
-            Whether debug logging messages are displayed.
+            Whether :py:ref:`DEBUG <levels>` logging messages are displayed.
         loop : :class:`asyncio.AbstractEventLoop`
             The event loop that the Network :class:`Manager` is running in.
         """
@@ -570,12 +570,12 @@ class Manager(Network):
         })
 
     def set_debug(self, boolean):
-        """Set the debug mode of the Network :class:`Manager`.
+        """Set the :py:ref:`DEBUG <levels>` mode of the Network :class:`Manager`.
 
         Parameters
         ----------
         boolean : :class:`bool`
-            Whether to enable or disable debug logging messages.
+            Whether to enable or disable :py:ref:`DEBUG <levels>` logging messages.
         """
         self._debug = bool(boolean)
 
@@ -612,7 +612,7 @@ class Peer(object):
 
 
 def start(password, login, hostnames, port, cert, key, key_password, database, disable_tls, debug):
-    """Start the asynchronous network manager event loop.
+    """Start the Network :class:`.Manager`\'s event loop.
 
     .. attention::
         Not to be called directly. To be called from the command line.
