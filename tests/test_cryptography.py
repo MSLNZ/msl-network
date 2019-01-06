@@ -7,7 +7,7 @@ import pytest
 from msl.network import cryptography
 
 
-def test_cryo():
+def test_crypto():
     filename = 'msl-network-testing'
     key_path = os.path.join(tempfile.gettempdir(), filename + '.key')
     cert_path = os.path.join(tempfile.gettempdir(), filename + '.crt')
