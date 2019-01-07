@@ -5,6 +5,10 @@ Release Notes
 Version 0.3.1.dev0
 ==================
 
+- Fixed
+
+  * issue `#6 <https://github.com/MSLNZ/msl-network/issues/6>`_
+
 Version 0.3.0 (2019.01.06)
 ==========================
 

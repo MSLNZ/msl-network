@@ -1,7 +1,6 @@
 """
 The Network :class:`Manager`.
 """
-import re
 import sys
 import ssl
 import socket
@@ -12,12 +11,10 @@ import platform
 from .network import Network
 from .json import deserialize
 from .constants import HOSTNAME, IS_WINDOWS
-from .utils import parse_terminal_input
+from .utils import parse_terminal_input, _ipv4_regex
 from .database import ConnectionsTable, UsersTable, HostnamesTable
 
 log = logging.getLogger(__name__)
-
-_ipv4_regex = re.compile(r'\d+\.\d+\.\d+\.\d+')
 
 
 class Manager(Network):

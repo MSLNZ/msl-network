@@ -313,3 +313,9 @@ def test_echo_json_not_serializable_asynchronous():
     assert not k
 
     services.shutdown(cxn)
+
+
+def test_cannot_specify_multiple_passwords():
+    echo = Echo()
+    with raises(ValueError):
+        echo.start(password='abc', password_manager='xyz')

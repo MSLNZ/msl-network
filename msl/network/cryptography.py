@@ -2,7 +2,6 @@
 Functions to create a self-signed certificate for the secure SSL/TLS protocol.
 """
 import os
-import re
 import ssl
 import sys
 import logging
@@ -18,7 +17,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import dsa
 
-from .utils import ensure_root_path
+from .utils import ensure_root_path, _oid_regex
 from .constants import KEY_DIR, CERT_DIR, HOSTNAME
 
 log = logging.getLogger(__name__)
@@ -299,7 +298,7 @@ def get_metadata(cert):
         return oid
 
     def oid_to_dict(oid):
-        match = re.search(r'oid=(.+), name=(.+)\)', str(oid))
+        match = _oid_regex.search(str(oid))
         return {'oid': match.group(1), 'name': match.group(2)}
 
     meta = dict()

@@ -174,3 +174,28 @@ def test_ensure_root():
     # these should not raise an error (nor create any directories)
     utils.ensure_root_path(None)
     utils.ensure_root_path('')
+
+
+def test_is_manager_regex():
+    search = utils._is_manager_regex.search
+    assert search('name') is None
+    assert search('name:') is None
+    assert search('name1') is None
+    assert search('name:1') is not None
+    assert search('name12') is None
+    assert search('name:12') is not None
+    assert search('name123') is None
+    assert search('name:123') is not None
+    assert search('name1234') is None
+    assert search('name:1234') is not None
+    assert search('name12345') is None
+    assert search('name:12345') is not None
+    assert search('name:123:45') is not None
+
+
+def test_ipv4_regex():
+    search = utils._ipv4_regex.search
+    assert search('1.2.3') is None
+    assert search('1.2.3.4') is not None
+    assert search('localhost') is None
+    assert search('en.wikipedia.org') is None

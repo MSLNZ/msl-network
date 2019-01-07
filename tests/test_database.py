@@ -16,11 +16,14 @@ def test_users_table():
         ('Alice', 'alice123', False),
         ('Bob', 'bob likes cheese', []),
         ('charlie', 'CharliesAngels', 0),
-        ('jdoe', 'anonymous & unknown', None),
+        ('jdoe2', 'anonymous & unknown', None),  # username can end with an integer
     ]
 
     for user in users:
         table.insert(*user)
+
+    with pytest.raises(ValueError):
+        table.insert('myname:1234', 'whatever', False)  # username cannot end with ":integer"
 
     user = table.get_user('admin')
     assert user[1] == 'admin'
@@ -31,7 +34,7 @@ def test_users_table():
     assert not table.get_user('does not exist')
 
     with pytest.raises(ValueError):
-        table.insert('Alice', 'whatever', 0)
+        table.insert('Alice', 'whatever', 0)  # an Alice already exists in the table
 
     assert len(table.usernames()) == 6
     assert 'admin' in table.usernames()
@@ -39,7 +42,7 @@ def test_users_table():
     assert 'Alice' in table.usernames()
     assert 'Bob' in table.usernames()
     assert 'charlie' in table.usernames()
-    assert 'jdoe' in table.usernames()
+    assert 'jdoe2' in table.usernames()
 
     with pytest.raises(ValueError):
         table.update('does not exist')
@@ -55,12 +58,12 @@ def test_users_table():
     assert not table.is_password_valid('Bob', 'bob likes cheese')
     assert table.is_password_valid('Bob', 'my new password')
 
-    assert not table.is_admin('jdoe')
-    assert not table.is_password_valid('jdoe', 'wrong password')
-    assert table.is_password_valid('jdoe', 'anonymous & unknown')
-    table.update('jdoe', password='password123ABC')
-    assert not table.is_admin('jdoe')
-    assert table.is_password_valid('jdoe', 'password123ABC')
+    assert not table.is_admin('jdoe2')
+    assert not table.is_password_valid('jdoe2', 'wrong password')
+    assert table.is_password_valid('jdoe2', 'anonymous & unknown')
+    table.update('jdoe2', password='password123ABC')
+    assert not table.is_admin('jdoe2')
+    assert table.is_password_valid('jdoe2', 'password123ABC')
 
     assert table.is_admin('enforcer')
     assert table.is_password_valid('enforcer', 'the second in command')
@@ -73,8 +76,8 @@ def test_users_table():
     with pytest.raises(ValueError):
         table.delete('does not exist')
 
-    table.delete('jdoe')
-    assert 'jdoe' not in table.usernames()
+    table.delete('jdoe2')
+    assert 'jdoe2' not in table.usernames()
 
     for name, is_admin in table.users():
         assert isinstance(name, str)

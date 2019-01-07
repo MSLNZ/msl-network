@@ -12,7 +12,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from .constants import DATABASE
-from .utils import localhost_aliases
+from .utils import localhost_aliases, _is_manager_regex
 
 log = logging.getLogger(__name__)
 
@@ -345,8 +345,10 @@ class UsersTable(Database):
         Raises
         -------
         ValueError
-            If a user with `username` already exists in the table or if `password` is empty.
+            If the `username` is invalid or if `password` is empty.
         """
+        if _is_manager_regex.search(username) is not None:
+            raise ValueError('A username cannot end with ":<integer>"')
         if not password:
             raise ValueError('You must specify a password')
 
@@ -428,7 +430,7 @@ class UsersTable(Database):
         ValueError
             If `username` is not in the table.
         """
-        self._ensure_user_exists(username, 'update')
+        self._ensure_user_exists(username, 'delete')
         self.execute('DELETE FROM %s WHERE username = ?;' % self.NAME, (username,))
         self.connection.commit()
 

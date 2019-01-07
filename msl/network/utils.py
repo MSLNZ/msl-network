@@ -11,6 +11,12 @@ _args_regex = re.compile(r'[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
 
 _kwargs_regex = re.compile(r'(\w+)[\s]*=[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
 
+_is_manager_regex = re.compile(r':\d+$')
+
+_ipv4_regex = re.compile(r'\d+\.\d+\.\d+\.\d+')
+
+_oid_regex = re.compile(r'oid=(.+), name=(.+)\)')
+
 
 def ensure_root_path(path):
     """Ensure that the root directory of the file path exists.

@@ -1,5 +1,6 @@
 """
-Connect to a Network :class:`~msl.network.manager.Manager`.
+Use the :func:`connect` function to connect to the Network
+:class:`~msl.network.manager.Manager` as a :class:`Client`
 """
 import time
 import uuid
@@ -11,7 +12,7 @@ import threading
 
 from .network import Network
 from .json import deserialize
-from .utils import localhost_aliases
+from .utils import localhost_aliases, _is_manager_regex
 from .constants import PORT, HOSTNAME
 from .exceptions import MSLNetworkError
 
@@ -38,17 +39,18 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=10, username=
         The maximum number of seconds to wait to establish the connection to the
         :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
     username : :class:`str`, optional
-        The username to use to connect to Network :class:`~msl.network.manager.Manager`.
-        If not specified then you will be asked for the `username` when needed.
+        The username to use to connect to the Network :class:`~msl.network.manager.Manager`.
+        You need to specify a username only if the Network :class:`~msl.network.manager.Manager`
+        was started with the ``--auth-login`` flag. If a username is required and you have not
+        specified it when you called this function then you will be asked for a username.
     password : :class:`str`, optional
-        The password that is associated with `username`. If not specified then you will
-        be asked for the password when needed.
+        The password that is associated with `username`. If a password is required and you
+        have not specified it when you called this function then you will be asked for the password.
     password_manager : :class:`str`, optional
-        The password of the Network :class:`~msl.network.manager.Manager`. A Network
-        :class:`~msl.network.manager.Manager` can be started with the option to
-        use a global password that is required for all connecting devices to specify
-        in order for the device to connect to it. If the `password_manager` value is
-        not specified then you will be asked for the password when needed.
+        The password that is associated with the Network :class:`~msl.network.manager.Manager`.
+        You need to specify the password only if the Network :class:`~msl.network.manager.Manager`
+        was started with the ``--auth-password`` flag. If a password is required and you
+        have not specified it when you called this function then you will be asked for the password.
     certificate : :class:`str`, optional
         The path to the certificate file to use for the secure connection
         with the Network :class:`~msl.network.manager.Manager`.
@@ -57,14 +59,21 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=10, username=
         without using the TLS protocol.
     assert_hostname : :class:`bool`, optional
         Whether to force the hostname of the Network :class:`~msl.network.manager.Manager`
-        to match the value of `host`. Default is :data:`True`.
+        to match the value of `host`.
     debug : :class:`bool`, optional
-        Whether to log :py:ref:`DEBUG <levels>` messages of the :class:`Client`.
+        Whether to log :py:ref:`DEBUG <levels>` messages for the :class:`Client`.
 
     Returns
     -------
     :class:`Client`
         A new connection.
+
+    Examples
+    --------
+    ::
+
+        >>> from msl.network import connect
+        >>> cxn = connect()  # doctest: +SKIP
     """
     client = Client(name)
     success = client.start(host, port, timeout, username, password, password_manager,
@@ -145,7 +154,7 @@ class Client(Network, asyncio.Protocol):
         # remains secure, however, a Client does not need this security check because a Client
         # cannot send a request to other Clients
         self._connection_successful = True
-        if name == self._address_manager:
+        if _is_manager_regex.search(name) is not None:
             if self._password_manager is None:
                 self._password_manager = getpass.getpass('Enter the password for ' + name + ' > ')
             return self._password_manager

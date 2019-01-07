@@ -1,6 +1,6 @@
 """
-Base class for all :class:`~msl.network.manager.Manager`'\s,
-:class:`~msl.network.service.Service`'\s and :class:`~msl.network.client.Client`'\s.
+Base class for a :class:`~msl.network.manager.Manager`,
+:class:`~msl.network.service.Service` and :class:`~msl.network.client.Client`.
 """
 import time
 import asyncio
@@ -17,8 +17,8 @@ log = logging.getLogger(__name__)
 
 class Network(object):
     """
-    Base class for all Network :class:`~msl.network.manager.Manager`'\s,
-    :class:`~msl.network.service.Service`'\s and :class:`~msl.network.client.Client`'\s.
+    Base class for the Network :class:`~msl.network.manager.Manager`,
+    :class:`~msl.network.service.Service` and :class:`~msl.network.client.Client`.
     """
     TERMINATION = b'\r\n'
     """:class:`bytes`: The sequence of bytes that signify the end of the data being sent."""
@@ -35,8 +35,8 @@ class Network(object):
 
         All devices on the network must be able to identify themselves to any
         other device that is connected to the network. There are 3 possible types
-        of network devices -- :class:`~msl.network.manager.Manager`\'s,
-        :class:`~msl.network.service.Service`\'s, :class:`~msl.network.client.Client`\'s.
+        of network devices -- a :class:`~msl.network.manager.Manager`,
+        a :class:`~msl.network.service.Service` and a :class:`~msl.network.client.Client`.
         The member names and JSON_ datatype for each network device is described below.
 
         .. _JSON: https://www.json.org/
@@ -64,12 +64,12 @@ class Network(object):
                 The name of the operating system that the :class:`~msl.network.manager.Manager`
                 is running on.
 
-            clients: array
-                An object (a Python :class:`dict`) of :class:`~msl.network.client.Client`\'s that
-                are currently connected to the Network :class:`~msl.network.manager.Manager`.
+            clients: object
+                An object (a Python :class:`dict`) of all :class:`~msl.network.client.Client` devices
+                that are currently connected to the Network :class:`~msl.network.manager.Manager`.
 
             services: object
-                An object (a Python :class:`dict`) of :class:`~msl.network.service.Service`\'s
+                An object (a Python :class:`dict`) of all :class:`~msl.network.service.Service` devices
                 that are currently connected to the Network :class:`~msl.network.manager.Manager`.
 
         * :class:`~msl.network.service.Service`
@@ -82,7 +82,7 @@ class Network(object):
                 (can contain spaces).
 
             attributes: object
-                An object (a Python :class:`dict`) of attributes that the
+                An object (a Python :class:`dict`) of the attributes that the
                 :class:`~msl.network.service.Service` provides. The keys are
                 the function names and the values are the function signatures
                 (expressed as a string).

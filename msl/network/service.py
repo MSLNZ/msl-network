@@ -33,7 +33,6 @@ class Service(Network, asyncio.Protocol):
         self._loop = None
         self._username = None
         self._password = None
-        self._password_manager = None
         self._transport = None
         self._identity = dict()
         self._debug = False
@@ -74,12 +73,9 @@ class Service(Network, asyncio.Protocol):
             # blocking function and therefore the Service blocks all other requests until getpass returns
             return Service._PASSWORD_MESSAGE
         self._connection_successful = True
-        if name == self._address_manager and self._password_manager is not None:
-            return self._password_manager
-        elif self._password is not None:
+        if self._password is not None:
             return self._password
-        else:
-            return getpass.getpass('Enter the password for ' + name + ' > ')
+        return getpass.getpass('Enter the password for ' + name + ' > ')
 
     def username(self, name):
         """
@@ -92,7 +88,7 @@ class Service(Network, asyncio.Protocol):
             return 'You do not have permission to receive the username'
         self._connection_successful = True
         if self._username is None:
-            return input('Enter the username for ' + name + ' > ')
+            return input('Enter a username for ' + name + ' > ')
         return self._username
 
     def identity(self):
@@ -207,7 +203,7 @@ class Service(Network, asyncio.Protocol):
             executor = ThreadPoolExecutor(max_workers=1)
             self._futures[uid] = self._loop.run_in_executor(executor, self._function, attrib, data, uid)
         else:
-            if data['attribute'].startswith('_password'):
+            if data['attribute'] == '_password':
                 attrib = Service._PASSWORD_MESSAGE
             self.send_reply(self._transport, attrib, requester=data['requester'], uuid=data['uuid'])
         log.info(data['requester'] + ' requested ' + data['attribute'] + ' [{} executing]'.format(len(self._futures)))
@@ -263,19 +259,18 @@ class Service(Network, asyncio.Protocol):
             The maximum number of seconds to wait to establish the connection to the
             :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
         username : :class:`str`, optional
-            The username to use to connect to Network :class:`~msl.network.manager.Manager`.
-            If not specified then you will be asked for the username (only if the Network
-            :class:`~msl.network.manager.Manager` requires login credentials to be able
-            to connect to it).
+            The username to use to connect to the Network :class:`~msl.network.manager.Manager`.
+            You need to specify a username only if the Network :class:`~msl.network.manager.Manager`
+            was started with the ``--auth-login`` flag. If a username is required and you have not
+            specified it when you called this method then you will be asked for a username.
         password : :class:`str`, optional
-            The password that is associated with `username`. If the `password` is not
-            specified then you will be asked for the password if needed.
+            The password that is associated with `username`. If a password is required and you
+            have not specified it when you called this method then you will be asked for the password.
         password_manager : :class:`str`, optional
-            The password of the Network :class:`~msl.network.manager.Manager`. A Network
-            :class:`~msl.network.manager.Manager` can be started with the option to
-            set a global password which all connecting devices must enter in order
-            to connect to it. If the `password_manager` value is not specified then you will
-            be asked for the password if needed.
+            The password that is associated with the Network :class:`~msl.network.manager.Manager`.
+            You need to specify the password only if the Network :class:`~msl.network.manager.Manager`
+            was started with the ``--auth-password`` flag. If a password is required and you
+            have not specified it when you called this method then you will be asked for the password.
         certificate : :class:`str`, optional
             The path to the certificate file to use for the TLS connection
             with the Network :class:`~msl.network.manager.Manager`.
@@ -284,9 +279,9 @@ class Service(Network, asyncio.Protocol):
             without using the TLS protocol.
         assert_hostname : :class:`bool`, optional
             Whether to force the hostname of the Network :class:`~msl.network.manager.Manager`
-            to match the value of `host`. Default is :data:`True`.
+            to match the value of `host`.
         debug : :class:`bool`, optional
-            Whether to log debug messages for the :class:`Service`.
+            Whether to log :py:ref:`DEBUG <levels>` messages for the :class:`Service`.
         """
         if self._transport is not None:
             raise RuntimeError('The Service has already started')
@@ -299,8 +294,11 @@ class Service(Network, asyncio.Protocol):
 
         self._debug = bool(debug)
         self._username = username
-        self._password = password
-        self._password_manager = password_manager
+
+        if password and password_manager:
+            raise ValueError('Specify either "password" or "password_manager" but not both.\n'
+                             'A Manager cannot be started using multiple authentication methods.')
+        self._password = password or password_manager
 
         # create a new event loop, rather than using asyncio.get_event_loop()
         # (in case the Service does not run in the threading._MainThread)
