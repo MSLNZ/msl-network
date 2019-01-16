@@ -2,12 +2,24 @@
 Release Notes
 =============
 
-Version 0.3.1.dev0
+Version 0.4.0.dev0
 ==================
+
+- Added
+
+  * a `Service` now accepts `name` and `max_clients` as keyword arguments when it is instantiated
 
 - Fixed
 
-  * issue `#6 <https://github.com/MSLNZ/msl-network/issues/6>`_
+  * issue `#7 <https://github.com/MSLNZ/msl-network/issues/7>`_ - a `Service` can now specify
+    the maximum number of `Client`\s that can be linked with it
+  * issue `#6 <https://github.com/MSLNZ/msl-network/issues/6>`_ - the `password_manager` keyword
+    argument is now used properly when starting a `Service`
+
+- Removed
+
+  * the `name` class attribute for a `Service`
+  * the `send_request` method for a `Client` (must link with a `Service`)
 
 Version 0.3.0 (2019.01.06)
 ==========================
