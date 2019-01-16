@@ -90,6 +90,8 @@ def fetch_init(key):
     return re.compile(r'{}\s*=\s*(.*)'.format(key)).search(init_text).group(1)[1:-1]
 
 
+install_requires = ['cryptography']
+
 testing = {'test', 'tests', 'pytest'}.intersection(sys.argv)
 pytest_runner = ['pytest-runner'] if testing else []
 
@@ -119,9 +121,9 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Topic :: Scientific/Engineering :: Physics',
     ],
-    setup_requires=sphinx + pytest_runner,
+    setup_requires=sphinx + pytest_runner + install_requires,
     tests_require=['pytest-cov', 'pytest'],
-    install_requires=['cryptography'],
+    install_requires=install_requires,
     cmdclass={'docs': BuildDocs, 'apidocs': ApiDocs},
     entry_points={
         'console_scripts': [
