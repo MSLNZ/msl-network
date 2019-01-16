@@ -6,106 +6,26 @@ Python Examples
 The following examples illustrate some ideas on how one could use **MSL-Network**.
 
 1. :ref:`digital-multimeter`
-2. :ref:`included-examples`
+2. :ref:`additional-examples`
 
 .. _digital-multimeter:
 
 Digital Multimeter
 ------------------
 
-This example shows how a digital multimeter that has a GPIB or RS232 interface can be controlled from
-any computer that is on the network. It uses the MSL-Equipment_ package to connect to the digital multimeter
-and **MSL-Network** to enable the digital multimeter as a :class:`~msl.network.service.Service` on the network.
+This example shows how a digital multimeter that has a non-Ethernet interface, e.g., GPIB or RS232, can be
+controlled from any computer that is on the network. It uses the MSL-Equipment_ package to connect to the digital
+multimeter and **MSL-Network** to enable the digital multimeter as a :class:`~msl.network.service.Service` on the
+network. This example is included with **MSL-Network** when it is installed, but since it requires additional hardware
+(a digital multimeter) it can only be run if the hardware is attached to the computer.
 
 The first task to do is to :ref:`start-manager` on the same computer that the digital multimeter is
-physically connected to (via a GPIB cable or a DB9 cable). Next, on the same computer, run the following program
-to start the digital multimeter :class:`~msl.network.service.Service`.
+physically connected to (via a GPIB cable or a DB9 cable). Next, on the same computer, copy and paste the
+following script to a file and run the script to start the digital multimeter :class:`~msl.network.service.Service`.
 
-.. code-block:: python
+.. literalinclude:: ../msl/examples/network/dmm.py
 
-    from msl.network import Service
-    from msl.equipment import Config
-
-
-    class DigitalMultimeter(Service):
-
-        # The name of this Service as it will appear on the Network Manager
-        name = 'Hewlett Packard 34401A'
-
-        def __init__(self, config_path):
-            """Initialize and start the Service.
-
-            Parameters
-            ----------
-            config_path : str
-                The path to the configuration file that is used by MSL-Equipment.
-            """
-
-            # Initialize the Service
-            super().__init__()
-
-            # Load the MSL-Equipment database
-            # See MSL-Equipment for details
-            db = Config(config_path).database()
-
-            # Connect to the digital multimeter
-            self._dmm = db.equipment['HP34401A'].connect()
-
-            # Start the Service
-            self.start()
-
-        def write(self, command):
-            """Write a command to the digital multimeter.
-
-            Parameters
-            ----------
-            command : str
-                The command to write.
-            """
-            return self._dmm.write(command)
-
-        def read(self):
-            """Read the response from the digital multimeter.
-
-            Returns
-            -------
-            str
-                The response.
-            """
-            return self._dmm.read()
-
-        def query(self, command):
-            """Query the digital multimeter.
-
-            Performs a write then a read.
-
-            Parameters
-            ----------
-            command : str
-                The command to write.
-
-            Returns
-            -------
-            str
-                The response.
-            """
-            return self._dmm.query(command)
-
-
-    if __name__ == '__main__':
-        import sys
-
-        # Allows for the option to provide the path to the MSL-Equipment
-        # configuration file from the command line
-        if len(sys.argv) > 1:
-            cfg = sys.argv[1]
-        else:
-            cfg = 'config.xml'
-
-        DigitalMultimeter(cfg)
-
-
-With the digital multimeter :class:`~msl.network.service.Service` running you can execute the following
+With the ``DigitalMultimeter`` :class:`~msl.network.service.Service` running you can execute the following
 commands on another computer that is on the same network as the :class:`~msl.network.manager.Manager`
 in order to interact with the digital multimeter from the remote computer.
 
@@ -129,23 +49,24 @@ Now we can send ``write``, ``read`` or ``query`` commands to the digital multime
 .. code-block:: pycon
 
    >>> dmm.query('MEASURE:VOLTAGE:DC?')
-   '-6.23954727E-02\n'
+   '-6.23954727E-02'
 
 When you are finished sending requests to the :class:`~msl.network.manager.Manager` you should disconnect
-from the :class:`~msl.network.manager.Manager`
+from the :class:`~msl.network.manager.Manager`. This will allow other :class:`~msl.network.client.Client`\'s
+to be able to control the digital multimeter.
 
 .. code-block:: pycon
 
    >>> cxn.disconnect()
 
-.. _included-examples:
+.. _additional-examples:
 
-Included Examples
------------------
+Additional (Runnable) Examples
+------------------------------
 The following :class:`~msl.network.service.Service`\'s are included with **MSL-Network**. To start
 any of these :class:`~msl.network.service.Service`\'s, first make sure that you :ref:`start-manager`,
 and then run the following command in a `command prompt`_ (Windows) or in a terminal (\*nix, replace *python*
-with *python3*). For this example the ``Echo`` :class:`~msl.network.service.Service` is started
+with *python3*). For this example, the ``Echo`` :class:`~msl.network.service.Service` is started
 
 .. code-block:: console
 
