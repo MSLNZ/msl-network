@@ -108,7 +108,7 @@ class Manager(Network):
             The stream writer.
         """
         peer = Peer(writer)  # a peer is either a Client or a Service
-        log.info('new connection request from ' + peer.address)
+        log.info('new connection request from {!r}'.format(peer.address))
         self.connections_table.insert(peer, 'new connection request')
 
         # create a new attribute called 'peer' for the StreamReader and StreamWriter
@@ -119,14 +119,14 @@ class Manager(Network):
             if not await self.check_manager_password(reader, writer):
                 return
         elif self.hostnames:
-            log.info(self._network_name + ' verifying hostname of ' + peer.network_name)
+            log.info('{!r} verifying hostname of {!r}'.format(self._network_name, peer.network_name))
             if peer.hostname not in self.hostnames:
-                log.info(peer.hostname + ' is not a trusted hostname, closing connection')
+                log.info('{!r} is not a trusted hostname, closing connection'.format(peer.hostname))
                 self.connections_table.insert(peer, 'rejected: untrusted hostname')
-                self.send_error(writer, ValueError(peer.hostname + ' is not a trusted hostname.'), self._network_name)
+                self.send_error(writer, ValueError('{!r} is not a trusted hostname'.format(peer.hostname)), self._network_name)
                 await self.close_writer(writer)
                 return
-            log.debug(peer.hostname + ' is a trusted hostname')
+            log.debug('{!r} is a trusted hostname'.format(peer.hostname))
         elif self.login:
             if not await self.check_user(reader, writer):
                 return
@@ -161,39 +161,39 @@ class Manager(Network):
         :class:`bool`
             Whether the login credentials are valid.
         """
-        log.info(self._network_name + ' verifying login credentials from ' + writer.peer.network_name)
-        log.debug(self._network_name + ' verifying login username from ' + writer.peer.network_name)
+        log.info('{!r} verifying login credentials from {!r}'.format(self._network_name, writer.peer.network_name))
+        log.debug('{!r} verifying login username from {!r}'.format(self._network_name, writer.peer.network_name))
         self.send_request(writer, 'username', self._network_name)
         username = await self.get_handshake_data(reader)
         if not username:  # then the connection closed prematurely
-            log.info(reader.peer.network_name + ' connection closed before receiving the username')
+            log.info('{!r} connection closed before receiving the username'.format(reader.peer.network_name))
             self.connections_table.insert(reader.peer, 'connection closed before receiving the username')
             return False
 
         user = self.users_table.is_user_registered(username)
         if not user:
-            log.error(reader.peer.network_name + ' sent an unregistered username, closing connection')
+            log.error('{!r} sent an unregistered username, closing connection'.format(reader.peer.network_name))
             self.connections_table.insert(reader.peer, 'rejected: unregistered username')
             self.send_error(writer, ValueError('Unregistered username'), self._network_name)
             await self.close_writer(writer)
             return False
 
-        log.debug(self._network_name + ' verifying login password from ' + writer.peer.network_name)
+        log.debug('{!r} verifying login password from {!r}'.format(self._network_name, writer.peer.network_name))
         self.send_request(writer, 'password', username)
         password = await self.get_handshake_data(reader)
 
         if not password:  # then the connection closed prematurely
-            log.info(reader.peer.network_name + ' connection closed before receiving the password')
+            log.info('{!r} connection closed before receiving the password'.format(reader.peer.network_name))
             self.connections_table.insert(reader.peer, 'connection closed before receiving the password')
             return False
 
         if self.users_table.is_password_valid(username, password):
-            log.debug(reader.peer.network_name + ' sent the correct login password')
+            log.debug('{!r} sent the correct login password'.format(reader.peer.network_name))
             # writer.peer.is_admin points to the same location in memory so its value also gets updated
             reader.peer.is_admin = self.users_table.is_admin(username)
             return True
 
-        log.info(reader.peer.network_name + ' sent the wrong login password, closing connection')
+        log.info('{!r} sent the wrong login password, closing connection'.format(reader.peer.network_name))
         self.connections_table.insert(reader.peer, 'rejected: wrong login password')
         self.send_error(writer, ValueError('Wrong login password'), self._network_name)
         await self.close_writer(writer)
@@ -214,19 +214,19 @@ class Manager(Network):
         :class:`bool`
             Whether the correct password was received.
         """
-        log.info(self._network_name + ' requesting password from ' + writer.peer.network_name)
+        log.info('{!r} requesting password from {!r}'.format(self._network_name, writer.peer.network_name))
         self.send_request(writer, 'password', self._network_name)
         password = await self.get_handshake_data(reader)
         if not password:  # then the connection closed prematurely
-            log.info(reader.peer.network_name + ' connection closed before receiving the password')
+            log.info('{!r} connection closed before receiving the password'.format(reader.peer.network_name))
             self.connections_table.insert(reader.peer, 'connection closed before receiving the password')
             return False
 
         if password == self.password:
-            log.debug(reader.peer.network_name + ' sent the correct password')
+            log.debug('{!r} sent the correct password'.format(reader.peer.network_name))
             return True
 
-        log.info(reader.peer.network_name + ' sent the wrong Manager password, closing connection')
+        log.info('{!r} sent the wrong Manager password, closing connection'.format(reader.peer.network_name))
         self.connections_table.insert(reader.peer, 'rejected: wrong Manager password')
         self.send_error(writer, ValueError('Wrong Manager password'), self._network_name)
         await self.close_writer(writer)
@@ -248,7 +248,7 @@ class Manager(Network):
             If the identity check was successful then returns the connection type,
             either ``'client'`` or ``'service'``, otherwise returns :data:`None`.
         """
-        log.info(self._network_name + ' requesting identity from ' + writer.peer.network_name)
+        log.info('{!r} requesting identity from {!r}'.format(self._network_name, writer.peer.network_name))
         self.send_request(writer, 'identity')
         identity = await self.get_handshake_data(reader)
 
@@ -257,7 +257,7 @@ class Manager(Network):
         elif isinstance(identity, str):
             identity = parse_terminal_input(identity)
 
-        log.debug(reader.peer.network_name + ' has identity {}'.format(identity))
+        log.debug('{!r} has identity {}'.format(reader.peer.network_name, identity))
 
         try:
             # writer.peer.network_name points to the same location in memory so its value also gets updated
@@ -274,24 +274,25 @@ class Manager(Network):
                 log.info(reader.peer.network_name + ' is a new Client connection')
             elif typ == 'service':
                 if identity['name'] in self.services:
-                    raise NameError('A {} service is already running on the Manager'.format(identity['name']))
+                    raise NameError('A {!r} service is already running on the Manager'.format(identity['name']))
                 self.services[identity['name']] = {
                     'attributes': identity['attributes'],
                     'address': identity.get('address', reader.peer.address),
                     'language': identity.get('language', 'unknown'),
                     'os': identity.get('os', 'unknown'),
+                    'max_clients': identity.get('max_clients', -1),
                 }
                 self.service_writers[identity['name']] = writer
                 self.service_links[identity['name']] = set()
                 log.info(reader.peer.network_name + ' is a new Service connection')
             else:
-                raise TypeError('Unknown connection type "{}". Must be "client" or "service"'.format(typ))
+                raise TypeError('Unknown connection type {!r}. Must be "client" or "service"'.format(typ))
 
             self.connections_table.insert(reader.peer, 'connected as a ' + typ)
             return typ
 
         except (TypeError, KeyError, NameError) as e:
-            log.info(reader.peer.address + ' sent an invalid identity, closing connection')
+            log.info('{!r} sent an invalid identity, closing connection'.format(reader.peer.address))
             self.connections_table.insert(reader.peer, 'rejected: invalid identity')
             self.send_error(writer, e, self._network_name)
             await self.close_writer(writer)
@@ -315,7 +316,7 @@ class Manager(Network):
         except (ConnectionAbortedError, ConnectionResetError, UnicodeDecodeError):
             # then most likely the connection was for a certificate request, or,
             # the connection is trying to use a certificate and the Manage has TLS disabled
-            log.info(reader.peer.network_name + ' connection closed prematurely')
+            log.info('{!r} connection closed prematurely'.format(reader.peer.network_name))
             self.connections_table.insert(reader.peer, 'connection closed prematurely')
             return None
 
@@ -347,7 +348,7 @@ class Manager(Network):
                 return  # then the device disconnected abruptly
 
             if self._debug:
-                log.debug(reader.peer.network_name + ' sent {} bytes'.format(len(line)))
+                log.debug('{!r} sent {} bytes'.format(reader.peer.network_name, len(line)))
                 if len(line) > self._max_print_size:
                     log.debug(line[:self._max_print_size//2] + b' ... ' + line[-self._max_print_size//2:])
                 else:
@@ -367,12 +368,12 @@ class Manager(Network):
             if 'result' in data:
                 # then data is a reply from a Service so send it back to the Client
                 if data['requester'] is None:
-                    log.info(reader.peer.network_name + ' was not able to deserialize the bytes')
+                    log.info('{!r} was not able to deserialize the bytes'.format(reader.peer.network_name))
                 else:
                     try:
                         self.send_line(self.client_writers[data['requester']], line)
                     except KeyError:
-                        log.info(data['requester'] + ' is no longer available to send the reply to')
+                        log.info('{!r} is no longer available to send the reply to'.format(data['requester']))
             elif data['service'] == 'Manager':
                 # then the Client is requesting something from the Manager
                 if data['attribute'] == 'identity':
@@ -381,11 +382,11 @@ class Manager(Network):
                     try:
                         self.link(writer, data.get('uuid', ''), data['args'][0])
                     except Exception as e:
-                        log.error(self._network_name + ' ' +  e.__class__.__name__ + ': ' + str(e))
+                        log.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
                         self.send_error(writer, e, reader.peer.address, uuid=data.get('uuid', ''))
                 else:
                     # the peer needs administrative rights to send any other request to the Manager
-                    log.info('received an admin request from ' + reader.peer.network_name)
+                    log.info('received an admin request from {!r}'.format(reader.peer.network_name))
                     if not reader.peer.is_admin:
                         await self.check_user(reader, writer)
                         if not reader.peer.is_admin:
@@ -397,7 +398,7 @@ class Manager(Network):
                             continue
                     # the peer is an administrator, so execute the request
                     if data['attribute'] == 'shutdown_manager':
-                        log.info('received shutdown request from ' + reader.peer.network_name)
+                        log.info('received shutdown request from {!r}'.format(reader.peer.network_name))
                         self.loop.stop()
                         return
                     try:
@@ -406,7 +407,7 @@ class Manager(Network):
                         for item in data['attribute'].split('.'):
                             attrib = getattr(attrib, item)
                     except AttributeError as e:
-                        log.error(self._network_name + ' AttributeError: ' + str(e))
+                        log.error('{!r} AttributeError: {}'.format(self._network_name, e))
                         self.send_error(writer, e, reader.peer.address)
                         continue
                     try:
@@ -418,7 +419,7 @@ class Manager(Network):
                         # do not include the uuid in the reply
                         self.send_reply(writer, reply, requester=reader.peer.address)
                     except Exception as e:
-                        log.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
+                        log.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
                         self.send_error(writer, e, reader.peer.address)
             elif data['attribute'] == '__disconnect__':
                 # then the device requested to disconnect
@@ -428,11 +429,11 @@ class Manager(Network):
                 try:
                     data['requester'] = writer.peer.address
                     self.send_data(self.service_writers[data['service']], data)
-                    log.info(writer.peer.address + ' sent a request to ' + data['service'])
+                    log.info('{!r} sent a request to {!r}'.format(writer.peer.address, data['service']))
                 except KeyError:
-                    msg = 'the "{}" Service is not connected to the Network Manager at {}'.format(
+                    msg = 'the {!r} Service is not connected to the Network Manager at {!r}'.format(
                         data['service'], self._network_name)
-                    log.info(self._network_name + ' KeyError: ' + msg)
+                    log.info('{!r} KeyError: {}'.format(self._network_name, msg))
                     self.send_error(writer, KeyError(msg), reader.peer.address)
 
     def remove_peer(self, id_type, writer):
@@ -449,9 +450,14 @@ class Manager(Network):
             try:
                 del self.clients[writer.peer.address]
                 del self.client_writers[writer.peer.address]
-                log.info(writer.peer.network_name + ' has been removed from the registry')
+                log.info('{!r} has been removed from the registry'.format(writer.peer.network_name))
             except KeyError:  # ideally this exception should never occur
-                log.error(writer.peer.network_name + ' is not in the Client dictionaries')
+                log.error('{!r} is not in the Client dictionaries'.format(writer.peer.network_name))
+
+            # remove this Client from all Services that it was linked with
+            for service_name, client_addresses in self.service_links.items():
+                if writer.peer.address in client_addresses:
+                    self.service_links[service_name].remove(writer.peer.address)
         else:
             for service in self.services:
                 if self.services[service]['address'] == writer.peer.address:
@@ -463,16 +469,16 @@ class Manager(Network):
                             continue
                         self.send_error(
                             client_writer,
-                            ConnectionAbortedError('The "{}" service has been disconnected'.format(service)),
+                            ConnectionAbortedError('The {!r} service has been disconnected'.format(service)),
                             self._network_name,
                         )
                     try:
                         del self.service_links[service]
                         del self.services[service]
                         del self.service_writers[service]
-                        log.info(writer.peer.network_name + ' service has been removed from the registry')
+                        log.info('{!r} service has been removed from the registry'.format(writer.peer.network_name))
                     except KeyError:  # ideally this exception should never occur
-                        log.error(writer.peer.network_name + ' is not in the Service dictionaries')
+                        log.error('{!r} is not in the Service dictionaries'.format(writer.peer.network_name))
                     finally:
                         # must break from the iteration, otherwise will get
                         # RuntimeError: dictionary changed size during iteration
@@ -494,7 +500,7 @@ class Manager(Network):
             writer.close()
         except ConnectionResetError:
             pass
-        log.info(writer.peer.network_name + ' connection closed')
+        log.info('{!r} connection closed'.format(writer.peer.network_name))
         self.connections_table.insert(writer.peer, 'disconnected')
 
     async def shutdown_manager(self):
@@ -532,13 +538,24 @@ class Manager(Network):
         """
         try:
             identity = self.services[service]
-            self.service_links[service].add(writer.peer.address)
-            log.info('linked ' + writer.peer.network_name + ' with ' + service)
-            self.send_reply(writer, identity, requester=writer.peer.address, uuid=uuid)
         except KeyError:
-            msg = service + ' service does not exist, could not link with ' + writer.peer.network_name
+            msg = '{!r} service does not exist, could not link with {!r}'.format(service, writer.peer.network_name)
             log.info(msg)
             self.send_error(writer, KeyError(msg), writer.peer.address, uuid=uuid)
+        else:
+            if writer.peer.address in self.service_links[service]:
+                # a Client wants to re-link with the same Service
+                log.info('re-linked {!r} with {!r}'.format(writer.peer.network_name, service))
+                self.send_reply(writer, identity, requester=writer.peer.address, uuid=uuid)
+            elif identity['max_clients'] <= 0 or len(self.service_links[service]) < identity['max_clients']:
+                self.service_links[service].add(writer.peer.address)
+                log.info('linked {!r} with {!r}'.format(writer.peer.network_name, service))
+                self.send_reply(writer, identity, requester=writer.peer.address, uuid=uuid)
+            else:
+                msg = 'The maximum number of Clients are already linked with {!r}. ' \
+                      'The linked Clients are {}'.format(service, self.service_links[service])
+                log.info(msg)
+                self.send_error(writer, PermissionError(msg), writer.peer.address, uuid=uuid)
 
     def send_request(self, writer, attribute, *args, **kwargs):
         """Send a request to a :class:`~msl.network.client.Client` or a
@@ -620,15 +637,15 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
     if not disable_tls:
         context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
         context.load_cert_chain(certfile=cert, keyfile=key, password=key_password)
-        log.info('loaded certificate ' + cert)
+        log.info('loaded certificate {!r}'.format(cert))
 
     # load the connections table
     conn_table = ConnectionsTable(database=database)
-    log.info('loaded the ' + conn_table.NAME + ' table from ' + conn_table.path)
+    log.info('loaded the {!r} table from {!r}'.format(conn_table.NAME, conn_table.path))
 
     # load the auth_hostnames table
     hostnames_table = HostnamesTable(database=database)
-    log.info('loaded the ' + hostnames_table.NAME + ' table from ' + hostnames_table.path)
+    log.info('loaded the {!r} table from {!r}'.format(hostnames_table.NAME, hostnames_table.path))
 
     # load the auth_users table for the login credentials
     users_table = UsersTable(database=database)
@@ -636,7 +653,7 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
         print('The Users Table is empty. You cannot use login credentials for authorisation.')
         print('See: msl-network users')
         return
-    log.info('loaded the ' + users_table.NAME + ' table from ' + users_table.path)
+    log.info('loaded the {!r} table from {!r}'.format(users_table.NAME, users_table.path))
 
     if hostnames:
         log.info('using trusted hosts for authentication')

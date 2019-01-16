@@ -206,13 +206,9 @@ class Client(Network, asyncio.Protocol):
         :class:`~msl.network.exceptions.MSLNetworkError`
             If there is no :class:`~msl.network.service.Service` available
             with the name `service`.
-
-        See Also
-        --------
-        :meth:`send_request`
         """
         if self._debug:
-            log.debug('preparing to link with ' + service)
+            log.debug('preparing to link with {!r}'.format(service))
         identity = self._send_request_for_manager('link', service, timeout=timeout)
         return Link(self, service, identity)
 
@@ -377,10 +373,10 @@ class Client(Network, asyncio.Protocol):
         if self._debug:
             n = len(buffer_bytes)
             if dt > 0:
-                log.debug('{} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
+                log.debug('{!r} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
                     self._network_name, n, dt, n*1e-6/dt))
             else:
-                log.debug('{} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
+                log.debug('{!r} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
             if len(buffer_bytes) > self._max_print_size:
                 log.debug(buffer_bytes[:self._max_print_size//2] + b' ... ' + buffer_bytes[-self._max_print_size//2:])
             else:
@@ -454,107 +450,6 @@ class Client(Network, asyncio.Protocol):
             self._latest_error = ''
             self._clear_all_futures()
             raise MSLNetworkError(msg)
-
-    def send_request(self, service, attribute, *args, **kwargs):
-        """Send a request to a :class:`~msl.network.service.Service` on the
-        Network :class:`~msl.network.manager.Manager`.
-
-        Although a :class:`Client` can call this method directly, in general, it is
-        recommended to create a :meth:`link` with a :class:`~msl.network.service.Service`
-        and to send requests via the :class:`Link` object. This allows for using the dot
-        notation ``.`` for accessing an `attribute` from the :class:`~msl.network.service.Service`
-        class.
-
-        .. versionchanged:: 0.3
-           Added the `timeout` option as one of the `**kwargs`.
-
-        Parameters
-        ----------
-        service : :class:`str`
-            The name of the :class:`~msl.network.service.Service`
-        attribute : :class:`str`
-            The name of the property or method of the :class:`~msl.network.service.Service`
-            to process the request.
-        *args
-            The arguments that the :class:`~msl.network.service.Service` `attribute`
-            requires.
-        **kwargs
-            The keyword arguments that the :class:`~msl.network.service.Service`
-            `attribute` requires. Also accepts an `asynchronous` parameter
-            (as a :class:`bool`) and a `timeout` parameter (as a :class:`float`).
-            The `timeout` parameter is only used when sending synchronous
-            requests. If sending asynchronous requests then specify a `timeout`
-            value when calling :meth:`send_pending_requests`.
-
-        Returns
-        -------
-        The result from the :class:`~msl.network.service.Service` executing the request, or
-        an :class:`asyncio.Future` object if the ``asynchronous=True`` keyword argument is specified.
-
-            If sending asynchronous requests then you must call :meth:`send_pending_requests`
-            to be able to get the result from each :class:`asyncio.Future`.
-
-        Raises
-        ------
-        ConnectionError
-            If the connection to the Network :class:`~msl.network.manager.Manager`
-            has been disconnected.
-        ValueError
-            If there are asynchronous requests pending and a synchronous request is made.
-        TimeoutError
-            If receiving the reply takes longer than `timeout` seconds for a synchronous
-            request.
-        :exc:`~msl.network.exceptions.MSLNetworkError`
-            If there was an error executing the request.
-
-        Example
-        -------
-        The following example shows how the :meth:`link` and :meth:`send_request` methods
-        can be used to send a request to a :class:`~msl.network.service.Service`. Connect to the
-        Network :class:`~msl.network.manager.Manager` at ``localhost``::
-
-            >>> from msl.network import connect  # doctest: +SKIP
-            >>> cxn = connect()  # doctest: +SKIP
-
-        using the :meth:`send_request` method to send requests to the example :ref:`basic-math-service`::
-
-            >>> cxn.send_request('BasicMath', 'add', 2, 3)  # doctest: +SKIP
-            5
-            >>> cxn.send_request('BasicMath', 'subtract', 2, 3)  # doctest: +SKIP
-            -1
-
-        using the :meth:`link` method to create a link with the :ref:`basic-math-service` and then send requests::
-
-            >>> bm = cxn.link('BasicMath')  # doctest: +SKIP
-            >>> bm.add(2, 3)  # doctest: +SKIP
-            5
-            >>> bm.subtract(2, 3)  # doctest: +SKIP
-            -1
-
-        """
-        send_asynchronously = kwargs.pop('asynchronous', False)
-        timeout = kwargs.pop('timeout', None)
-        if not send_asynchronously and self._futures:
-            raise ValueError('Requests are pending. '
-                             'You must call the wait() method to wait for them to '
-                             'finish before sending another request')
-
-        uid = self._create_request(service, attribute, *args, **kwargs)
-        if send_asynchronously:
-            return self._futures[uid]
-        else:
-            try:
-                self.send_data(self._transport, self._requests[uid])
-            except Exception:
-                # fixes Issue #5 for synchronous requests
-                self._futures[uid].cancel()
-                self._remove_future(uid)
-                raise
-            else:
-                self._wait(uid=uid, timeout=timeout)
-                result = self._futures[uid].result()
-                self._remove_future(uid)
-                return result
 
     def send_pending_requests(self, *, wait=True, timeout=None):
         """Send all pending requests to the Network :class:`~msl.network.manager.Manager`.
@@ -747,6 +642,34 @@ class Client(Network, asyncio.Protocol):
         self._remove_future(uid)
         return result
 
+    def _send_request(self, service, attribute, *args, **kwargs):
+        # Removed as a public API method in v0.4. Linking with a Service is the proper
+        # way to send requests to a Service so that the Manager can check if the maximum
+        # number of Clients are linked with the Service.
+        send_asynchronously = kwargs.pop('asynchronous', False)
+        timeout = kwargs.pop('timeout', None)
+        if not send_asynchronously and self._futures:
+            raise ValueError('Requests are pending. '
+                             'You must call the wait() method to wait for them to '
+                             'finish before sending another request')
+
+        uid = self._create_request(service, attribute, *args, **kwargs)
+        if send_asynchronously:
+            return self._futures[uid]
+        else:
+            try:
+                self.send_data(self._transport, self._requests[uid])
+            except Exception:
+                # fixes Issue #5 for synchronous requests
+                self._futures[uid].cancel()
+                self._remove_future(uid)
+                raise
+            else:
+                self._wait(uid=uid, timeout=timeout)
+                result = self._futures[uid].result()
+                self._remove_future(uid)
+                return result
+
     @property
     def _identity_successful(self):
         return self._handshake_finished
@@ -803,5 +726,5 @@ class Link(object):
 
     def __getattr__(self, item):
         def service_request(*args, **kwargs):
-            return self._client.send_request(self._service_name, item, *args, **kwargs)
+            return self._client._send_request(self._service_name, item, *args, **kwargs)
         return service_request

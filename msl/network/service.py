@@ -17,19 +17,26 @@ from .constants import PORT, HOSTNAME, IS_WINDOWS
 
 log = logging.getLogger(__name__)
 
-IGNORE_ITEMS = ['port', 'address_manager', 'username', 'name', 'start', 'password', 'set_debug']
+IGNORE_ITEMS = ['port', 'address_manager', 'username', 'start', 'password', 'set_debug', 'max_clients']
 IGNORE_ITEMS += dir(Network) + dir(asyncio.Protocol)
+
+PASSWORD_MESSAGE = 'You do not have permission to receive the password'
 
 
 class Service(Network, asyncio.Protocol):
 
-    name = None
-    """:class:`str`: The name of the Service as it will appear on the Network :class:`~msl.network.manager.Manager`."""
+    def __init__(self, *, name=None, max_clients=None):
+        """Base class for all Services.
 
-    _PASSWORD_MESSAGE = 'You do not have permission to receive the password'
-
-    def __init__(self):
-        """Base class for all Services."""
+        Parameters
+        ----------
+        name : :class:`str`, optional
+            The name of the Service as it will appear on the Network :class:`~msl.network.manager.Manager`.
+            If not specified then uses the class name.
+        max_clients : :class:`int`, optional
+            The maximum number of :class:`~msl.network.client.Client`\'s that can be linked
+            with this :class:`Service`. A value <= 0 means that there is no limit.
+        """
         self._loop = None
         self._username = None
         self._password = None
@@ -38,9 +45,12 @@ class Service(Network, asyncio.Protocol):
         self._debug = False
         self._port = None
         self._address_manager = None
-        if self.name is None:
-            self.name = self.__class__.__name__
-        self._network_name = self.name
+        self._name = self.__class__.__name__ if name is None else name
+        if max_clients is None or max_clients <= 0:
+            self._max_clients = -1
+        else:
+            self._max_clients = int(max_clients)
+        self._network_name = self._name
         self._buffer = bytearray()
         self._t0 = None  # used for profiling sections of the code
         self._futures = dict()
@@ -58,6 +68,12 @@ class Service(Network, asyncio.Protocol):
         that this :class:`Service` is connected to."""
         return self._address_manager
 
+    @property
+    def max_clients(self):
+        """:class:`int`: The maximum number of :class:`~msl.network.client.Client`\s
+        that can be linked with this :class:`Service` (-1 if infinite)."""
+        return self._max_clients
+
     def password(self, name):
         """
         .. attention::
@@ -71,7 +87,7 @@ class Service(Network, asyncio.Protocol):
             # Without this self._identity check a Client could potentially retrieve the password
             # of a user in plain-text format. Also, if the getpass function is called it is a
             # blocking function and therefore the Service blocks all other requests until getpass returns
-            return Service._PASSWORD_MESSAGE
+            return PASSWORD_MESSAGE
         self._connection_successful = True
         if self._password is not None:
             return self._password
@@ -100,9 +116,10 @@ class Service(Network, asyncio.Protocol):
         """
         if not self._identity:
             self._identity['type'] = 'service'
-            self._identity['name'] = self.name
+            self._identity['name'] = self._name
             self._identity['language'] = 'Python ' + platform.python_version()
             self._identity['os'] = '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
+            self._identity['max_clients'] = self._max_clients
             self._identity['attributes'] = dict()
             for item in dir(self):
                 if item.startswith('_') or item in IGNORE_ITEMS:
@@ -129,7 +146,7 @@ class Service(Network, asyncio.Protocol):
         """
         self._transport = transport
         self._port = int(transport.get_extra_info('sockname')[1])
-        self._network_name = '{}[{}]'.format(self.name, self._port)
+        self._network_name = '{}[{}]'.format(self._name, self._port)
         log.info(str(self) + ' connection made')
 
     def data_received(self, data):
@@ -204,7 +221,7 @@ class Service(Network, asyncio.Protocol):
             self._futures[uid] = self._loop.run_in_executor(executor, self._function, attrib, data, uid)
         else:
             if data['attribute'] == '_password':
-                attrib = Service._PASSWORD_MESSAGE
+                attrib = PASSWORD_MESSAGE
             self.send_reply(self._transport, attrib, requester=data['requester'], uuid=data['uuid'])
         log.info(data['requester'] + ' requested ' + data['attribute'] + ' [{} executing]'.format(len(self._futures)))
 

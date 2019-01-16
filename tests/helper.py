@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.CRITICAL+10)
 
 class ServiceStarter(object):
 
-    def __init__(self, service_classes, sleep=1):
+    def __init__(self, service_classes, sleep=1, **kwargs):
         """Starts the Network Manager and all specified Services to use for testing.
 
         Parameters
@@ -26,6 +26,8 @@ class ServiceStarter(object):
             The Service sub-classes to start (they have NOT been instantiated).
         sleep : float, optional
             The number of second to wait after starting the Manager and each Service.
+        **kwargs
+            These are all sent to Service.__init__ for all `service_classes`.
         """
         with socket() as sock:
             sock.bind(('', 0))  # get any available port
@@ -76,7 +78,7 @@ class ServiceStarter(object):
         # start all Service's
         self._service_threads = []
         for cls in service_classes:
-            service = cls()
+            service = cls(**kwargs)
             self._service_threads.append(Thread(target=service.start, kwargs=self.kwargs, daemon=True))
             self._service_threads[-1].start()
             time.sleep(sleep)  # wait for the Service to be running

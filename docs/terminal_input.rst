@@ -67,6 +67,18 @@ Some tips for connecting as a :class:`~msl.network.client.Client`:
 
        <service> <attribute> [<arguments>, [<keyword_arguments>]]
 
+    .. attention::
+
+       Although you can send requests to a :class:`~msl.network.service.Service` in the following manner
+       there is no way to block the request if the :class:`~msl.network.service.Service` has already met the
+       restriction for the maximum number of :class:`~msl.network.client.Client`\'s that can be linked with
+       the :class:`~msl.network.service.Service` to send requests to it. Therefore, you should only do the
+       following if you are certain that the :class:`~msl.network.service.Service` has not reached its maximum
+       :class:`~msl.network.client.Client` limit. To test if this :class:`~msl.network.client.Client`
+       limit has been reached enter ``link <service>``, for example, ``link BasicMath`` and see if you get
+       a ``PermissionError`` in the response before you proceed to send requests to the
+       :class:`~msl.network.service.Service`.
+
     For example, to request the addition of two numbers from the :ref:`basic-math-service` enter
 
     .. code-block:: console

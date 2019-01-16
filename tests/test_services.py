@@ -8,6 +8,7 @@ import helper  # located in the tests folder
 
 from msl.network import connect
 from msl.network.exceptions import MSLNetworkError
+from msl.network.service import PASSWORD_MESSAGE
 from msl.examples.network import BasicMath, MyArray, Echo
 
 
@@ -70,10 +71,6 @@ def test_basic_math_synchronous():
     services = helper.ServiceStarter((BasicMath,))
 
     cxn = connect(**services.kwargs)
-
-    assert cxn.send_request('BasicMath', 'euler') == approx(math.exp(1))
-    assert cxn.send_request('BasicMath', 'pi') == approx(math.pi)
-    assert cxn.send_request('BasicMath', 'add', -4, 10) == -4 + 10
 
     bm = cxn.link('BasicMath')
 
@@ -211,7 +208,9 @@ def test_password_retrieval():
     bm = cxn.link('BasicMath')
 
     assert bm.password('any name') != services.admin_password
+    assert bm.password('any name') == PASSWORD_MESSAGE
     assert bm._password() != services.admin_password
+    assert bm._password() == PASSWORD_MESSAGE
 
     services.shutdown(cxn)
 
@@ -319,3 +318,66 @@ def test_cannot_specify_multiple_passwords():
     echo = Echo()
     with raises(ValueError):
         echo.start(password='abc', password_manager='xyz')
+
+
+def test_max_clients():
+    # no limit
+    services = helper.ServiceStarter((Echo,))
+    cxn = connect(**services.kwargs)
+    spawns, links = [], []
+    for i in range(50):  # pretend that 50 == infinity
+        spawns.append(cxn.spawn('Client%d' % i))
+        links.append(spawns[-1].link('Echo'))
+        assert links[-1].echo(i)[0][0] == i
+    assert len(cxn.manager()['clients']) == len(spawns) + 1
+    for spawn in spawns:
+        spawn.disconnect()
+    services.shutdown(cxn)
+
+    # only 1 Client at a time
+    services = helper.ServiceStarter((Echo, BasicMath), max_clients=1)
+    client1 = connect(**services.kwargs)
+    echo1 = client1.link('Echo')
+    assert echo1.echo('abc123')[0][0] == 'abc123'
+    math1 = client1.link('BasicMath')
+    assert math1.add(5, -3) == 2
+    client2 = client1.spawn('Client2')
+    with raises(MSLNetworkError) as err:
+        client2.link('Echo')
+    assert str(err.value).strip().startswith('PermissionError: The maximum number of Clients')
+    with raises(MSLNetworkError) as err:
+        client2.link('BasicMath')
+    assert str(err.value).strip().startswith('PermissionError: The maximum number of Clients')
+    client1.disconnect()  # Echo and BasicMath are no longer linked with client1
+    echo2 = client2.link('Echo')
+    assert echo2.echo(9.9)[0][0] == 9.9
+    math2 = client2.link('BasicMath')
+    assert math2.add(9, 5) == 14
+    services.shutdown(client2)
+
+    # only 5 Clients at a time
+    services = helper.ServiceStarter((Echo,), max_clients=5)
+    cxn = connect(**services.kwargs)
+    spawns, links = [], []
+    for i in range(5):
+        spawns.append(cxn.spawn('Client%d' % i))
+        links.append(spawns[-1].link('Echo'))
+        assert links[-1].echo(i)[0][0] == i
+    client6 = cxn.spawn('Client6')
+    with raises(MSLNetworkError) as err:
+        client6.link('Echo')
+    assert str(err.value).strip().startswith('PermissionError: The maximum number of Clients')
+    assert len(cxn.manager()['clients']) == len(spawns) + 2
+    for spawn in spawns:
+        spawn.disconnect()
+    client6.disconnect()
+    services.shutdown(cxn)
+
+    # the same Client link multiple times to the same Service
+    services = helper.ServiceStarter((Echo,), max_clients=1)
+    cxn = connect(**services.kwargs)
+    link1 = cxn.link('Echo')
+    assert link1.echo('foo')[0][0] == 'foo'
+    link2 = cxn.link('Echo')
+    assert link2.echo('bar')[0][0] == 'bar'
+    services.shutdown(cxn)
