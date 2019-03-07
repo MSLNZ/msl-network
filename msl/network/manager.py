@@ -672,9 +672,13 @@ def start(password, login, hostnames, port, cert, key, key_password, database, d
     # create the network manager
     manager = Manager(port, password, login, hostnames, conn_table, users_table, hostnames_table, debug, loop)
 
-    server = loop.run_until_complete(
-        asyncio.start_server(manager.new_connection, port=port, ssl=context, loop=loop, limit=sys.maxsize)
-    )
+    try:
+        server = loop.run_until_complete(
+            asyncio.start_server(manager.new_connection, port=port, ssl=context, loop=loop, limit=sys.maxsize)
+        )
+    except OSError as err:
+        log.error(err)
+        return
 
     # https://bugs.python.org/issue23057
     # enable this hack only in debug mode and only on Windows

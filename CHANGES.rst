@@ -11,6 +11,7 @@ Version 0.4.0.dev0
 
 - Fixed
 
+  * perform error handling if the `Manager` attempts to start on a port that is already in use
   * issue `#7 <https://github.com/MSLNZ/msl-network/issues/7>`_ - a `Service` can now specify
     the maximum number of `Client`\s that can be linked with it
   * issue `#6 <https://github.com/MSLNZ/msl-network/issues/6>`_ - the `password_manager` keyword
