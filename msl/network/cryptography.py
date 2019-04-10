@@ -316,7 +316,17 @@ def get_metadata(cert):
         meta['key']['encryption'] = 'Elliptic Curve'
         meta['key']['curve'] = key.curve.name
         meta['key']['size'] = key.curve.key_size
-        meta['key']['key'] = to_hex_string(key.public_numbers().encode_point())
+        try:
+            # This try..except block fixes the following::
+            #   CryptographyDeprecationWarning: encode_point has been deprecated on ElliptcCurvePublicNumbers
+            #   and will be removed in a future version. Please use EllipticCurvePublicKey.public_bytes to
+            #   obtain both compressed and uncompressed point encoding.
+            # In v2.5 the X962 name was added to the Encoding enum so previous versions will throw an AttributeError
+            meta['key']['key'] = to_hex_string(
+                key.public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
+            )
+        except AttributeError:
+            meta['key']['key'] = to_hex_string(key.public_numbers().encode_point())
     elif issubclass(key.__class__, rsa.RSAPublicKey):
         meta['key']['encryption'] = 'RSA'
         meta['key']['exponent'] = key.public_numbers().e
