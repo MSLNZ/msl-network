@@ -232,4 +232,6 @@ def execute(args):
         return
 
     # start the network manager
-    manager.start(password, login, hostnames, port, cert, key, key_password, database, args.disable_tls, args.debug)
+    manager.start(port=port, password=password, login=login, hostnames=hostnames,
+                  database=database, debug=args.debug, disable_tls=args.disable_tls,
+                  certfile=cert, keyfile=key, keyfile_password=key_password)

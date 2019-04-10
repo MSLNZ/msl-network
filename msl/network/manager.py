@@ -10,7 +10,7 @@ import platform
 
 from .network import Network
 from .json import deserialize
-from .constants import HOSTNAME, IS_WINDOWS
+from .constants import HOSTNAME, IS_WINDOWS, PORT
 from .utils import parse_terminal_input, _ipv4_regex
 from .database import ConnectionsTable, UsersTable, HostnamesTable
 
@@ -27,43 +27,10 @@ class Manager(Network):
             Not to be instantiated directly. Start the Network :class:`Manager`
             from the command line. Run ``msl-network start --help`` from a terminal
             for more information.
-
-        Parameters
-        ----------
-        port : :class:`int`
-            The port number that the Network :class:`Manager` is running on.
-        password : :class:`str` or :data:`None`
-            The password of the Network :class:`Manager`. Essentially, this can be a
-            thought of as a single password that all :class:`~msl.network.client.Client`\'s
-            and :class:`~msl.network.service.Service`\'s need to specify before the
-            connection to the Network :class:`Manager` is successful. To use the `password` start
-            the :class:`Manager` with the ``--auth-password`` flag.
-        login : :class:`bool` or :data:`None`
-            If :data:`True` then the Network :class:`Manager` was started with the ``--auth-login`` flag
-            and checks a users login credentials (the username and password) before a
-            :class:`~msl.network.client.Client` or :class:`~msl.network.service.Service` successfully
-            connects.
-        hostnames : :class:`list` of :class:`str` or :data:`None`
-            A list of trusted hostnames of devices that can connect to the Network
-            :class:`Manager` (only if the Network :class:`Manager` was started using the
-            ``--auth-hostname`` flag as the authentication procedure).
-        connections_table : :class:`~msl.network.database.ConnectionsTable`
-            The table in the database that keeps the records for the devices that connected
-            to the Network :class:`Manager`.
-        users_table : :class:`~msl.network.database.UsersTable`
-            The table in the database that keeps the records of the users that can connect
-            to the Network :class:`Manager`.
-        hostnames_table : :class:`~msl.network.database.HostnamesTable`
-            The table in the database that keeps the records of the trusted hostnames that
-            can connect to the Network :class:`Manager`.
-        debug : :class:`bool`
-            Whether :py:ref:`DEBUG <levels>` logging messages are displayed.
-        loop : :class:`asyncio.AbstractEventLoop`
-            The event loop that the Network :class:`Manager` is running in.
         """
-        self._debug = debug
+        self._debug = debug  # bool
         self._network_name = '{}:{}'.format(HOSTNAME, port)
-        self.port = port
+        self.port = port  # int
         self.loop = loop  # asyncio.AbstractEventLoop
         self.password = password  # string or None
         self.login = login  # boolean or None
@@ -625,19 +592,55 @@ class Peer(object):
             self.network_name = '{}:{}'.format(self.hostname, self.port)
 
 
-def start(password, login, hostnames, port, cert, key, key_password, database, disable_tls, debug):
-    """Start the Network :class:`.Manager`\'s event loop.
+def start(*, port=PORT, password=None, login=None, hostnames=None, database=None,
+          debug=False, disable_tls=False, certfile=None, keyfile=None, keyfile_password=None):
+    """Start the event loop for the Network :class:`.Manager`.
 
-    .. attention::
-        Not to be called directly. To be called from the command line.
+    This is a blocking call and will not return until the event loop stops.
+
+    .. versionchanged:: 0.4
+       The function arguments became keyword arguments.
+
+    Parameters
+    ----------
+    port : :class:`int`
+        The port number to run the Network :class:`Manager` on.
+    password : :class:`str` or :data:`None`
+        The password of the Network :class:`Manager`. Essentially, this can be a
+        thought of as a single password that all :class:`~msl.network.client.Client`\'s
+        and :class:`~msl.network.service.Service`\'s need to specify before the
+        connection to the Network :class:`Manager` is successful. If using a `password` then
+        do not specify `login` nor `hostnames`.
+    login : :class:`bool` or :data:`None`
+        If :data:`True` then checks a users login credentials (the username and password)
+        before a :class:`~msl.network.client.Client` or :class:`~msl.network.service.Service`
+        successfully connects. If using a `login` then do not specify `password` nor `hostnames`.
+    hostnames : :class:`list` of :class:`str` or :data:`None`
+        A list of trusted hostnames of devices that can connect to the Network
+        :class:`Manager`. If using `hostnames` then do not specify `password` nor `login`.
+    database : :class:`str` or :data:`None`
+        The path to the sqlite3 database that contains the records for the following tables:
+        :class:`.ConnectionsTable`, :class:`.HostnamesTable`, :class:`.UsersTable`. If
+        :data:`None` then loads the default database.
+    debug : :class:`bool`
+        Whether :py:ref:`DEBUG <levels>` logging messages are displayed. On Windows, enabling
+        debug mode also allows for the ``CTRL+C`` interrupt to stop the event loop.
+    disable_tls : :class:`bool`
+        Whether to disable using TLS for the protocol.
+    certfile : :class:`str`
+        See :meth:`~ssl.SSLContext.load_cert_chain` for more details. Only required if using TLS.
+    keyfile : :class:`str`
+        See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
+    keyfile_password : :class:`str`
+        See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
     """
 
     # create the SSL context
     context = None
     if not disable_tls:
         context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
-        context.load_cert_chain(certfile=cert, keyfile=key, password=key_password)
-        log.info('loaded certificate {!r}'.format(cert))
+        context.load_cert_chain(certfile, keyfile=keyfile, password=keyfile_password)
+        log.info('loaded certificate {!r}'.format(certfile))
 
     # load the connections table
     conn_table = ConnectionsTable(database=database)
