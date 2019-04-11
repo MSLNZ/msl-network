@@ -6,8 +6,12 @@ from collections import namedtuple
 
 from .client import connect
 from .service import Service
-from .database import ConnectionsTable, HostnamesTable, UsersTable
 from .exceptions import MSLNetworkError
+from .database import (
+    ConnectionsTable,
+    HostnamesTable,
+    UsersTable,
+)
 
 __author__ = 'Joseph Borbely'
 __copyright__ = '\xa9 2017 - 2019, ' + __author__

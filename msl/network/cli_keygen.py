@@ -56,13 +56,13 @@ def add_parser_keygen(parser):
              'key. Default is %(default)s.'
     )
     p.add_argument(
-        '--curve',
+        '-c', '--curve',
         default='SECP384R1',
         help='The name of the elliptic curve to use. Only used if the\n'
              'encryption algorithm is ECC. Default is %(default)s.'
     )
     p.add_argument(
-        '--password',
+        '-p', '--password',
         nargs='+',
         help='The password to use to encrypt the private key. Can include\n'
              'spaces. Default is None (unencrypted). Specify a path to a\n'
@@ -74,14 +74,14 @@ def add_parser_keygen(parser):
              'password.'
     )
     p.add_argument(
-        '--path',
+        '-o', '--out',
         help='The path to where to save the private key\n'
-             '(e.g., --path /where/to/save/key.pem). If omitted then\n'
+             '(e.g., --out /where/to/save/key.pem). If omitted then\n'
              'the default directory and filename is used to save the\n'
              'private key file.'
     )
     p.add_argument(
-        '--size',
+        '-s', '--size',
         default=2048,
         help='The size (number of bits) of the key. Only used if the\n'
              'encryption algorithm is RSA or DSA. Default is %(default)s.'
@@ -99,12 +99,12 @@ def execute(args):
 
     password = None if args.password is None else ' '.join(args.password)
     if password is not None and os.path.isfile(password):
-        print('Reading the password from the file')
+        print('Reading the key password from the file')
         with open(password, 'r') as fp:
             password = fp.readline().strip()
 
     path = generate_key(
-        path=args.path,
+        path=args.out,
         algorithm=args.algorithm,
         password=password,
         size=size,
@@ -112,4 +112,3 @@ def execute(args):
     )
 
     print('Created private {} key {}'.format(args.algorithm.upper(), path))
-

@@ -9,7 +9,10 @@ To see the help documentation, run the following command in a terminal::
 import os
 
 from .utils import ensure_root_path
-from .cryptography import get_metadata_as_string, load_certificate
+from .cryptography import (
+    get_metadata_as_string,
+    load_certificate,
+)
 
 HELP = 'Dumps the details of a PEM certificate.'
 
@@ -53,7 +56,7 @@ def add_parser_certdump(parser):
         help='The path to a PEM certificate.'
     )
     p.add_argument(
-        '--out',
+        '-o', '--out',
         help='The path to a file to dump the details to. If\n'
              'omitted then prints the details to the terminal.'
     )

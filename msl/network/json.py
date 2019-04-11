@@ -4,7 +4,10 @@ This module is used as the `JSON <https://www.json.org/>`_ (de)serializer.
 import time
 import logging
 
-from .constants import JSON, JSONPackage
+from .constants import (
+    JSON,
+    JSONPackage,
+)
 
 log = logging.getLogger(__name__)
 

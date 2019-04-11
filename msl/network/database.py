@@ -12,7 +12,10 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from .constants import DATABASE
-from .utils import localhost_aliases, _is_manager_regex
+from .utils import (
+    localhost_aliases,
+    _is_manager_regex,
+)
 
 log = logging.getLogger(__name__)
 
