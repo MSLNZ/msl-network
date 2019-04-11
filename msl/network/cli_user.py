@@ -73,6 +73,11 @@ def add_parser_user(parser):
         help='The action to perform.'
     )
     p.add_argument(
+        'username',
+        nargs='?',
+        help='The name of the user.'
+    )
+    p.add_argument(
         '-a', '--admin',
         action='store_true',
         default=False,
@@ -94,11 +99,6 @@ def add_parser_user(parser):
              'the first line in the file will be used for the password.\n'
              'WARNING: If you enter a path that does not exist then the\n'
              'path itself will be used as the password.'
-    )
-    p.add_argument(
-        'username',
-        nargs='?',
-        help='The name of the user.'
     )
     p.set_defaults(func=execute)
 

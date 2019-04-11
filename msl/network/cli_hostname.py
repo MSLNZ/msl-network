@@ -65,13 +65,13 @@ def add_parser_hostname(parser):
         help='The action to perform.'
     )
     p.add_argument(
-        '-d', '--database',
-        help='The path to a database file to save the trusted hostname to.'
-    )
-    p.add_argument(
         'names',
         nargs='*',
         help='The hostname of trusted devices.'
+    )
+    p.add_argument(
+        '-d', '--database',
+        help='The path to a database file to save the trusted hostname to.'
     )
     p.set_defaults(func=execute)
 
