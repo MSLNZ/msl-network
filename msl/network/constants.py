@@ -13,8 +13,16 @@ PORT = 1875
 HOSTNAME = socket.gethostname()
 """:class:`str`: The hostname of the Network :class:`~msl.network.manager.Manager`."""
 
-HOME_DIR = os.environ.get('MSL_NETWORK_HOME', os.path.join(os.path.expanduser('~'), '.msl', 'network'))
-""":class:`str`: The default ``$HOME`` directory where all files are to be located. 
+# If this module is run via "sudo python" on a Raspberry Pi the value of
+# os.path.expanduser('~') becomes '/root' instead of '/home/pi'. On Linux using
+# "sudo python" keeps os.path.expanduser('~') as /home/<username> and running this
+# module in an elevated command prompt on Windows keeps os.path.expanduser('~')
+# as C:\\Users\\<username>. Therefore defining USER_DIR in the following way keeps
+# things more consistent across more platforms.
+USER_DIR = os.path.expanduser('~'+os.getenv('SUDO_USER', ''))
+
+HOME_DIR = os.environ.get('MSL_NETWORK_HOME', os.path.join(USER_DIR, '.msl', 'network'))
+""":class:`str`: The default directory where all files are to be located. 
 
 Can be overwritten by specifying a ``MSL_NETWORK_HOME`` environment variable.
 """
@@ -29,7 +37,7 @@ DATABASE = os.path.join(HOME_DIR, 'manager.sqlite3')
 """:class:`str`: The default database path."""
 
 IS_WINDOWS = sys.platform in ['win32', 'cygwin']
-""":class:`bool`: Whether the Operating System is Windows."""
+""":class:`bool`: Whether the operating system is Windows."""
 
 DISCONNECT_REQUEST = '__disconnect__'
 
