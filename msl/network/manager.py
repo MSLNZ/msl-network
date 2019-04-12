@@ -617,7 +617,7 @@ class Peer(object):
 
 def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
                 database=None, debug=False, disable_tls=False, certfile=None, keyfile=None,
-                keyfile_password=None):
+                keyfile_password=None, logfile=None):
     """Start the event loop for the Network :class:`.Manager`.
 
     This is a blocking call and will not return until the event loop of the :class:`.Manager`
@@ -655,7 +655,7 @@ def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_passwo
         debug mode also allows for the ``CTRL+C`` interrupt to stop the event loop.
     disable_tls : :class:`bool`
         Whether to disable using TLS for the protocol.
-    certfile : :class:`str`
+    certfile : :class:`str` or :data:`None`
         The path to the TLS certificate file. See :meth:`~ssl.SSLContext.load_cert_chain` for
         more details. Only required if using TLS.
     keyfile : :class:`str` or :data:`None`
@@ -664,11 +664,13 @@ def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_passwo
         The password to decrypt key. See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
         Can be a path to a file that contains the password on the first line in the file
         (WARNING if the path is invalid then the value of `keyfile_password` becomes the password).
+    logfile : :class:`str` or :data:`None`
+        The file path to write logging messages to. If :data:`None` then use the default file path.
     """
     output = _create_manager_and_loop(
         port=port, auth_hostname=auth_hostname, auth_login=auth_login, auth_password=auth_password,
         database=database, debug=debug, disable_tls=disable_tls, certfile=certfile, keyfile=keyfile,
-        keyfile_password=keyfile_password
+        keyfile_password=keyfile_password, logfile=logfile
     )
 
     if not output:
@@ -822,19 +824,20 @@ def parse_run_forever_kwargs(**kwargs):
 
 
 def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
-                database=None, debug=False, disable_tls=False, certfile=None, keyfile=None,
-                keyfile_password=None):
+                             database=None, debug=False, disable_tls=False, certfile=None, keyfile=None,
+                             keyfile_password=None, logfile=None):
 
     # set up logging -- FileHandler and StreamHandler
-    now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    path = os.path.join(HOME_DIR, 'logs', 'manager-{}.log'.format(now))
-    ensure_root_path(path)
+    if logfile is None:
+        now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        logfile = os.path.join(HOME_DIR, 'logs', 'manager-{}.log'.format(now))
+    ensure_root_path(logfile)
 
     # the root logger is a FileHandler and it will always log at the debug level
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s [%(levelname)-8s] %(name)s - %(message)s',
-        filename=path,
+        filename=logfile,
     )
 
     # the StreamHandler log level can be decided from the command line

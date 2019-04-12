@@ -47,10 +47,11 @@ def test_parse_run_forever_kwargs():
         'certfile': 'h',
         'keyfile': 'i',
         'keyfile_password': 'j',
+        'logfile': 'k',
         'foo': 'bar',  # ignored
     }
     k = parse_run_forever_kwargs(**kwargs)
-    assert len(k) == 10
+    assert len(k) == 11
     assert k['port'] == 'a'
     assert k['auth_hostname'] == 'b'
     assert k['auth_login'] == 'c'
@@ -61,4 +62,5 @@ def test_parse_run_forever_kwargs():
     assert k['certfile'] == 'h'
     assert k['keyfile'] == 'i'
     assert k['keyfile_password'] == 'j'
+    assert k['logfile'] == 'k'
     assert 'foo' not in k
