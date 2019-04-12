@@ -128,9 +128,10 @@ class Network(object):
                 is running on.
 
             max_clients: integer, optional
-                The maximum number of :class:`~msl.network.client.Client`\'s that can be
-                linked with the :class:`~msl.network.service.Service`. A value <=0 means that
-                an unlimited number can be linked (this is the default setting if not specified).
+                The maximum number of :class:`~msl.network.client.Client`\\s that can be
+                linked with the :class:`~msl.network.service.Service`. A value :math:`\\leq` 0
+                means that an unlimited number of :class:`~msl.network.client.Client`\\s
+                can be linked (this is the default setting if not specified).
 
         * :class:`~msl.network.client.Client`
 

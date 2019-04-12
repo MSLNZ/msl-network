@@ -190,7 +190,7 @@ class Manager(Network):
         return False
 
     async def check_manager_password(self, reader, writer):
-        """Check the :class:`Manager`\'s password from the connected device.
+        """Check the :class:`Manager`\\'s password from the connected device.
 
         Parameters
         ----------
@@ -320,8 +320,8 @@ class Manager(Network):
             return data
 
     async def handler(self, reader, writer):
-        """Handle requests from the connected :class:`~msl.network.client.Client`\'s and
-        replies from connected :class:`~msl.network.service.Service`\'s.
+        """Handles requests from the connected :class:`~msl.network.client.Client`\\s and
+        replies from the connected :class:`~msl.network.service.Service`\\s.
 
         Parameters
         ----------
@@ -495,9 +495,9 @@ class Manager(Network):
 
     async def shutdown_manager(self):
         """
-        Disconnect all :class:`~msl.network.service.Service`\'s and
-        :class:`~msl.network.client.Client`\'s from the :class:`Manager`
-        and then shutdown the :class:`Manager`.
+        Disconnect all :class:`~msl.network.service.Service`\\s and
+        :class:`~msl.network.client.Client`\\s from the :class:`Manager`
+        and then shut down the :class:`Manager`.
         """
         # convert the dict_values to a list since we are modifying the dictionary in remove_peer()
         for writer in list(self.client_writers.values()):
@@ -548,7 +548,7 @@ class Manager(Network):
                 self.send_error(writer, PermissionError(msg), writer.peer.address, uuid=uuid)
 
     def send_request(self, writer, attribute, *args, **kwargs):
-        """Send a request to a :class:`~msl.network.client.Client` or a
+        """Send a request to a :class:`~msl.network.client.Client` or to a
         :class:`~msl.network.service.Service`.
 
         Parameters
@@ -620,7 +620,7 @@ def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_passwo
                 keyfile_password=None, logfile=None):
     """Start the event loop for the Network :class:`.Manager`.
 
-    This is a blocking call and will not return until the event loop of the :class:`.Manager`
+    This is a blocking call and it will not return until the event loop of the :class:`.Manager`
     has stopped.
 
     .. versionadded:: 0.4
@@ -640,11 +640,11 @@ def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_passwo
         and do not enable `auth_hostname`. Run ``msl-network user --help`` for more details.
     auth_password : :class:`str` or :data:`None`
         The password of the Network :class:`Manager`. Essentially, this can be a
-        thought of as a single password that all :class:`~msl.network.client.Client`\'s
-        and :class:`~msl.network.service.Service`\'s need to specify before the
+        thought of as a single password that all :class:`~msl.network.client.Client`\\s
+        and :class:`~msl.network.service.Service`\\s need to specify before the
         connection to the Network :class:`Manager` is successful. Can be a path to a file
-        that contains the password on the first line in the file (WARNING if the path is invalid
-        then the value of `auth_password` becomes the password). If using an `auth_password`
+        that contains the password on the first line in the file *(WARNING if the path is invalid*
+        *then the value of the path becomes the password)*. If using an `auth_password`
         then do not enable `auth_login` nor `auth_hostname`.
     database : :class:`str` or :data:`None`
         The path to the sqlite3 database that contains the records for the following tables --
@@ -663,7 +663,7 @@ def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_passwo
     keyfile_password : :class:`str` or :data:`None`
         The password to decrypt key. See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
         Can be a path to a file that contains the password on the first line in the file
-        (WARNING if the path is invalid then the value of `keyfile_password` becomes the password).
+        *(WARNING if the path is invalid then the value of the path becomes the password).*
     logfile : :class:`str` or :data:`None`
         The file path to write logging messages to. If :data:`None` then use the default file path.
     """
@@ -686,14 +686,14 @@ def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_passwo
 
 def run_services(*services, **kwargs):
     """This function starts the Network :class:`.Manager` and then starts the
-    specified :class:`~msl.network.service.Service`\s.
+    specified :class:`~msl.network.service.Service`\\s.
 
     This is a convenience function for running the Network :class:`.Manager`
-    only when the specified :class:`~msl.network.service.Service`\s are all
-    connected to the :class:`.Manager`. Once all :class:`~msl.network.service.Service`\s
+    only when the specified :class:`~msl.network.service.Service`\\s are all
+    connected to the :class:`.Manager`. Once all :class:`~msl.network.service.Service`\\s
     disconnect from the :class:`.Manager` then the :class:`.Manager` shuts down.
 
-    This is a blocking call and will not return until the event loop of the :class:`.Manager`
+    This is a blocking call and it will not return until the event loop of the :class:`.Manager`
     has stopped.
 
     .. versionadded:: 0.4
@@ -701,7 +701,7 @@ def run_services(*services, **kwargs):
     Parameters
     ----------
     services : :class:`~msl.network.service.Service`
-        The :class:`~msl.network.service.Service`\s to run on the :class:`.Manager`.
+        The :class:`~msl.network.service.Service`\\s to run on the :class:`.Manager`.
         Each :class:`~msl.network.service.Service` must be instantiated but not started.
         This :func:`run_services` function will start each :class:`~msl.network.service.Service`.
     kwargs
@@ -762,8 +762,9 @@ def run_services(*services, **kwargs):
         a.disconnect_service()
         s.disconnect_service()
 
-    Once this :class:`~msl.network.client.Client` script finished the Network :class:`.Manager`
-    would have shut down and the :func:`run_services` function would return.
+    When this :class:`~msl.network.client.Client` script is finished running the Network
+    :class:`.Manager` would have been shut down and the :func:`run_services` function
+    will return.
     """
     if not services:
         print('Warning... no services have been specified')

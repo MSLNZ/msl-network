@@ -40,8 +40,9 @@ class Service(Network, asyncio.Protocol):
             The name of the Service as it will appear on the Network :class:`~msl.network.manager.Manager`.
             If not specified then uses the class name.
         max_clients : :class:`int`, optional
-            The maximum number of :class:`~msl.network.client.Client`\'s that can be linked
-            with this :class:`Service`. A value <= 0 means that there is no limit.
+            The maximum number of :class:`~msl.network.client.Client`\\s that can be linked
+            with this :class:`Service`. A value :math:`\\leq` 0 or :data:`None` means that
+            there is no limit.
         """
         self._loop = None
         self._username = None
@@ -76,8 +77,9 @@ class Service(Network, asyncio.Protocol):
 
     @property
     def max_clients(self):
-        """:class:`int`: The maximum number of :class:`~msl.network.client.Client`\s
-        that can be linked with this :class:`Service` (-1 if infinite)."""
+        """:class:`int`: The maximum number of :class:`~msl.network.client.Client`\\s
+        that can be linked with this :class:`Service`. A value :math:`\\leq` 0 means an
+        infinite number of :class:`~msl.network.client.Client`\\s can be linked."""
         return self._max_clients
 
     def password(self, name):
