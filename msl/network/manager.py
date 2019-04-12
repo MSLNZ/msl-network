@@ -698,7 +698,7 @@ def run_services(*services, **kwargs):
 
     Parameters
     ----------
-    services : :class:`tuple` of :class:`~msl.network.service.Service`
+    services : :class:`~msl.network.service.Service`
         The :class:`~msl.network.service.Service`\s to run on the :class:`.Manager`.
         Each :class:`~msl.network.service.Service` must be instantiated but not started.
         This :func:`run_services` function will start each :class:`~msl.network.service.Service`.
