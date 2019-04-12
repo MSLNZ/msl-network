@@ -7,7 +7,8 @@ Version 0.4.0.dev0
 
 - Added
 
-  * the `run_server` and `run_services` functions
+  * the `run_forever` (to start the `Manager`) and `run_services` (to start the `Manager`
+    and then start `Servie`\s) functions
   * the `parse_service_start_kwargs` and `parse_run_forever_kwargs` functions
   * a `disconnect_service` method to `Link`
   * shorter argument name options for some CLI parameters
