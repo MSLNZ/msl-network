@@ -7,7 +7,35 @@ Version 0.4.0.dev0
 
 - Added
 
+  * the `run_server` and `run_services` functions
+  * the `parse_service_start_kwargs` and `parse_run_forever_kwargs` functions
+  * a `disconnect_service` method to `Link`
+  * shorter argument name options for some CLI parameters
   * a `Service` now accepts `name` and `max_clients` as keyword arguments when it is instantiated
+
+- Changed
+
+  * the following CLI changes to argument names for the `certgen` command
+
+    + `--key-path` became `--keyfile`
+    + `--key-password` became `--keyfile-password`
+    + `path` became `out`
+
+  * the following CLI changes to argument names for the `keygen` command
+
+    + `--path` became `--out`
+
+  * the following CLI changes to argument names for the `start` command
+
+    + `--cert` became `--certfile`
+    + `--key` became `--keyfile`
+    + `--key-password` became `--keyfile-password`
+
+  * the `certificate` keyword argument for the `connect` function and for the `Service.start`
+    method was changed to `certfile`
+  * a `Client` can no longer request a private attribute -- i.e., an attribute that starts with
+    a ``_`` (an underscore) -- from a `Service`
+  * the default `timeout` value for connecting to the `Manager` is now 10 seconds
 
 - Fixed
 
