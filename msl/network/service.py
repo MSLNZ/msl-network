@@ -377,6 +377,8 @@ def parse_service_start_kwargs(**kwargs):
     """From the specified keyword arguments only return those that are valid for
     :meth:`~msl.network.service.Service.start`.
 
+    .. versionadded:: 0.4
+
     Parameters
     ----------
     kwargs

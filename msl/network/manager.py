@@ -795,6 +795,8 @@ def parse_run_forever_kwargs(**kwargs):
     """From the specified keyword arguments only return those that are valid for
     :func:`~msl.network.manager.run_forever`.
 
+    .. versionadded:: 0.4
+
     Parameters
     ----------
     kwargs
