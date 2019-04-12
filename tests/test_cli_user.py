@@ -8,6 +8,11 @@ from msl.network.database import UsersTable
 db = os.path.join(tempfile.gettempdir(), 'test_cli_user.db')
 out = os.path.join(tempfile.gettempdir(), 'test_cli_user.tmp')
 pw_file = os.path.join(tempfile.gettempdir(), 'password.tmp')
+
+for item in [db, out, pw_file]:
+    if os.path.isfile(item):
+        os.remove(item)
+
 table = UsersTable(database=db)
 
 

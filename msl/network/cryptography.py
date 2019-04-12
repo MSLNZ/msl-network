@@ -3,7 +3,6 @@ Functions to create a self-signed certificate for the secure SSL/TLS protocol.
 """
 import os
 import ssl
-import sys
 import logging
 import inspect
 import datetime
@@ -13,16 +12,23 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.asymmetric import dsa
-
-from .utils import ensure_root_path, _oid_regex
-from .constants import KEY_DIR, CERT_DIR, HOSTNAME
+from cryptography.hazmat.primitives.asymmetric import (
+    ec,
+    rsa,
+    dsa,
+)
+from .utils import (
+    ensure_root_path,
+    _oid_regex,
+)
+from .constants import (
+    KEY_DIR,
+    CERT_DIR,
+    HOSTNAME,
+    DEFAULT_YEARS_VALID,
+)
 
 log = logging.getLogger(__name__)
-
-_DEFAULT_YEARS_VALID = 100 if sys.maxsize > 2**32 else 15
 
 
 def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve='SECP384R1'):
@@ -182,7 +188,7 @@ def generate_certificate(*, path=None, key_path=None, key_password=None, algorit
 
     now = datetime.datetime.utcnow()
 
-    years_valid = _DEFAULT_YEARS_VALID if years_valid is None else max(0, years_valid)
+    years_valid = DEFAULT_YEARS_VALID if years_valid is None else max(0, years_valid)
     years = int(years_valid)
     days = int((years_valid - years) * 365)
     expires = now.replace(year=now.year + years)

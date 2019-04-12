@@ -31,6 +31,10 @@ DATABASE = os.path.join(HOME_DIR, 'manager.sqlite3')
 IS_WINDOWS = sys.platform in ['win32', 'cygwin']
 """:class:`bool`: Whether the Operating System is Windows."""
 
+DISCONNECT_REQUEST = '__disconnect__'
+
+DEFAULT_YEARS_VALID = 100 if sys.maxsize > 2**32 else 15
+
 
 class JSONPackage(enum.Enum):
     """

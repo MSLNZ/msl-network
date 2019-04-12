@@ -8,7 +8,6 @@ import helper  # located in the tests folder
 
 from msl.network import connect
 from msl.network.exceptions import MSLNetworkError
-from msl.network.service import PASSWORD_MESSAGE
 from msl.examples.network import BasicMath, MyArray, Echo
 
 
@@ -201,16 +200,15 @@ def test_spawn_basic_math_and_array_asynchronous():
     assert cxn2.port is None
 
 
-def test_password_retrieval():
+def test_private_retrieval():
     services = helper.ServiceStarter((BasicMath,))
 
     cxn = connect(**services.kwargs)
     bm = cxn.link('BasicMath')
 
     assert bm.password('any name') != services.admin_password
-    assert bm.password('any name') == PASSWORD_MESSAGE
-    assert bm._password() != services.admin_password
-    assert bm._password() == PASSWORD_MESSAGE
+    with raises(MSLNetworkError):
+        bm._password()
 
     services.shutdown(cxn)
 

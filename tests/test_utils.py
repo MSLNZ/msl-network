@@ -2,6 +2,7 @@ import os
 import tempfile
 
 from msl.network import utils
+from msl.network.constants import DISCONNECT_REQUEST
 
 
 def test_terminal_parser():
@@ -116,10 +117,10 @@ def test_terminal_parser():
         assert d['args'][0] == 'Basic Math'
         assert isinstance(d['kwargs'], dict) and not d['kwargs']
 
-    for item in ['disconnect', '__disconnect__', 'exit', 'EXIT']:
+    for item in ['disconnect', DISCONNECT_REQUEST, 'exit', 'EXIT']:
         d = utils.parse_terminal_input(item)
         assert d['service'] == 'self'
-        assert d['attribute'] == '__disconnect__'
+        assert d['attribute'] == DISCONNECT_REQUEST
         assert isinstance(d['args'], list) and not d['args']
         assert isinstance(d['kwargs'], dict) and not d['kwargs']
 

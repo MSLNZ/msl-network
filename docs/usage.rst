@@ -14,29 +14,38 @@ Using **MSL-Network** requires a sequence of 3 steps:
 Start the Network Manager
 -------------------------
 
-The first thing to do is to start the Network :class:`~msl.network.manager.Manager`. Open a
-`command prompt`_ (Windows) or a terminal (\*nix) and run:
+The first thing to do is to start the Network :class:`~msl.network.manager.Manager`. There are 3 ways
+to do this.
 
-.. code-block:: console
+1. From a `command prompt`_ (Windows) or a terminal (\*nix) by running:
 
-   msl-network start
+    .. code-block:: console
 
-Running this command will automatically perform the following default actions:
+       msl-network start
 
-* create a private 2048-bit, RSA_ key
-* create a self-signed certificate using the private key
-* create a SQLite_ database to store information that is needed by the Network :class:`~msl.network.manager.Manager`
-* start the Network :class:`~msl.network.manager.Manager` on the default port using the TLS_ protocol
-* no authentication is required for :class:`~msl.network.client.Client`\'s and :class:`~msl.network.service.Service`\'s
-  to connect to the Network :class:`~msl.network.manager.Manager`
+    Running this command will automatically perform the following default actions:
 
-You can override the default actions, for example, use `Elliptic-Curve Cryptography`_ rather than
-RSA_. For more details refer to the help that is available from the command line, for example
+        * create a private 2048-bit, RSA_ key
+        * create a self-signed certificate using the private key
+        * create a SQLite_ database to store information that is used by the Network
+          :class:`~msl.network.manager.Manager`
+        * start the Network :class:`~msl.network.manager.Manager` on the default port using the TLS_ protocol
+        * no authentication is required for :class:`~msl.network.client.Client`\'s and
+          :class:`~msl.network.service.Service`\'s to connect to the :class:`~msl.network.manager.Manager`
 
-.. code-block:: console
+    You can override the default actions, for example, use `Elliptic-Curve Cryptography`_ rather than
+    RSA_ or only allow certain users to be able to connect to the :class:`~msl.network.manager.Manager`.
+    For more details refer to the help that is available from the command line
 
-   msl-network --help
-   msl-network certgen --help
+    .. code-block:: console
+
+       msl-network --help
+       msl-network start --help
+
+2. Call :func:`~msl.network.manager.run_forever` in a script.
+
+3. Call :func:`~msl.network.manager.run_services` in a script. This method also starts the
+   :class:`~msl.network.service.Service`\'s immediately after the :class:`~msl.network.manager.Manager` starts.
 
 .. _start-service:
 

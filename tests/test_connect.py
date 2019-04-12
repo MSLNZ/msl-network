@@ -6,7 +6,7 @@ from threading import Thread
 
 import pytest
 
-from msl.network import connect, cli_start, cryptography, UsersTable, MSLNetworkError
+from msl.network import connect, manager, cryptography, UsersTable, MSLNetworkError
 
 
 def get_available_port():
@@ -22,12 +22,14 @@ class Manager(object):
         self.auth_hostname = False
         self.auth_login = False
         self.auth_password = None
-        self.cert = None
+        self.certfile = None
         self.database = tempfile.gettempdir() + '/msl-network-testing.db'
+        if os.path.isfile(self.database):
+            os.remove(self.database)
         self.debug = False
         self.disable_tls = False
-        self.key = None
-        self.key_password = None
+        self.keyfile = None
+        self.keyfile_password = None
         self.port = get_available_port()
 
         self._sleep = sleep
@@ -38,8 +40,17 @@ class Manager(object):
         ut.insert(self.admin_username, self.admin_password, True)
         ut.close()
 
+        self._manager_thread = None
+
     def start(self):
-        self._manager_thread = Thread(target=cli_start.execute, args=(self,), daemon=True)
+        # start the Network Manager
+        self._manager_thread = Thread(
+            target=manager.run_forever,
+            kwargs={'port': self.port, 'database': self.database, 'disable_tls': self.disable_tls,
+                    'auth_password': self.auth_password, 'auth_hostname': self.auth_hostname,
+                    'auth_login': self.auth_login},
+            daemon=True
+        )
         self._manager_thread.start()
         time.sleep(self._sleep)
 
@@ -66,7 +77,7 @@ def test_default_settings():
     path = tempfile.gettempdir() + '/msl-network-wrong-certificate.crt'
     cryptography.generate_certificate(path=path)
     with pytest.raises(MSLNetworkError) as e:
-        connect(port=mgr.port, certificate=path)
+        connect(port=mgr.port, certfile=path)
     os.remove(path)
     assert 'CERTIFICATE_VERIFY_FAILED' in str(e.value)
 

@@ -9,6 +9,7 @@ To see the help documentation, run the following command in a terminal::
 import os
 
 from . import cryptography
+from .constants import DEFAULT_YEARS_VALID
 
 HELP = 'Generates a self-signed PEM certificate.'
 
@@ -20,7 +21,7 @@ executed on as the Common Name and as the Issuer Name.
 The certgen command is similar to the openssl command to generate a 
 self-signed certificate from a pre-existing private key::
 
-  openssl req -key private.key -new -x509 -days 365 -out certificate.crt
+  openssl req -key private.key -new -x509 -days 365 --out certificate.crt
  
 """
 
@@ -33,7 +34,7 @@ Examples::
 
   # create a certificate using the specified key and 
   # save the certificate to the specified file
-  msl-network certgen --key-path /path/to/key.pem /path/to/cert.pem
+  msl-network certgen --keyfile /path/to/key.pem /path/to/cert.pem
 
 See Also::
 
@@ -54,15 +55,29 @@ def add_parser_certgen(parser):
         epilog=EPILOG,
     )
     p.add_argument(
-        '--algorithm',
+        'out',
+        nargs='?',
+        help='The path to where to save the certificate\n'
+             '(e.g., /where/to/save/cert.pem). If omitted then\n'
+             'the default directory and filename is used to\n'
+             'save the certificate file.'
+    )
+    p.add_argument(
+        '-a', '--algorithm',
         default='SHA256',
         help='The hash algorithm to use. Default is %(default)s.'
     )
     p.add_argument(
-        '--key-password',
+        '-k', '--keyfile',
+        help='The path to the private key to use to digitally sign\n'
+             'the certificate. If omitted then load (or create) a\n'
+             'default key. See also: msl-network keygen'
+    )
+    p.add_argument(
+        '-p', '--keyfile-password',
         nargs='+',
         help='The password to use to decrypt the private key. Only\n'
-             'required if --key-path is specified and it is an encrypted\n'
+             'required if --keyfile is specified and it is an encrypted\n'
              'file. Specify a path to a file if you do not want to type\n'
              'the password in the terminal (i.e., you do not want the\n'
              'password to appear in your command history). Whatever is\n'
@@ -71,31 +86,17 @@ def add_parser_certgen(parser):
              'then the path itself will be used as the password.'
     )
     p.add_argument(
-        '--key-path',
-        help='The path to the private key to use to digitally sign\n'
-             'the certificate. If omitted then load (or create) a\n'
-             'default key. See also: msl-network keygen'
-    )
-    p.add_argument(
-        'path',
-        nargs='?',
-        help='The path to where to save the certificate\n'
-             '(e.g., /where/to/save/cert.pem). If omitted then\n'
-             'the default directory and filename is used to\n'
-             'save the certificate file.'
+        '-y', '--years-valid',
+        default=DEFAULT_YEARS_VALID,
+        help='The number of years that the certificate is valid for\n'
+             '(e.g., a value of 0.25 would mean that the certificate\n'
+             'is valid for 3 months). Default is %(default)s years.'
     )
     p.add_argument(
         '--show',
         action='store_true',
         default=False,
         help='Display the details of the newly-created certificate.'
-    )
-    p.add_argument(
-        '--years-valid',
-        default=cryptography._DEFAULT_YEARS_VALID,
-        help='The number of years that the certificate is valid for\n'
-             '(e.g., a value of 0.25 would mean that the certificate\n'
-             'is valid for 3 months). Default is %(default)s years.'
     )
     p.set_defaults(func=execute)
 
@@ -110,16 +111,16 @@ def execute(args):
         print('ValueError: The --years-valid value must be a positive number')
         return
 
-    key_password = None if args.key_password is None else ' '.join(args.key_password)
-    if key_password is not None and os.path.isfile(key_password):
-        print('Reading the password from the file')
-        with open(key_password, 'r') as fp:
-            key_password = fp.readline().strip()
+    keyfile_password = None if args.keyfile_password is None else ' '.join(args.keyfile_password)
+    if keyfile_password is not None and os.path.isfile(keyfile_password):
+        print('Reading the key password from the file')
+        with open(keyfile_password, 'r') as fp:
+            keyfile_password = fp.readline().strip()
 
     path = cryptography.generate_certificate(
-        path=args.path,
-        key_path=args.key_path,
-        key_password=key_password,
+        path=args.out,
+        key_path=args.keyfile,
+        key_password=keyfile_password,
         algorithm=args.algorithm,
         years_valid=years
     )

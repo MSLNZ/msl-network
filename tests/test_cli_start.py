@@ -7,6 +7,10 @@ from msl.network.database import UsersTable
 
 db = os.path.join(tempfile.gettempdir(), 'test_cli_start.db')
 out = os.path.join(tempfile.gettempdir(), 'test_cli_start.tmp')
+for item in [db, out]:
+    if os.path.isfile(item):
+        os.remove(item)
+
 table = UsersTable(database=db)
 
 

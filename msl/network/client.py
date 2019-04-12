@@ -12,18 +12,28 @@ import threading
 
 from .network import Network
 from .json import deserialize
-from .utils import localhost_aliases, _is_manager_regex
-from .constants import PORT, HOSTNAME
 from .exceptions import MSLNetworkError
+from .utils import (
+    localhost_aliases,
+    _is_manager_regex,
+)
+from .constants import (
+    PORT,
+    HOSTNAME,
+    DISCONNECT_REQUEST,
+)
 
 log = logging.getLogger(__name__)
 
 
 def connect(*, name='Client', host='localhost', port=PORT, timeout=10, username=None,
-            password=None, password_manager=None, certificate=None, disable_tls=False,
+            password=None, password_manager=None, certfile=None, disable_tls=False,
             assert_hostname=True, debug=False):
     """Create a new connection to a Network :class:`~msl.network.manager.Manager`
     as a :class:`Client`.
+
+    .. versionchanged:: 0.4
+       Renamed `certificate` to `certfile`.
 
     Parameters
     ----------
@@ -51,7 +61,7 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=10, username=
         You need to specify the password only if the Network :class:`~msl.network.manager.Manager`
         was started with the ``--auth-password`` flag. If a password is required and you
         have not specified it when you called this function then you will be asked for the password.
-    certificate : :class:`str`, optional
+    certfile : :class:`str`, optional
         The path to the certificate file to use for the secure connection
         with the Network :class:`~msl.network.manager.Manager`.
     disable_tls : :class:`bool`, optional
@@ -77,7 +87,7 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=10, username=
     """
     client = Client(name)
     success = client.start(host, port, timeout, username, password, password_manager,
-                           certificate, disable_tls, assert_hostname, debug)
+                           certfile, disable_tls, assert_hostname, debug)
     if not success:
         client.raise_latest_error()
     return client
@@ -215,7 +225,7 @@ class Client(Network, asyncio.Protocol):
     def disconnect(self):
         """Disconnect from the Network :class:`~msl.network.manager.Manager`."""
         if self._transport is not None:
-            uid = self._create_request('self', '__disconnect__')
+            uid = self._create_request(self._network_name, DISCONNECT_REQUEST)
             self.send_data(self._transport, self._requests[uid])
             self._wait(uid=uid, timeout=self._timeout)
             self._clear_all_futures()
@@ -431,7 +441,7 @@ class Client(Network, asyncio.Protocol):
         """
         return connect(name=name, host=self._host_manager, port=self._port_manager,
                        timeout=self._timeout, username=self._username, password=self._password,
-                       password_manager=self._password_manager, certificate=self._certificate,
+                       password_manager=self._password_manager, certfile=self._certificate,
                        disable_tls=self._disable_tls, assert_hostname=self._assert_hostname,
                        debug=self._debug)
 
@@ -485,7 +495,7 @@ class Client(Network, asyncio.Protocol):
             self._wait(timeout=timeout)
 
     def start(self, host, port, timeout, username, password, password_manager,
-              certificate, disable_tls, assert_hostname, debug):
+              certfile, disable_tls, assert_hostname, debug):
         """
         .. attention::
             Do not call this method directly. Use :meth:`connect` to connect to
@@ -498,7 +508,7 @@ class Client(Network, asyncio.Protocol):
         self._username = username
         self._password = password
         self._password_manager = password_manager
-        self._certificate = certificate
+        self._certificate = certfile
         self._address_manager = '{}:{}'.format(self._host_manager, port)
         self._timeout = timeout
         self._assert_hostname = bool(assert_hostname)
@@ -506,7 +516,7 @@ class Client(Network, asyncio.Protocol):
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
-        if not self._create_connection(self._host_manager, port, certificate, disable_tls, assert_hostname, timeout):
+        if not self._create_connection(self._host_manager, port, certfile, disable_tls, assert_hostname, timeout):
             return False
 
         def run_forever():
@@ -692,7 +702,7 @@ class Link(object):
         self._service_name = service
         self._service_identity = identity
         if client._debug:
-            log.debug('linked with {}[{}]'.format(service, identity['address']))
+            log.debug("linked with '{}[{}]'".format(service, identity['address']))
 
     @property
     def service_name(self):
@@ -728,3 +738,23 @@ class Link(object):
         def service_request(*args, **kwargs):
             return self._client._send_request(self._service_name, item, *args, **kwargs)
         return service_request
+
+    def disconnect_service(self, *args, **kwargs):
+        """Send a request for the :class:`~msl.network.service.Service` to shut down.
+
+        A :class:`~msl.network.service.Service` must also implement a method called
+        ``disconnect_service`` otherwise calling this :meth:`disconnect_service` method
+        will raise :class:`~msl.network.exceptions.MSLNetworkError`.
+        """
+
+        # If the request is successful then a ConnectionAbortedError will be raised which
+        # is an exception that we expect.
+        # However, if a disconnect_service is not available on the Service then we want
+        # the AttributeError to be raised
+        try:
+            self._client._send_request(self._service_name, 'disconnect_service', *args, **kwargs)
+        except MSLNetworkError as e:
+            traceback = str(e).splitlines()
+            if traceback[-1].startswith('ConnectionAbortedError:'):
+                return True
+            raise

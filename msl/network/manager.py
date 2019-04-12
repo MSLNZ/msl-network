@@ -1,18 +1,41 @@
 """
 The Network :class:`Manager`.
 """
+import os
 import sys
 import ssl
 import socket
+import inspect
 import asyncio
 import logging
 import platform
+from datetime import datetime
 
+from . import cryptography
 from .network import Network
 from .json import deserialize
-from .constants import HOSTNAME, IS_WINDOWS, PORT
-from .utils import parse_terminal_input, _ipv4_regex
-from .database import ConnectionsTable, UsersTable, HostnamesTable
+from .service import (
+    Service,
+    parse_service_start_kwargs,
+)
+from .constants import (
+    HOSTNAME,
+    IS_WINDOWS,
+    PORT,
+    HOME_DIR,
+    DATABASE,
+    DISCONNECT_REQUEST,
+)
+from .database import (
+    ConnectionsTable,
+    UsersTable,
+    HostnamesTable,
+)
+from .utils import (
+    parse_terminal_input,
+    ensure_root_path,
+    _ipv4_regex,
+)
 
 log = logging.getLogger(__name__)
 
@@ -238,7 +261,7 @@ class Manager(Network):
                     'os': identity.get('os', 'unknown'),
                 }
                 self.client_writers[reader.peer.address] = writer
-                log.info(reader.peer.network_name + ' is a new Client connection')
+                log.info(repr(reader.peer.network_name) + ' is a new Client connection')
             elif typ == 'service':
                 if identity['name'] in self.services:
                     raise NameError('A {!r} service is already running on the Manager'.format(identity['name']))
@@ -251,7 +274,7 @@ class Manager(Network):
                 }
                 self.service_writers[identity['name']] = writer
                 self.service_links[identity['name']] = set()
-                log.info(reader.peer.network_name + ' is a new Service connection')
+                log.info(repr(reader.peer.network_name) + ' is a new Service connection')
             else:
                 raise TypeError('Unknown connection type {!r}. Must be "client" or "service"'.format(typ))
 
@@ -388,7 +411,7 @@ class Manager(Network):
                     except Exception as e:
                         log.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
                         self.send_error(writer, e, reader.peer.address)
-            elif data['attribute'] == '__disconnect__':
+            elif data['attribute'] == DISCONNECT_REQUEST:
                 # then the device requested to disconnect
                 return
             else:
@@ -592,34 +615,39 @@ class Peer(object):
             self.network_name = '{}:{}'.format(self.hostname, self.port)
 
 
-def start(*, port=PORT, password=None, login=None, hostnames=None, database=None,
-          debug=False, disable_tls=False, certfile=None, keyfile=None, keyfile_password=None):
+def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
+                database=None, debug=False, disable_tls=False, certfile=None, keyfile=None,
+                keyfile_password=None):
     """Start the event loop for the Network :class:`.Manager`.
 
-    This is a blocking call and will not return until the event loop stops.
+    This is a blocking call and will not return until the event loop of the :class:`.Manager`
+    has stopped.
 
-    .. versionchanged:: 0.4
-       The function arguments became keyword arguments.
+    .. versionadded:: 0.4
 
     Parameters
     ----------
     port : :class:`int`
         The port number to run the Network :class:`Manager` on.
-    password : :class:`str` or :data:`None`
+    auth_hostname : :class:`bool`
+        If :data:`True` then only connections from trusted hosts are allowed. If enabling
+        `auth_hostname` then do not specify an `auth_password` and do not enable `auth_login`.
+        Run ``msl-network hostname --help`` for more details.
+    auth_login : :class:`bool`
+        If :data:`True` then checks a users login credentials (the username and password)
+        before a :class:`~msl.network.client.Client` or :class:`~msl.network.service.Service`
+        successfully connects. If enabling `auth_login` then do not specify an `auth_password`
+        and do not enable `auth_hostname`. Run ``msl-network user --help`` for more details.
+    auth_password : :class:`str` or :data:`None`
         The password of the Network :class:`Manager`. Essentially, this can be a
         thought of as a single password that all :class:`~msl.network.client.Client`\'s
         and :class:`~msl.network.service.Service`\'s need to specify before the
-        connection to the Network :class:`Manager` is successful. If using a `password` then
-        do not specify `login` nor `hostnames`.
-    login : :class:`bool` or :data:`None`
-        If :data:`True` then checks a users login credentials (the username and password)
-        before a :class:`~msl.network.client.Client` or :class:`~msl.network.service.Service`
-        successfully connects. If using a `login` then do not specify `password` nor `hostnames`.
-    hostnames : :class:`list` of :class:`str` or :data:`None`
-        A list of trusted hostnames of devices that can connect to the Network
-        :class:`Manager`. If using `hostnames` then do not specify `password` nor `login`.
+        connection to the Network :class:`Manager` is successful. Can be a path to a file
+        that contains the password on the first line in the file (WARNING if the path is invalid
+        then the value of `auth_password` becomes the password). If using an `auth_password`
+        then do not enable `auth_login` nor `auth_hostname`.
     database : :class:`str` or :data:`None`
-        The path to the sqlite3 database that contains the records for the following tables:
+        The path to the sqlite3 database that contains the records for the following tables --
         :class:`.ConnectionsTable`, :class:`.HostnamesTable`, :class:`.UsersTable`. If
         :data:`None` then loads the default database.
     debug : :class:`bool`
@@ -628,19 +656,231 @@ def start(*, port=PORT, password=None, login=None, hostnames=None, database=None
     disable_tls : :class:`bool`
         Whether to disable using TLS for the protocol.
     certfile : :class:`str`
-        See :meth:`~ssl.SSLContext.load_cert_chain` for more details. Only required if using TLS.
-    keyfile : :class:`str`
-        See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
-    keyfile_password : :class:`str`
-        See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
+        The path to the TLS certificate file. See :meth:`~ssl.SSLContext.load_cert_chain` for
+        more details. Only required if using TLS.
+    keyfile : :class:`str` or :data:`None`
+        The path to the TLS key file. See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
+    keyfile_password : :class:`str` or :data:`None`
+        The password to decrypt key. See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
+        Can be a path to a file that contains the password on the first line in the file
+        (WARNING if the path is invalid then the value of `keyfile_password` becomes the password).
     """
+    output = _create_manager_and_loop(
+        port=port, auth_hostname=auth_hostname, auth_login=auth_login, auth_password=auth_password,
+        database=database, debug=debug, disable_tls=disable_tls, certfile=certfile, keyfile=keyfile,
+        keyfile_password=keyfile_password
+    )
+
+    if not output:
+        return
+
+    try:
+        output['loop'].run_forever()
+    except KeyboardInterrupt:
+        log.info('CTRL+C keyboard interrupt received')
+    finally:
+        _cleanup(**output)
+
+
+def run_services(*services, **kwargs):
+    """This function starts the Network :class:`.Manager` and then starts the
+    specified :class:`~msl.network.service.Service`\s.
+
+    This is a convenience function for running the Network :class:`.Manager`
+    only when the specified :class:`~msl.network.service.Service`\s are all
+    connected to the :class:`.Manager`. Once all :class:`~msl.network.service.Service`\s
+    disconnect from the :class:`.Manager` then the :class:`.Manager` shuts down.
+
+    This is a blocking call and will not return until the event loop of the :class:`.Manager`
+    has stopped.
+
+    .. versionadded:: 0.4
+
+    Parameters
+    ----------
+    services : :class:`tuple` of :class:`~msl.network.service.Service`
+        The :class:`~msl.network.service.Service`\s to run on the :class:`.Manager`.
+        Each :class:`~msl.network.service.Service` must be instantiated but not started.
+        This :func:`run_services` function will start each :class:`~msl.network.service.Service`.
+    kwargs
+        The keyword arguments that can be passed to either :func:`run_forever` or to
+        :meth:`~msl.network.service.Service.start`.
+
+    Examples
+    --------
+
+    If you want to allow a :class:`~msl.network.client.Client` to be able to shut down a
+    :class:`~msl.network.service.Service` then implement a public ``disconnect_service()``
+    method on the :class:`~msl.network.service.Service`. For example,
+
+    .. code-block:: python
+
+        from msl.network import Service
+        from msl.network.manager import run_services
+
+        class DisconnectableService(Service):
+
+            def disconnect_service(self):
+                self._disconnect()
+
+        class AddService(DisconnectableService):
+
+            def add(self, a, b):
+                return a + b
+
+        class SubtractService(DisconnectableService):
+
+            def subtract(self, a, b):
+                return a - b
+
+        run_services(AddService(), SubtractService())
+
+    Since the ``_disconnect()`` method of a :class:`~msl.network.service.Service` is private
+    (i.e., it starts with a ``_``), and a :class:`~msl.network.client.Client` cannot access
+    private methods of a :class:`~msl.network.service.Service`, a :class:`~msl.network.client.Client`
+    cannot call ``_disconnect()`` directly unless you intentionally make the public ``disconnect_service()``
+    method available on the :class:`~msl.network.service.Service`.
+
+    .. important::
+
+       Do not rename the ``disconnect_service()`` method to be something that you prefer. The name
+       ``disconnect_service`` is important.
+
+    Then the :class:`~msl.network.client.Client` script could be
+
+    .. code-block:: python
+
+        from msl.network import connect
+
+        cxn = connect()
+        a = cxn.link('AddService')
+        s = cxn.link('SubtractService')
+        assert a.add(1, 2) == 3
+        assert s.subtract(1, 2) == -1
+        a.disconnect_service()
+        s.disconnect_service()
+
+    Once this :class:`~msl.network.client.Client` script finished the Network :class:`.Manager`
+    would have shut down and the :func:`run_services` function would return.
+    """
+    if not services:
+        print('Warning... no services have been specified')
+        return
+
+    for service in services:
+        if not isinstance(service, Service):
+            raise TypeError('All services must be of type {}'.format(Service))
+
+    manager_kwargs = parse_run_forever_kwargs(**kwargs)
+    service_kwargs = parse_service_start_kwargs(**kwargs)
+
+    output = _create_manager_and_loop(**manager_kwargs)
+    if not output:
+        return
+
+    async def start_service(s):
+        await output['loop'].run_in_executor(None, lambda: s.start(**service_kwargs))
+
+    tasks = [start_service(service) for service in services]
+
+    try:
+        output['loop'].run_until_complete(asyncio.gather(*tasks))
+    except KeyboardInterrupt:
+        log.info('CTRL+C keyboard interrupt received')
+    finally:
+        _cleanup(**output)
+
+
+def parse_run_forever_kwargs(**kwargs):
+    """From the specified keyword arguments only return those that are valid for
+    :func:`~msl.network.manager.run_forever`.
+
+    Parameters
+    ----------
+    kwargs
+        Keyword arguments. All keyword arguments that are not part of the function
+        signature for :func:`~msl.network.manager.run_forever` are silently ignored.
+
+    Returns
+    -------
+    :class:`dict`
+        Valid keyword arguments that can be passed to :func:`~msl.network.manager.run_forever`.
+    """
+    kws = {}
+    for item in inspect.getfullargspec(run_forever).kwonlyargs:
+        if item in kwargs:
+            kws[item] = kwargs[item]
+
+    # the manager uses an `auth_password` kwarg but a service uses a `password_manager` kwarg
+    # however, these kwargs represent the same thing
+    if 'password_manager' in kwargs and 'auth_password' not in kws:
+        kws['auth_password'] = kwargs['password_manager']
+
+    return kws
+
+
+def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
+                database=None, debug=False, disable_tls=False, certfile=None, keyfile=None,
+                keyfile_password=None):
+
+    # set up logging -- FileHandler and StreamHandler
+    now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    path = os.path.join(HOME_DIR, 'logs', 'manager-{}.log'.format(now))
+    ensure_root_path(path)
+
+    # the root logger is a FileHandler and it will always log at the debug level
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s [%(levelname)-8s] %(name)s - %(message)s',
+        filename=path,
+    )
+
+    # the StreamHandler log level can be decided from the command line
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.DEBUG if debug else logging.INFO)
+    sh.setFormatter(logging.Formatter('%(asctime)s [%(levelname)-5s] %(name)s - %(message)s'))
+    logging.getLogger().addHandler(sh)
+
+    # get the port number
+    try:
+        port = int(port)
+    except ValueError:
+        print('ValueError: The port number must be an integer')
+        return
 
     # create the SSL context
     context = None
     if not disable_tls:
+        # get the password to decrypt the private key
+        if isinstance(keyfile_password, (list, tuple)):
+            keyfile_password = ' '.join(keyfile_password)
+        if keyfile_password is not None and os.path.isfile(keyfile_password):
+            with open(keyfile_password, 'r') as fp:
+                keyfile_password = fp.readline().strip()
+
+        # get the path to the certificate and to the private key
+        if certfile is None and keyfile is None:
+            keyfile = cryptography.get_default_key_path()
+            if not os.path.isfile(keyfile):
+                cryptography.generate_key(path=keyfile, password=keyfile_password)
+            certfile = cryptography.get_default_cert_path()
+            if not os.path.isfile(certfile):
+                cryptography.generate_certificate(path=certfile, key_path=keyfile, key_password=keyfile_password)
+        elif certfile is None and keyfile is not None:
+            # create (or overwrite) the default certificate to match the key
+            certfile = cryptography.generate_certificate(key_path=keyfile, key_password=keyfile_password)
+        elif certfile is not None and keyfile is None:
+            pass  # assume that the certificate file also contains the private key
+
         context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
         context.load_cert_chain(certfile, keyfile=keyfile, password=keyfile_password)
         log.info('loaded certificate {!r}'.format(certfile))
+
+    # get the path to the database file
+    if database is not None and os.path.isfile(database):
+        database = database
+    else:
+        database = DATABASE
 
     # load the connections table
     conn_table = ConnectionsTable(database=database)
@@ -652,11 +892,41 @@ def start(*, port=PORT, password=None, login=None, hostnames=None, database=None
 
     # load the auth_users table for the login credentials
     users_table = UsersTable(database=database)
-    if login and not users_table.users():
-        print('The Users Table is empty. You cannot use login credentials for authorisation.')
-        print('See: msl-network users')
-        return
     log.info('loaded the {!r} table from {!r}'.format(users_table.NAME, users_table.path))
+
+    # check which authentication method to use
+    login, password, hostnames = None, None, None
+    if not auth_password and not auth_hostname and not auth_login:
+        # then no authentication is required for Clients or Services to connect to the Manager
+        pass
+    elif auth_password and not auth_hostname and not auth_login:
+        # then the authentication is a password
+        if isinstance(auth_password, (list, tuple)):
+            password = ' '.join(auth_password)
+        else:
+            password = auth_password
+        if os.path.isfile(password):
+            with open(password, 'r') as fp:
+                password = fp.readline().strip()
+    elif not auth_password and auth_hostname and not auth_login:
+        # then the authentication is based on a list of trusted hosts
+        hostnames = hostnames_table.hostnames()
+    elif not auth_password and not auth_hostname and auth_login:
+        # then the authentication is based on the user's login information
+        login = True
+        if not users_table.usernames():
+            users_table.close()
+            conn_table.close()
+            hostnames_table.close()
+            print('ValueError: The Users table is empty. No one could login...')
+            print('To add a user to the Users table run the "msl-network user" command')
+            return
+    else:
+        users_table.close()
+        conn_table.close()
+        hostnames_table.close()
+        print('ValueError: Cannot specify multiple authentication methods')
+        return
 
     if hostnames:
         log.info('using trusted hosts for authentication')
@@ -680,7 +950,10 @@ def start(*, port=PORT, password=None, login=None, hostnames=None, database=None
             asyncio.start_server(manager.new_connection, port=port, ssl=context, loop=loop, limit=sys.maxsize)
         )
     except OSError as err:
-        log.error(err)
+        users_table.close()
+        conn_table.close()
+        hostnames_table.close()
+        print(err)
         return
 
     # https://bugs.python.org/issue23057
@@ -694,33 +967,37 @@ def start(*, port=PORT, password=None, login=None, hostnames=None, database=None
     state = 'ENABLED' if context else 'DISABLED'
     log.info('Network Manager running on {}:{} (TLS {})'.format(HOSTNAME, port, state))
 
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        log.info('CTRL+C keyboard interrupt received')
-    finally:
-        log.info('shutting down the network manager')
+    return {
+        'manager': manager,
+        'loop': loop,
+        'server': server,
+        'db_tables': [conn_table, hostnames_table, users_table]
+    }
 
-        if manager.client_writers or manager.service_writers:
-            loop.run_until_complete(manager.shutdown_manager())
 
-        if sys.version_info >= (3, 7):
-            all_tasks = asyncio.all_tasks
-        else:
-            # From the docs:
-            #  This method is deprecated and will be removed in Python 3.9.
-            #  Use the asyncio.all_tasks() function instead.
-            all_tasks = asyncio.Task.all_tasks
+def _cleanup(manager, loop, server, db_tables):
+    log.info('shutting down the network manager')
 
-        for task in all_tasks(loop=loop):
-            task.cancel()
+    if manager.client_writers or manager.service_writers:
+        loop.run_until_complete(manager.shutdown_manager())
 
-        log.info('closing the server')
-        server.close()
-        loop.run_until_complete(server.wait_closed())
-        log.info('closing the event loop')
-        loop.close()
+    if sys.version_info >= (3, 7):
+        all_tasks = asyncio.all_tasks
+    else:
+        # From the docs:
+        #  This method is deprecated and will be removed in Python 3.9.
+        #  Use the asyncio.all_tasks() function instead.
+        all_tasks = asyncio.Task.all_tasks
 
-        conn_table.close()
-        users_table.close()
-        hostnames_table.close()
+    for task in all_tasks(loop=loop):
+        task.cancel()
+
+    log.info('closing the connection server')
+    server.close()
+    loop.run_until_complete(server.wait_closed())
+    log.info('closing the event loop')
+    loop.close()
+
+    # close the database tables
+    for table in db_tables:
+        table.close()

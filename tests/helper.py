@@ -9,7 +9,7 @@ import logging
 from socket import socket
 from threading import Thread
 
-from msl.network import cli_start, cryptography, UsersTable
+from msl.network import manager, cryptography, UsersTable
 
 # suppress all logging message from being displayed
 logging.basicConfig(level=logging.CRITICAL+10)
@@ -34,7 +34,7 @@ class ServiceStarter(object):
             port = sock.getsockname()[1]
 
         # the args in cli_start.execute(args) requires that the following CLI arguments are available:
-        # port, auth_password, auth_hostname, auth_login, cert, key, key_password, database, debug
+        # port, auth_password, auth_hostname, auth_login, certfile, keyfile, keyfile_password, database, debug
 
         self.port = port
         self.auth_password = None
@@ -44,22 +44,20 @@ class ServiceStarter(object):
         self.disable_tls = False
 
         filename = 'msl-network-testing'
-        self.key = tempfile.gettempdir() + '/' + filename + '.key'
-        self.cert = tempfile.gettempdir() + '/' + filename + '.crt'
-        self.db = tempfile.gettempdir() + '/' + filename + '.db'
+        self.keyfile = tempfile.gettempdir() + '/' + filename + '.key'
+        self.certfile = tempfile.gettempdir() + '/' + filename + '.crt'
+        self.database = tempfile.gettempdir() + '/' + filename + '.db'
 
         self.cleanup()
 
         key_pw = 'dummy pw!'  # use a password for the key.. just for fun
-        cryptography.generate_key(path=self.key, password=key_pw, algorithm='ecc')
-        cryptography.generate_certificate(path=self.cert, key_path=self.key, key_password=key_pw)
-        self.key_password = key_pw.split()  # must be a list of strings
+        cryptography.generate_key(path=self.keyfile, password=key_pw, algorithm='ecc')
+        cryptography.generate_certificate(path=self.certfile, key_path=self.keyfile, key_password=key_pw)
 
         # need a UsersTable with an administrator to be able to shutdown the Manager
-        ut = UsersTable(database=self.db)
+        ut = UsersTable(database=self.database)
         self.admin_username, self.admin_password = 'admin', 'whatever'
         ut.insert(self.admin_username, self.admin_password, True)
-        self.database = ut.path
         ut.close()
 
         # a convenience dictionary for connecting to the Manager as a Service or a Client
@@ -67,11 +65,16 @@ class ServiceStarter(object):
             'username': self.admin_username,
             'password': self.admin_password,
             'port': self.port,
-            'certificate': self.cert,
+            'certfile': self.certfile,
         }
 
         # start the Network Manager
-        self._manager_thread = Thread(target=cli_start.execute, args=(self,), daemon=True)
+        self._manager_thread = Thread(
+            target=manager.run_forever,
+            kwargs={'port': port, 'certfile': self.certfile, 'keyfile': self.keyfile,
+                    'keyfile_password': key_pw, 'database': self.database, 'auth_login': True},
+            daemon=True
+        )
         self._manager_thread.start()
         time.sleep(sleep)  # wait for the Manager to be running
 
@@ -84,7 +87,8 @@ class ServiceStarter(object):
             time.sleep(sleep)  # wait for the Service to be running
 
     def cleanup(self):
-        for item in (self.key, self.cert, self.db):
+        time.sleep(0.5)
+        for item in (self.keyfile, self.certfile, self.database):
             if os.path.isfile(item):
                 os.remove(item)
 

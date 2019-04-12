@@ -5,7 +5,10 @@ import re
 import os
 import ast
 
-from .constants import HOSTNAME
+from .constants import (
+    HOSTNAME,
+    DISCONNECT_REQUEST,
+)
 
 _args_regex = re.compile(r'[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
 
@@ -88,10 +91,10 @@ def parse_terminal_input(line):
             'os': 'unknown',
             'error': False,
         }
-    elif line_lower == '__disconnect__' or line_lower == 'disconnect' or line_lower == 'exit':
+    elif line_lower == DISCONNECT_REQUEST or line_lower == 'disconnect' or line_lower == 'exit':
         return {
             'service': 'self',
-            'attribute': '__disconnect__',
+            'attribute': DISCONNECT_REQUEST,
             'args': [],
             'kwargs': {},
             'uuid': '',

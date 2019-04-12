@@ -11,16 +11,22 @@ import platform
 from concurrent.futures import ThreadPoolExecutor
 
 from .network import Network
-from .json import deserialize, serialize
 from .utils import localhost_aliases
-from .constants import PORT, HOSTNAME, IS_WINDOWS
+from .json import (
+    deserialize,
+    serialize,
+)
+from .constants import (
+    PORT,
+    HOSTNAME,
+    IS_WINDOWS,
+    DISCONNECT_REQUEST,
+)
 
 log = logging.getLogger(__name__)
 
 IGNORE_ITEMS = ['port', 'address_manager', 'username', 'start', 'password', 'set_debug', 'max_clients']
 IGNORE_ITEMS += dir(Network) + dir(asyncio.Protocol)
-
-PASSWORD_MESSAGE = 'You do not have permission to receive the password'
 
 
 class Service(Network, asyncio.Protocol):
@@ -87,7 +93,7 @@ class Service(Network, asyncio.Protocol):
             # Without this self._identity check a Client could potentially retrieve the password
             # of a user in plain-text format. Also, if the getpass function is called it is a
             # blocking function and therefore the Service blocks all other requests until getpass returns
-            return PASSWORD_MESSAGE
+            return 'You do not have permission to receive the password'
         self._connection_successful = True
         if self._password is not None:
             return self._password
@@ -147,7 +153,7 @@ class Service(Network, asyncio.Protocol):
         self._transport = transport
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self._name, self._port)
-        log.info(str(self) + ' connection made')
+        log.info(repr(self._network_name) + ' connection made')
 
     def data_received(self, data):
         """
@@ -208,6 +214,16 @@ class Service(Network, asyncio.Protocol):
             log.error(self._network_name + ' ' + msg)
             return
 
+        # do not allow access to private attributes from the Service
+        if data['attribute'].startswith('_'):
+            self.send_error(
+                self._transport,
+                AttributeError('Cannot request a private attribute from {!r}'.format(self._name)),
+                requester=data['requester'],
+                uuid=data['uuid']
+            )
+            return
+
         try:
             attrib = getattr(self, data['attribute'])
         except Exception as e:
@@ -220,10 +236,10 @@ class Service(Network, asyncio.Protocol):
             executor = ThreadPoolExecutor(max_workers=1)
             self._futures[uid] = self._loop.run_in_executor(executor, self._function, attrib, data, uid)
         else:
-            if data['attribute'] == '_password':
-                attrib = PASSWORD_MESSAGE
             self.send_reply(self._transport, attrib, requester=data['requester'], uuid=data['uuid'])
-        log.info(data['requester'] + ' requested ' + data['attribute'] + ' [{} executing]'.format(len(self._futures)))
+
+        log.info(repr(data['requester']) + ' requested ' + data['attribute'] + ' [{} executing]'
+                 .format(len(self._futures)))
 
     def _function(self, attrib, data, uid):
         try:
@@ -240,7 +256,7 @@ class Service(Network, asyncio.Protocol):
            Do not override this method. It is called automatically when the connection
            to the Network :class:`~msl.network.manager.Manager` has been closed.
         """
-        log.info(str(self) + ' connection lost')
+        log.info(repr(self._network_name) + ' connection lost')
         self._futures.clear()
         self._transport = None
         self._port = None
@@ -261,8 +277,11 @@ class Service(Network, asyncio.Protocol):
         self._debug = bool(boolean)
 
     def start(self, *, host='localhost', port=PORT, timeout=10, username=None, password=None,
-              password_manager=None, certificate=None, disable_tls=False, assert_hostname=True, debug=False):
+              password_manager=None, certfile=None, disable_tls=False, assert_hostname=True, debug=False):
         """Start the :class:`Service`.
+
+        .. versionchanged:: 0.4
+           Renamed `certificate` to `certfile`.
 
         Parameters
         ----------
@@ -288,7 +307,7 @@ class Service(Network, asyncio.Protocol):
             You need to specify the password only if the Network :class:`~msl.network.manager.Manager`
             was started with the ``--auth-password`` flag. If a password is required and you
             have not specified it when you called this method then you will be asked for the password.
-        certificate : :class:`str`, optional
+        certfile : :class:`str`, optional
             The path to the certificate file to use for the TLS connection
             with the Network :class:`~msl.network.manager.Manager`.
         disable_tls : :class:`bool`, optional
@@ -322,7 +341,7 @@ class Service(Network, asyncio.Protocol):
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
-        if not self._create_connection(host, port, certificate, disable_tls, assert_hostname, timeout):
+        if not self._create_connection(host, port, certfile, disable_tls, assert_hostname, timeout):
             return
 
         # https://bugs.python.org/issue23057
@@ -338,9 +357,9 @@ class Service(Network, asyncio.Protocol):
         except KeyboardInterrupt:
             log.info('CTRL+C keyboard interrupt received')
         finally:
-            log.info(str(self) + ' disconnected')
+            log.info(repr(self._network_name) + ' disconnected')
             self._loop.close()
-            log.info('closed the event loop')
+            log.info(repr(self._network_name) + ' closed the event loop')
 
     @property
     def _identity_successful(self):
@@ -349,3 +368,34 @@ class Service(Network, asyncio.Protocol):
     @property
     def _connection_established(self):
         return self._connection_successful
+
+    def _disconnect(self):
+        self.send_data(self._transport, {'service': self._network_name, 'attribute': DISCONNECT_REQUEST})
+
+
+def parse_service_start_kwargs(**kwargs):
+    """From the specified keyword arguments only return those that are valid for
+    :meth:`~msl.network.service.Service.start`.
+
+    Parameters
+    ----------
+    kwargs
+        Keyword arguments. All keyword arguments that are not part of the method
+        signature for :meth:`~msl.network.service.Service.start` are silently ignored.
+
+    Returns
+    -------
+    :class:`dict`
+        Valid keyword arguments that can be passed to :meth:`~msl.network.service.Service.start`.
+    """
+    kws = {}
+    for item in inspect.getfullargspec(Service.start).kwonlyargs:
+        if item in kwargs:
+            kws[item] = kwargs[item]
+
+    # the manager uses an `auth_password` kwarg but a service uses a `password_manager` kwarg
+    # however, these kwargs represent the same thing
+    if 'auth_password' in kwargs and 'password_manager' not in kws:
+        kws['password_manager'] = kwargs['auth_password']
+
+    return kws
