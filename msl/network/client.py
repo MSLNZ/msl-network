@@ -13,6 +13,7 @@ import threading
 from .network import Network
 from .json import deserialize
 from .exceptions import MSLNetworkError
+from .service import parse_service_start_kwargs
 from .utils import (
     localhost_aliases,
     _is_manager_regex,
@@ -91,6 +92,31 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=10, username=
     if not success:
         client.raise_latest_error()
     return client
+
+
+def parse_client_connect_kwargs(**kwargs):
+    """From the specified keyword arguments only return those that are valid for
+    :func:`.connect`.
+
+    .. versionadded:: 0.4
+
+    Parameters
+    ----------
+    kwargs
+        Keyword arguments. All keyword arguments that are not part of the method
+        signature for :func:`.connect` are silently ignored.
+
+    Returns
+    -------
+    :class:`dict`
+        Valid keyword arguments that can be passed to :func:`.connect`.
+    """
+    # a Client uses the same keyword arguments (plus an additional `name` kwarg) to
+    # connect to a Manager as a Service does, so we can use the same parser function
+    kws = parse_service_start_kwargs(**kwargs)
+    if 'name' in kwargs:
+        kws['name'] = kwargs['name']
+    return kws
 
 
 class Client(Network, asyncio.Protocol):
