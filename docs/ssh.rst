@@ -143,7 +143,9 @@ In addition, install ``mypackage-0.1.0.tar.gz`` on another computer.
 Finally, on the *'another'* computer you would perform the following. This would
 start the Network :class:`~msl.network.manager.Manager` on the Raspberry Pi, start
 the ``RPiService``, connect to the :class:`~msl.network.manager.Manager`
-and :meth:`~msl.network.client.Client.link` with ``RPiService``
+and :meth:`~msl.network.client.Client.link` with ``RPiService``.
+
+You will have to change the value of *hostname* below for your Raspberry Pi.
 
 .. code-block:: pycon
 
