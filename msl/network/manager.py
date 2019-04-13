@@ -838,7 +838,7 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
 
     # set the root logger level to DEBUG and make sure that it has no handlers
     root_logger = logging.getLogger()
-    root_logger.handlers = []
+    root_logger.handlers.clear()
     root_logger.setLevel(logging.DEBUG)
 
     # add a FileHandler and it will always log at the debug level
