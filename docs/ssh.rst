@@ -183,8 +183,10 @@ Network :class:`~msl.network.manager.Manager` that is running on the Raspberry P
 
       >>> rpi = connect(hostname='192.168.1.65', assert_hostname=False, port=1876)
 
-   (2) Connect to the :class:`~msl.network.manager.Manager` and shut it down gracefully,
-       however, this requires that you are an administrator of that :class:`~msl.network.manager.Manager`
+   (2) Connect to the :class:`~msl.network.manager.Manager` and shut it down gracefully;
+       however, this requires that you are an administrator of that :class:`~msl.network.manager.Manager`.
+       See the ``user`` command in :ref:`network-cli` for more details on how to create a user that
+       is an administrator.
 
    .. code-block:: pycon
 

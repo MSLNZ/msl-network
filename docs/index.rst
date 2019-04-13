@@ -41,6 +41,7 @@ Contents
    Python Examples <examples>
    Non-Python Examples <nonpython>
    Starting a Service from another computer <ssh>
+   Command Line Interface <cli>
    API <api>
    License <license>
    Authors <authors>
