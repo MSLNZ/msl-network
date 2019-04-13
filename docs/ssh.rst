@@ -10,8 +10,8 @@ another computer that is on the same network as the Pi. Your package has the fol
     mypackage/
         mypackage/
             __init__.py
-            rpi_service.py
             my_client.py
+            rpi_service.py
         setup.py
 
 with ``setup.py`` as
