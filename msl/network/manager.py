@@ -767,7 +767,9 @@ def run_services(*services, **kwargs):
     will return.
     """
     if not services:
-        print('Warning... no services have been specified')
+        msg = 'Warning... no services have been specified'
+        log.error(msg)
+        print(msg, file=sys.stderr)
         return
 
     for service in services:
@@ -834,24 +836,29 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
         logfile = os.path.join(HOME_DIR, 'logs', 'manager-{}.log'.format(now))
     ensure_root_path(logfile)
 
-    # the root logger is a FileHandler and it will always log at the debug level
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s [%(levelname)-8s] %(name)s - %(message)s',
-        filename=logfile,
-    )
+    # set the root logger level to DEBUG
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
 
-    # the StreamHandler log level can be decided from the command line
+    # add a FileHandler and it will always log at the debug level
+    fh = logging.FileHandler(logfile, mode='w')
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(logging.Formatter('%(asctime)s [%(levelname)-8s] %(name)s - %(message)s'))
+    root_logger.addHandler(fh)
+
+    # add a StreamHandler and its log level can be decided from the command line
     sh = logging.StreamHandler(sys.stdout)
     sh.setLevel(logging.DEBUG if debug else logging.INFO)
     sh.setFormatter(logging.Formatter('%(asctime)s [%(levelname)-5s] %(name)s - %(message)s'))
-    logging.getLogger().addHandler(sh)
+    root_logger.addHandler(sh)
 
     # get the port number
     try:
         port = int(port)
     except ValueError:
-        print('ValueError: The port number must be an integer')
+        msg = 'ValueError: The port number must be an integer'
+        log.error(msg)
+        print(msg, file=sys.stderr)
         return
 
     # create the SSL context
@@ -882,9 +889,10 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
         context.load_cert_chain(certfile, keyfile=keyfile, password=keyfile_password)
         log.info('loaded certificate {!r}'.format(certfile))
 
-    # get the path to the database file
-    if database is not None and os.path.isfile(database):
-        database = database
+    # get database file
+    if database is not None:
+        if not os.path.isfile(database):
+            ensure_root_path(database)
     else:
         database = DATABASE
 
@@ -924,14 +932,18 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
             users_table.close()
             conn_table.close()
             hostnames_table.close()
-            print('ValueError: The Users table is empty. No one could login...')
-            print('To add a user to the Users table run the "msl-network user" command')
+            msg = 'ValueError: The Users table is empty. No one could log in.\n' \
+                  'To add a user to the Users table run the "msl-network user" command'
+            log.error(msg)
+            print(msg, file=sys.stderr)
             return
     else:
         users_table.close()
         conn_table.close()
         hostnames_table.close()
-        print('ValueError: Cannot specify multiple authentication methods')
+        msg = 'ValueError: Cannot specify multiple authentication methods'
+        log.error(msg)
+        print(msg, file=sys.stderr)
         return
 
     if hostnames:
@@ -959,7 +971,8 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
         users_table.close()
         conn_table.close()
         hostnames_table.close()
-        print(err)
+        log.error(err)
+        print(err, file=sys.stderr)
         return
 
     # https://bugs.python.org/issue23057
