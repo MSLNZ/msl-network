@@ -36,8 +36,8 @@ def test_cannot_use_multiple_auth_methods():
         args = get_args('start ' + flag)
         args.func(args)
         sys.stdout.close()
-        line = open(out, 'r').readline().strip()
-        assert line == 'ValueError: Cannot specify multiple authentication methods'
+        lines = [line.strip() for line in open(out, 'r').readlines()]
+        assert lines[-1].endswith('ValueError: Cannot specify multiple authentication methods')
 
 
 def test_invalid_port():
@@ -45,8 +45,8 @@ def test_invalid_port():
     args = get_args('start --port 1234x')
     args.func(args)
     sys.stdout.close()
-    line = open(out, 'r').readline().strip()
-    assert line == 'ValueError: The port number must be an integer'
+    lines = [line.strip() for line in open(out, 'r').readlines()]
+    assert lines[-1].endswith('ValueError: The port number must be an integer')
 
 
 def test_cannot_use_auth_login_with_empty_table():
@@ -54,5 +54,5 @@ def test_cannot_use_auth_login_with_empty_table():
     args = get_args('start --auth-login --database ' + db)
     args.func(args)
     sys.stdout.close()
-    line = open(out, 'r').readline().strip()
-    assert line == 'ValueError: The Users table is empty. No one could login...'
+    lines = [line.strip() for line in open(out, 'r').readlines()]
+    assert lines[-2].endswith('ValueError: The Users table is empty. No one could log in.')
