@@ -4,11 +4,16 @@
 MSL-Network API Documentation
 =============================
 
-**MSL-Network** has very little functions or classes that need to be accessed in a users application.
+**MSL-Network** has very little functions or classes that need to be accessed in a user's application.
 
 Typically, only the :class:`~msl.network.service.Service` class needs to be subclassed and the
-:func:`~msl.network.client.connect` function will be called to connect to the
+:func:`~msl.network.client.connect` function will be called to connect to the Network
 :class:`~msl.network.manager.Manager` for most applications using **MSL-Network**.
+
+The :mod:`msl.network.ssh` module provides some functions for using `SSH <https://www.ssh.com/ssh/>`_
+to connect to a remote computer. :ref:`ssh-example` shows an example package showing how to
+automatically start a Network :class:`~msl.network.manager.Manager` and
+:class:`~msl.network.service.Service` on a Raspberry Pi from another computer.
 
 Package Structure
 -----------------
@@ -33,4 +38,5 @@ Package Structure
    msl.network.manager <_api/msl.network.manager>
    msl.network.network <_api/msl.network.network>
    msl.network.service <_api/msl.network.service>
+   msl.network.ssh <_api/msl.network.ssh>
    msl.network.utils <_api/msl.network.utils>

@@ -40,6 +40,7 @@ Contents
    Connecting from a Terminal <terminal_input>
    Python Examples <examples>
    Non-Python Examples <nonpython>
+   Starting a Service from another computer <ssh>
    API <api>
    License <license>
    Authors <authors>

@@ -27,6 +27,7 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
+    'sphinx.ext.mathjax',
 ]
 
 # autodoc options
@@ -210,6 +211,7 @@ epub_exclude_files = ['search.html']
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'cryptography': ('https://cryptography.readthedocs.io/en/stable/', None),
+    'paramiko': ('http://docs.paramiko.org/en/stable/', None),
 }
 
 # warn about all broken links
