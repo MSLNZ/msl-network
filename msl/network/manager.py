@@ -627,18 +627,18 @@ def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_passwo
 
     Parameters
     ----------
-    port : :class:`int`
+    port : :class:`int`, optional
         The port number to run the Network :class:`Manager` on.
-    auth_hostname : :class:`bool`
+    auth_hostname : :class:`bool`, optional
         If :data:`True` then only connections from trusted hosts are allowed. If enabling
         `auth_hostname` then do not specify an `auth_password` and do not enable `auth_login`.
         Run ``msl-network hostname --help`` for more details.
-    auth_login : :class:`bool`
+    auth_login : :class:`bool`, optional
         If :data:`True` then checks a users login credentials (the username and password)
         before a :class:`~msl.network.client.Client` or :class:`~msl.network.service.Service`
         successfully connects. If enabling `auth_login` then do not specify an `auth_password`
         and do not enable `auth_hostname`. Run ``msl-network user --help`` for more details.
-    auth_password : :class:`str` or :data:`None`
+    auth_password : :class:`str`, optional
         The password of the Network :class:`Manager`. Essentially, this can be a
         thought of as a single password that all :class:`~msl.network.client.Client`\\s
         and :class:`~msl.network.service.Service`\\s need to specify before the
@@ -646,25 +646,25 @@ def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_passwo
         that contains the password on the first line in the file *(WARNING if the path is invalid*
         *then the value of the path becomes the password)*. If using an `auth_password`
         then do not enable `auth_login` nor `auth_hostname`.
-    database : :class:`str` or :data:`None`
+    database : :class:`str`, optional
         The path to the sqlite3 database that contains the records for the following tables --
         :class:`.ConnectionsTable`, :class:`.HostnamesTable`, :class:`.UsersTable`. If
         :data:`None` then loads the default database.
-    debug : :class:`bool`
+    debug : :class:`bool`, optional
         Whether :py:ref:`DEBUG <levels>` logging messages are displayed. On Windows, enabling
         debug mode also allows for the ``CTRL+C`` interrupt to stop the event loop.
-    disable_tls : :class:`bool`
+    disable_tls : :class:`bool`, optional
         Whether to disable using TLS for the protocol.
-    certfile : :class:`str` or :data:`None`
+    certfile : :class:`str`, optional
         The path to the TLS certificate file. See :meth:`~ssl.SSLContext.load_cert_chain` for
         more details. Only required if using TLS.
-    keyfile : :class:`str` or :data:`None`
+    keyfile : :class:`str`, optional
         The path to the TLS key file. See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
-    keyfile_password : :class:`str` or :data:`None`
+    keyfile_password : :class:`str`, optional
         The password to decrypt key. See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
         Can be a path to a file that contains the password on the first line in the file
         *(WARNING if the path is invalid then the value of the path becomes the password).*
-    logfile : :class:`str` or :data:`None`
+    logfile : :class:`str`, optional
         The file path to write logging messages to. If :data:`None` then use the default file path.
     """
     output = _create_manager_and_loop(
