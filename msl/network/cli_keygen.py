@@ -14,7 +14,7 @@ HELP = 'Generates a private key to digitally sign a PEM certificate.'
 
 DESCRIPTION = HELP + """
 
-The keygen command is similar to the openssl command::
+The ``keygen`` command is similar to the openssl command::
 
   openssl req -newkey rsa:2048 -nodes -keyout key.pem
     

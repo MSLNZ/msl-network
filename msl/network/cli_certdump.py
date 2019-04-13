@@ -18,7 +18,7 @@ HELP = 'Dumps the details of a PEM certificate.'
 
 DESCRIPTION = HELP + """
 
-The certdump command is similar to the openssl command to
+The ``certdump`` command is similar to the openssl command to
 get the details of a certificate::
     
   openssl x509 -in certificate.crt -text -noout

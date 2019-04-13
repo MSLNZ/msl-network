@@ -18,7 +18,7 @@ DESCRIPTION = HELP + """
 The certificate uses the hostname of the computer that this command was
 executed on as the Common Name and as the Issuer Name.
 
-The certgen command is similar to the openssl command to generate a 
+The ``certgen`` command is similar to the openssl command to generate a 
 self-signed certificate from a pre-existing private key::
 
   openssl req -key private.key -new -x509 -days 365 --out certificate.crt
