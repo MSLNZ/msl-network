@@ -7,9 +7,11 @@ Version 0.4.0.dev0
 
 - Added
 
+  * the `ssh` module
   * the `run_forever` (to start the `Manager`) and the `run_services` (to start the `Manager`
     and then start the `Service`\s) functions
-  * the `parse_service_start_kwargs` and `parse_run_forever_kwargs` functions
+  * the `filter_service_start_kwargs`, `filter_run_forever_kwargs` and
+    'filter_client_connect_kwargs` functions
   * a `disconnect_service` method to `Link`
   * shorter argument name options for some CLI parameters
   * a `Service` now accepts `name` and `max_clients` as keyword arguments when it is instantiated
