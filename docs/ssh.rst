@@ -83,7 +83,7 @@ and ``my_client.py`` as
 
 .. code-block:: python
 
-    from msl.network.client import parse_client_connect_kwargs
+    from msl.network.client import filter_client_connect_kwargs
     from msl.network import (
         connect,
         MSLNetworkError,
@@ -97,7 +97,7 @@ and ``my_client.py`` as
             self._link = None
 
             # connect to the Manager on the Raspberry Pi
-            cxn = connect(host=hostname, **parse_client_connect_kwargs(**kwargs))
+            cxn = connect(host=hostname, **filter_client_connect_kwargs(**kwargs))
 
             # make a link to the Service on the Raspberry Pi
             self._link = cxn.link('RPiService')
