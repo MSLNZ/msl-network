@@ -1,8 +1,9 @@
-from msl.network.service import parse_service_start_kwargs
-from msl.network.manager import parse_run_forever_kwargs
+from msl.network.service import filter_service_start_kwargs
+from msl.network.manager import filter_run_forever_kwargs
+from msl.network.client import filter_client_connect_kwargs
 
 
-def test_parse_service_start_kwargs():
+def test_filter_service_start_kwargs():
     kwargs = {
         'host': 'a',
         'port': 'b',
@@ -18,7 +19,7 @@ def test_parse_service_start_kwargs():
         'auth_password': 'j',
         'foo': 'bar',  # ignored
     }
-    k = parse_service_start_kwargs(**kwargs)
+    k = filter_service_start_kwargs(**kwargs)
     assert len(k) == 10
     assert k['host'] == 'a'
     assert k['port'] == 'b'
@@ -33,7 +34,7 @@ def test_parse_service_start_kwargs():
     assert 'foo' not in k
 
 
-def test_parse_run_forever_kwargs():
+def test_filter_run_forever_kwargs():
     kwargs = {
         'port': 'a',
         'auth_hostname': 'b',
@@ -50,7 +51,7 @@ def test_parse_run_forever_kwargs():
         'logfile': 'k',
         'foo': 'bar',  # ignored
     }
-    k = parse_run_forever_kwargs(**kwargs)
+    k = filter_run_forever_kwargs(**kwargs)
     assert len(k) == 11
     assert k['port'] == 'a'
     assert k['auth_hostname'] == 'b'
@@ -64,3 +65,36 @@ def test_parse_run_forever_kwargs():
     assert k['keyfile_password'] == 'j'
     assert k['logfile'] == 'k'
     assert 'foo' not in k
+
+
+def test_filter_client_connect_kwargs():
+    kwargs = {
+        'host': 'a',
+        'port': 'b',
+        'timeout': 'c',
+        'username': 'd',
+        'password': 'e',
+        'certfile': 'f',
+        'disable_tls': 'g',
+        'assert_hostname': 'h',
+        'debug': 'i',
+        'password_manager': 'j',
+        'name': 'k',
+        'foo': 'bar',  # ignored
+        'new': 9,  # ignored
+    }
+    k = filter_client_connect_kwargs(**kwargs)
+    assert len(k) == 11
+    assert k['host'] == 'a'
+    assert k['port'] == 'b'
+    assert k['timeout'] == 'c'
+    assert k['username'] == 'd'
+    assert k['password'] == 'e'
+    assert k['certfile'] == 'f'
+    assert k['disable_tls'] == 'g'
+    assert k['assert_hostname'] == 'h'
+    assert k['debug'] == 'i'
+    assert k['password_manager'] == 'j'
+    assert k['name'] == 'k'
+    assert 'foo' not in k
+    assert 'new' not in k

@@ -375,7 +375,7 @@ class Service(Network, asyncio.Protocol):
         self.send_data(self._transport, {'service': self._network_name, 'attribute': DISCONNECT_REQUEST})
 
 
-def parse_service_start_kwargs(**kwargs):
+def filter_service_start_kwargs(**kwargs):
     """From the specified keyword arguments only return those that are valid for
     :meth:`~msl.network.service.Service.start`.
 

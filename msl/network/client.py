@@ -13,7 +13,7 @@ import threading
 from .network import Network
 from .json import deserialize
 from .exceptions import MSLNetworkError
-from .service import parse_service_start_kwargs
+from .service import filter_service_start_kwargs
 from .utils import (
     localhost_aliases,
     _is_manager_regex,
@@ -94,7 +94,7 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=10, username=
     return client
 
 
-def parse_client_connect_kwargs(**kwargs):
+def filter_client_connect_kwargs(**kwargs):
     """From the specified keyword arguments only return those that are valid for
     :func:`.connect`.
 
@@ -113,7 +113,7 @@ def parse_client_connect_kwargs(**kwargs):
     """
     # a Client uses the same keyword arguments (plus an additional `name` kwarg) to
     # connect to a Manager as a Service does, so we can use the same parser function
-    kws = parse_service_start_kwargs(**kwargs)
+    kws = filter_service_start_kwargs(**kwargs)
     if 'name' in kwargs:
         kws['name'] = kwargs['name']
     return kws

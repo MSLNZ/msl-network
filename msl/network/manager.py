@@ -16,7 +16,7 @@ from .network import Network
 from .json import deserialize
 from .service import (
     Service,
-    parse_service_start_kwargs,
+    filter_service_start_kwargs,
 )
 from .constants import (
     HOSTNAME,
@@ -776,8 +776,8 @@ def run_services(*services, **kwargs):
         if not isinstance(service, Service):
             raise TypeError('All services must be of type {}'.format(Service))
 
-    manager_kwargs = parse_run_forever_kwargs(**kwargs)
-    service_kwargs = parse_service_start_kwargs(**kwargs)
+    manager_kwargs = filter_run_forever_kwargs(**kwargs)
+    service_kwargs = filter_service_start_kwargs(**kwargs)
 
     output = _create_manager_and_loop(**manager_kwargs)
     if not output:
@@ -796,7 +796,7 @@ def run_services(*services, **kwargs):
         _cleanup(**output)
 
 
-def parse_run_forever_kwargs(**kwargs):
+def filter_run_forever_kwargs(**kwargs):
     """From the specified keyword arguments only return those that are valid for
     :func:`~msl.network.manager.run_forever`.
 
