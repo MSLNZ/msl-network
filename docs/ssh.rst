@@ -97,10 +97,10 @@ and ``my_client.py`` as
             self._link = None
 
             # connect to the Manager on the Raspberry Pi
-            cxn = connect(host=hostname, **filter_client_connect_kwargs(**kwargs))
+            self._cxn = connect(host=hostname, **filter_client_connect_kwargs(**kwargs))
 
             # make a link to the Service on the Raspberry Pi
-            self._link = cxn.link('RPiService')
+            self._link = self._cxn.link('RPiService')
 
         def __getattr__(self, item):
             def request(*args, **kwargs):
@@ -110,6 +110,12 @@ and ``my_client.py`` as
                     self.disconnect()
                     raise
             return request
+
+        def manager(self, as_yaml=False, indent=4, timeout=None):
+            return self._cxn.manager(as_yaml=as_yaml, indent=indent, timeout=timeout)
+
+        def admin_request(self, attrib, *args, **kwargs):
+            return self._cxn.admin_request(attrib, *args, **kwargs)
 
         def disconnect(self):
             if self._link is not None:
