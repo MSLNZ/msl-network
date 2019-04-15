@@ -29,13 +29,13 @@ With the ``DigitalMultimeter`` :class:`~msl.network.service.Service` running you
 commands on another computer that is on the same network as the :class:`~msl.network.manager.Manager`
 in order to interact with the digital multimeter from the remote computer.
 
-Connect to the :class:`~msl.network.manager.Manager` by specifying the hostname of the computer that the
-:class:`~msl.network.manager.Manager` is running on
+Connect to the :class:`~msl.network.manager.Manager` by specifying the hostname (or IP address) of the computer
+that the :class:`~msl.network.manager.Manager` is running on
 
 .. code-block:: pycon
 
    >>> from msl.network import connect
-   >>> cxn = connect(host='change to be the hostname of the computer that is running the Manager')
+   >>> cxn = connect(host='change to be the hostname or IP address of the computer that is running the Manager')
 
 Since the name of the ``DigitalMultimeter`` :class:`~msl.network.service.Service` was specified to be
 ``'Hewlett Packard 34401A'``, we must link with the correct name of the :class:`~msl.network.service.Service`
