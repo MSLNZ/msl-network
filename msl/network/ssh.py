@@ -36,6 +36,8 @@ from .json import (
 def parse_console_script_kwargs():
     """Parses the command line for keyword arguments sent from a remote computer.
 
+    .. versionadded:: 0.4
+
     Returns
     -------
     :class:`dict`
@@ -49,23 +51,25 @@ def parse_console_script_kwargs():
         return deserialize(sys.argv[index + 1])
 
 
-def start_manager(hostname, console_script_path, *, ssh_username=None, ssh_password=None,
+def start_manager(host, console_script_path, *, ssh_username=None, ssh_password=None,
                   timeout=10, as_sudo=False, missing_host_key_policy=None,
                   paramiko_kwargs=None, **kwargs):
     """Start a Network :class:`~msl.network.manager.Manager` on a remote computer.
+
+    .. versionadded:: 0.4
 
     .. _cs: https://python-packaging.readthedocs.io/en/latest/command-line-scripts.html#the-console-scripts-entry-point
 
     Parameters
     ----------
-    hostname : :class:`str`
-        The hostname of the remote computer. For example -- ``'192.168.1.100'``,
+    host : :class:`str`
+        The hostname (or IP address) of the remote computer. For example -- ``'192.168.1.100'``,
         ``'raspberrypi'``, ``'pi@raspberrypi'``
     console_script_path : :class:`str`
         The file path to where the `console script <cs_>`_ is located on the remote computer.
     ssh_username : :class:`str`, optional
         The username to use to establish the SSH_ connection. If :data:`None` and the
-        `ssh_username` is not specified in `hostname` then you will be asked for
+        `ssh_username` is not specified in `host` then you will be asked for
         the `ssh_username`.
     ssh_password : :class:`str`, optional
         The password to use to establish the SSH_ connection. If :data:`None`
@@ -94,7 +98,7 @@ def start_manager(hostname, console_script_path, *, ssh_username=None, ssh_passw
     if paramiko_kwargs is None:
         paramiko_kwargs = {}
 
-    ssh_client = connect(hostname, username=ssh_username, password=ssh_password,
+    ssh_client = connect(host, username=ssh_username, password=ssh_password,
                          timeout=timeout, missing_host_key_policy=missing_host_key_policy,
                          **paramiko_kwargs)
 
@@ -120,24 +124,28 @@ def start_manager(hostname, console_script_path, *, ssh_username=None, ssh_passw
         if success:
             break
 
-        if time.time() - t0 > timeout:  # just to avoid getting stuck forever
+        if time.time() - t0 > timeout:
+            # just to avoid getting stuck forever
+            # don't raise an error, maybe the Manager is running by the time a Client tries to connect
+            # if the Manager is not running then the Client will get an error when trying to connect
             break
 
     ssh_client.close()
 
 
-def connect(hostname, *, username=None, password=None, timeout=10,
-            missing_host_key_policy=None, **kwargs):
+def connect(host, *, username=None, password=None, timeout=10, missing_host_key_policy=None, **kwargs):
     """SSH_ to a remote computer.
+
+    .. versionadded:: 0.4
 
     Parameters
     ----------
-    hostname : :class:`str`
-        The hostname of the remote computer. For example -- ``'192.168.1.100'``,
+    host : :class:`str`
+        The hostname (or IP address) of the remote computer. For example -- ``'192.168.1.100'``,
         ``'raspberrypi'``, ``'pi@raspberrypi'``
     username : :class:`str`, optional
         The username to use to establish the SSH_ connection. If :data:`None` and the
-        `username` is not specified in `hostname` then you will be asked for
+        `username` is not specified in `host` then you will be asked for
         the `username`.
     password : :class:`str`, optional
         The password to use to establish the SSH_ connection. If :data:`None`
@@ -159,8 +167,8 @@ def connect(hostname, *, username=None, password=None, timeout=10,
     if paramiko is None:
         raise ImportError('paramiko is not installed, run: pip/conda install paramiko')
 
-    if '@' in hostname:
-        username, hostname = hostname.split('@')
+    if '@' in host:
+        username, host = host.split('@')
 
     if username is None:
         username = input('Enter the SSH username: ')
@@ -169,7 +177,7 @@ def connect(hostname, *, username=None, password=None, timeout=10,
         raise ValueError('You must specify the SSH username')
 
     if password is None:
-        password = getpass.getpass('{}@{}\'s password: '.format(username, hostname))
+        password = getpass.getpass('{}@{}\'s password: '.format(username, host))
 
     if not password:
         raise ValueError('You must specify the SSH password')
@@ -181,12 +189,14 @@ def connect(hostname, *, username=None, password=None, timeout=10,
     ssh_client.set_missing_host_key_policy(missing_host_key_policy)
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=CryptographyDeprecationWarning)
-        ssh_client.connect(hostname, username=username, password=password, timeout=timeout, **kwargs)
+        ssh_client.connect(host, username=username, password=password, timeout=timeout, **kwargs)
     return ssh_client
 
 
 def exec_command(ssh_client, command, *, timeout=10):
     """Execute the SSH_ command on the remote computer.
+
+    .. versionadded:: 0.4
 
     Parameters
     ----------
