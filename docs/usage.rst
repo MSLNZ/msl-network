@@ -111,7 +111,7 @@ To find out what devices are currently connected to the :class:`~msl.network.man
 
 .. code-block:: pycon
 
-   >>> print(cxn.manager(as_yaml=True))
+   >>> print(cxn.manager(as_string=True))
    Manager[localhost:1875]
        attributes:
            identity: () -> dict
@@ -136,7 +136,7 @@ To find out what devices are currently connected to the :class:`~msl.network.man
            language: Python 3.6.2
            os: Windows 10 AMD64
 
-If ``as_yaml=False``, which is the default boolean value, then the returned value would be a
+If ``as_string=False``, which is the default boolean value, then the returned value would be a
 :class:`dict`, rather than a :class:`str`, containing the same information.
 
 To disconnect from the :class:`~msl.network.manager.Manager`, execute

@@ -256,22 +256,26 @@ class Client(Network, asyncio.Protocol):
             self._wait(uid=uid, timeout=self._timeout)
             self._clear_all_futures()
 
-    def manager(self, *, as_yaml=False, indent=4, timeout=None):
+    def manager(self, *, as_string=False, indent=4, timeout=None):
         """Returns the :obj:`~msl.network.network.Network.identity` of the
         Network :class:`~msl.network.manager.Manager`.
 
         .. versionchanged:: 0.3
            Added the `timeout` keyword argument.
 
+        .. versionchanged:: 0.4
+           Renamed `as_yaml` to `as_string`.
+
         .. _YAML: https://en.wikipedia.org/wiki/YAML
 
         Parameters
         ----------
-        as_yaml : :class:`bool`, optional
-            Whether to return the information as a YAML_ string.
+        as_string : :class:`bool`, optional
+            Whether to return the information from the Network
+            :class:`~msl.network.manager.Manager` as a YAML_\\-style string.
         indent : :class:`int`, optional
             The amount of indentation added for each recursive level. Only used if
-            `as_yaml` is :data:`True`.
+            `as_string` is :data:`True`.
         timeout : :class:`float`, optional
             The maximum number of seconds to wait for the reply from the Network
             :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
@@ -283,7 +287,7 @@ class Client(Network, asyncio.Protocol):
             :class:`~msl.network.manager.Manager`.
         """
         identity = self._send_request_for_manager('identity', timeout=timeout)
-        if not as_yaml:
+        if not as_string:
             return identity
         space = ' ' * indent
         s = ['Manager[{}:{}]'.format(identity['hostname'], identity['port'])]
