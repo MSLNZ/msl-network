@@ -90,7 +90,7 @@ def fetch_init(key):
     return re.compile(r'{}\s*=\s*(.*)'.format(key)).search(init_text).group(1)[1:-1]
 
 
-install_requires = ['cryptography']
+install_requires = ['cryptography', 'paramiko']
 
 testing = {'test', 'tests', 'pytest'}.intersection(sys.argv)
 pytest_runner = ['pytest-runner'] if testing else []

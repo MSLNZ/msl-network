@@ -20,11 +20,8 @@ import socket
 import getpass
 import warnings
 
+import paramiko
 from cryptography.utils import CryptographyDeprecationWarning
-try:
-    import paramiko
-except ImportError:
-    paramiko = None
 
 from .exceptions import MSLNetworkError
 from .json import (
@@ -164,9 +161,6 @@ def connect(host, *, username=None, password=None, timeout=10, missing_host_key_
     :class:`~paramiko.client.SSHClient`
         The SSH_ connection to the remote computer.
     """
-    if paramiko is None:
-        raise ImportError('paramiko is not installed, run: pip/conda install paramiko')
-
     if '@' in host:
         username, host = host.split('@')
 

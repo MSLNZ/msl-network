@@ -34,6 +34,7 @@ Dependencies
 ++++++++++++
 * Python 3.5+
 * cryptography_
+* paramiko_
 
 Documentation
 -------------
@@ -55,3 +56,4 @@ The documentation for **MSL-Network** can be found `here <https://msl-network.re
 .. _Connecting from a Terminal: https://msl-network.readthedocs.io/en/latest/terminal_input.html#terminal-input
 .. _MSL Package Manager: https://msl-package-manager.readthedocs.io/en/latest/
 .. _cryptography: https://cryptography.io/en/latest/
+.. _paramiko: http://www.paramiko.org/

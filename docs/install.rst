@@ -30,6 +30,7 @@ Dependencies
 ------------
 * Python 3.5+
 * cryptography_
+* paramiko_
 
 Optional packages that can be used for (de)serializing JSON_ data:
 
@@ -52,3 +53,4 @@ for more details.
 .. _RapidJSON: https://pypi.python.org/pypi/python-rapidjson
 .. _simplejson: https://pypi.python.org/pypi/simplejson/
 .. _yajl: https://pypi.python.org/pypi/yajl
+.. _paramiko: http://www.paramiko.org/
