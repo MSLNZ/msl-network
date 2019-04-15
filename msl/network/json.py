@@ -41,7 +41,7 @@ else:
 
 
 def serialize(obj):
-    """Serialize `obj` to a JSON-formatted :class:`str`"""
+    """Serialize `obj` to a JSON-formatted :class:`str`."""
     t0 = time.perf_counter()
     data = json.dumps(obj, **kwargs_dumps)
     log.debug('{}.dumps took {:.3g} seconds'.format(_PKG, time.perf_counter() - t0))
