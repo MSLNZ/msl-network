@@ -25,6 +25,7 @@ from .constants import (
     HOME_DIR,
     DATABASE,
     DISCONNECT_REQUEST,
+    NETWORK_MANAGER_RUNNING_PREFIX,
 )
 from .database import (
     ConnectionsTable,
@@ -985,7 +986,7 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
         loop.create_task(wakeup())
 
     state = 'ENABLED' if context else 'DISABLED'
-    log.info('Network Manager running on {}:{} (TLS {})'.format(HOSTNAME, port, state))
+    log.info(NETWORK_MANAGER_RUNNING_PREFIX + ' {}:{} (TLS {})'.format(HOSTNAME, port, state))
 
     return {
         'manager': manager,

@@ -26,6 +26,7 @@ import paramiko
 from cryptography.utils import CryptographyDeprecationWarning
 
 from .exceptions import MSLNetworkError
+from .constants import NETWORK_MANAGER_RUNNING_PREFIX
 from .json import (
     serialize,
     deserialize,
@@ -113,7 +114,7 @@ def start_manager(host, console_script_path, *, ssh_username=None, ssh_password=
             stdout = exec_command(ssh_client, 'type ' + logfile)  # type is for Windows
 
         for line in stdout:
-            if 'Network Manager running' in line:
+            if NETWORK_MANAGER_RUNNING_PREFIX in line:
                 success = True
                 break
             if 'ERROR' in line or 'Error:' in line:

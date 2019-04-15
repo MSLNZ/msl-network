@@ -43,6 +43,8 @@ DISCONNECT_REQUEST = '__disconnect__'
 
 DEFAULT_YEARS_VALID = 100 if sys.maxsize > 2**32 else 15
 
+NETWORK_MANAGER_RUNNING_PREFIX = 'Network Manager running on'
+
 
 class JSONPackage(enum.Enum):
     """
