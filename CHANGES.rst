@@ -8,6 +8,7 @@ Version 0.4.0.dev0
 - Added
 
   * the `ssh` module
+  * a `LinkedClient` class
   * the `run_forever` (to start the `Manager`) and the `run_services` (to start the `Manager`
     and then start the `Service`\s) functions
   * the `filter_service_start_kwargs`, `filter_run_forever_kwargs` and
@@ -34,8 +35,9 @@ Version 0.4.0.dev0
     + `--key` became `--keyfile`
     + `--key-password` became `--keyfile-password`
 
-  * the `certificate` keyword argument for the `connect` function and for the `Service.start`
-    method was changed to `certfile`
+  * the `certificate` keyword argument for the `connect` and `get_ssl_context` functions and
+    for the `Service.start` method was changed to `certfile`
+  * the `as_yaml` keyword argument for the `Client.manager` method was changed to `as_string`
   * a `Client` can no longer request a private attribute -- i.e., an attribute that starts with
     a ``_`` (an underscore) -- from a `Service`
   * the default `timeout` value for connecting to the `Manager` is now 10 seconds
