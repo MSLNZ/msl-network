@@ -258,7 +258,7 @@ def get_fingerprint(cert, *, algorithm=hashes.SHA1):
     ----------
     cert : :class:`~cryptography.x509.Certificate`
         The PEM certificate.
-    algorithm : :class:`~cryptography.hazmat.primitives.hashes.HashAlgorithm`
+    algorithm : :class:`~cryptography.hazmat.primitives.hashes.HashAlgorithm`, optional
         The hash algorithm.
 
     Returns
