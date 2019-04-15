@@ -12,7 +12,7 @@ Version 0.4.0.dev0
   * the `run_forever` (to start the `Manager`) and the `run_services` (to start the `Manager`
     and then start the `Service`\s) functions
   * the `filter_service_start_kwargs`, `filter_run_forever_kwargs` and
-    'filter_client_connect_kwargs` functions
+    `filter_client_connect_kwargs` functions
   * a `disconnect_service` method to `Link`
   * shorter argument name options for some CLI parameters
   * a `Service` now accepts `name` and `max_clients` as keyword arguments when it is instantiated
@@ -21,19 +21,18 @@ Version 0.4.0.dev0
 
   * the following CLI changes to argument names for the `certgen` command
 
-    + `--key-path` became `--keyfile`
-    + `--key-password` became `--keyfile-password`
-    + `path` became `out`
+    + ``--key-path`` became ``--keyfile``
+    + ``--key-password`` became ``--keyfile-password``
 
   * the following CLI changes to argument names for the `keygen` command
 
-    + `--path` became `--out`
+    + ``--path`` became ``--out``
 
   * the following CLI changes to argument names for the `start` command
 
-    + `--cert` became `--certfile`
-    + `--key` became `--keyfile`
-    + `--key-password` became `--keyfile-password`
+    + ``--cert`` became ``--certfile``
+    + ``--key`` became ``--keyfile``
+    + ``--key-password`` became ``--keyfile-password``
 
   * the `certificate` keyword argument for the `connect` and `get_ssl_context` functions and
     for the `Service.start` method was changed to `certfile`
