@@ -2,7 +2,9 @@
 Helper functions for connecting to a remote computer via SSH_.
 
 Follow these `instructions <https://winscp.net/eng/docs/guide_windows_openssh_server>`_
-to install/enable an SSH_ server on Windows.
+to install/enable an SSH_ server on Windows. You can also create an SSH_ server using the
+`paramiko <http://docs.paramiko.org/en/2.4/api/server.html>`_ package (which is included
+when **MSL-Network** is installed).
 
 The two functions :func:`.start_manager` and :func:`.parse_console_script_kwargs`
 are meant to be used together to automatically start a Network
