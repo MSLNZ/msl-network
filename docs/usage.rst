@@ -145,6 +145,18 @@ To disconnect from the :class:`~msl.network.manager.Manager`, execute
 
   >>> cxn.disconnect()
 
+If you only wanted to connect to the :ref:`basic-math-service` (and no other
+:class:`~msl.network.service.Service`\s on the :class:`~msl.network.manager.Manager`)
+then you could create a :class:`~msl.network.client.LinkedClient`
+
+.. code-block:: pycon
+
+   >>> from msl.network import LinkedClient
+   >>> bm = LinkedClient('BasicMath')
+   >>> bm.add(1, 2)
+   3
+   >>> bm.disconnect()
+
 .. _RSA: https://en.wikipedia.org/wiki/RSA_(cryptosystem)
 .. _TLS: https://en.wikipedia.org/wiki/Transport_Layer_Security
 .. _Elliptic-Curve Cryptography: https://en.wikipedia.org/wiki/Elliptic-curve_cryptography

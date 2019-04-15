@@ -35,7 +35,7 @@ that the :class:`~msl.network.manager.Manager` is running on
 .. code-block:: pycon
 
    >>> from msl.network import connect
-   >>> cxn = connect(host='change to be the hostname or IP address of the computer that is running the Manager')
+   >>> cxn = connect(host='the hostname or IP address of the computer that the Manager is running on')
 
 Since the name of the ``DigitalMultimeter`` :class:`~msl.network.service.Service` was specified to be
 ``'Hewlett Packard 34401A'``, we must link with the correct name of the :class:`~msl.network.service.Service`
@@ -43,6 +43,18 @@ Since the name of the ``DigitalMultimeter`` :class:`~msl.network.service.Service
 .. code-block:: pycon
 
    >>> dmm = cxn.link('Hewlett Packard 34401A')
+
+.. tip::
+
+   The process of establishing a connection to a :class:`~msl.network.manager.Manager`
+   and linking with a :class:`~msl.network.service.Service` can also be done in a single
+   line. A :class:`~msl.network.client.LinkedClient` exists for this purpose. This can be
+   useful if you only want to link with a single :class:`~msl.network.service.Service`.
+
+   .. code-block:: pycon
+
+      >>> from msl.network import LinkedClient
+      >>> dmm = LinkedClient('Hewlett Packard 34401A', host='hostname or IP address of the Manager')
 
 Now we can send ``write``, ``read`` or ``query`` commands to the digital multimeter
 

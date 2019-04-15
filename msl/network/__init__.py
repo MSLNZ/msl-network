@@ -4,7 +4,10 @@ Concurrent and asynchronous network I/O.
 import re
 from collections import namedtuple
 
-from .client import connect
+from .client import (
+    connect,
+    LinkedClient,
+)
 from .service import Service
 from .exceptions import MSLNetworkError
 from .database import (

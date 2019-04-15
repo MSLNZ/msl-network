@@ -788,3 +788,145 @@ class Link(object):
             if traceback[-1].startswith('ConnectionAbortedError:'):
                 return True
             raise
+
+
+class LinkedClient(object):
+
+    def __init__(self, service_name, **kwargs):
+        """Create a new :class:`.Client` that has a :class:`.Link` with the
+        specified :class:`~msl.network.service.Service`.
+
+        .. versionadded:: 0.4
+
+        Parameters
+        ----------
+        service_name : :class:`str`
+            The name of the :class:`~msl.network.service.Service` to
+            :meth:`~msl.network.client.Client.link` with.
+        kwargs
+            Keyword arguments that are passed to :func:`.connect`.
+        """
+        super(LinkedClient, self).__init__()
+        self._kwargs = filter_client_connect_kwargs(**kwargs)
+        self._cxn = connect(**self._kwargs)
+        self._link = self._cxn.link(service_name)
+
+    @property
+    def address_manager(self):
+        """See :attr:`.Client.address_manager` for more details."""
+        return self._cxn.address_manager
+
+    @property
+    def name(self):
+        """See :attr:`.Client.name` for more details."""
+        return self._cxn.name
+
+    @property
+    def port(self):
+        """See :attr:`.Client.port` for more details."""
+        return self._cxn.port
+
+    @property
+    def service_address(self):
+        """See :attr:`.Link.service_address` for more details."""
+        return self._link.service_address
+
+    @property
+    def service_attributes(self):
+        """See :attr:`.Link.service_attributes` for more details."""
+        return self._link.service_attributes
+
+    @property
+    def service_language(self):
+        """See :attr:`.Link.service_language` for more details."""
+        return self._link.service_language
+
+    @property
+    def service_name(self):
+        """See :attr:`.Link.service_name` for more details."""
+        return self._link.service_name
+
+    @property
+    def service_os(self):
+        """See :attr:`.Link.service_os` for more details."""
+        return self._link.service_os
+
+    @property
+    def link(self):
+        """:class:`.Link`: The :class:`.Link` with the :class:`~msl.network.service.Service`."""
+        return self._link
+
+    def admin_request(self, attrib, *args, **kwargs):
+        """See :meth:`.Client.admin_request` for more details."""
+        return self._cxn.admin_request(attrib, *args, **kwargs)
+
+    def disconnect(self):
+        """See :meth:`.Client.disconnect` for more details."""
+        self._cxn.disconnect()
+
+    def identity(self):
+        """See :meth:`.Client.identity` for more details."""
+        return self._cxn.identity()
+
+    def manager(self, *, as_string=False, indent=4, timeout=None):
+        """See :meth:`.Client.manager` for more details."""
+        return self._cxn.manager(as_string=as_string, indent=indent, timeout=timeout)
+
+    def send_pending_requests(self, *, wait=True, timeout=None):
+        """See :meth:`.Client.send_pending_requests` for more details."""
+        self._cxn.send_pending_requests(wait=wait, timeout=timeout)
+
+    def service_error_handler(self):
+        """This method is called immediately before an exception is raised if there
+        was an error processing a request on the :class:`~msl.network.service.Service`
+        that this object is linked with.
+
+        You can override this method to perform any necessary cleanup (e.g., closing
+        file handles, shutting down threads, disconnecting from devices, ...) before
+        the :class:`~msl.network.exceptions.MSLNetworkError` is raised.
+        """
+        pass
+
+    def spawn(self, name='Client'):
+        """Returns a new connection to the Network :class:`~msl.network.manager.Manager`
+        that has a :class:`.Link` with the same :class:`~msl.network.service.Service`.
+
+        Parameters
+        ----------
+        name : :class:`str`, optional
+            The name to assign to the new :class:`.Client`.
+
+        Returns
+        -------
+        :class:`.LinkedClient`:
+            A new :class:`.Client` that has a :class:`.Link` with the same
+            :class:`~msl.network.service.Service`.
+        """
+        kwargs = self._kwargs.copy()
+        kwargs['name'] = name
+        return LinkedClient(self.service_name, **kwargs)
+
+    def wait(self, timeout=None):
+        """See :meth:`.Client.wait` for more details."""
+        self._cxn.wait(timeout=timeout)
+
+    def __repr__(self):
+        return '<Link[name={}] with {}[{}] at Manager[{}]>'.format(
+            self.name, self.service_name, self.service_address, self.address_manager
+        )
+
+    def __getattr__(self, item):
+        # all other methods that are called get sent to the Link object
+        def service_request(*args, **kwargs):
+            try:
+                return getattr(self._link, item)(*args, **kwargs)
+            except MSLNetworkError:
+                self.service_error_handler()
+                raise
+        return service_request
+
+    def __del__(self):
+        try:
+            self.disconnect()
+        except:
+            pass

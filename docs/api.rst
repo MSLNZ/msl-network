@@ -11,9 +11,14 @@ Typically, only the :class:`~msl.network.service.Service` class needs to be subc
 :class:`~msl.network.manager.Manager` for most applications using **MSL-Network**.
 
 The :mod:`msl.network.ssh` module provides some functions for using `SSH <https://www.ssh.com/ssh/>`_
-to connect to a remote computer. :ref:`ssh-example` shows an example package showing how to
-automatically start a Network :class:`~msl.network.manager.Manager` and
+to connect to a remote computer. :ref:`ssh-example` shows an example Python package that can
+automatically start a Network :class:`~msl.network.manager.Manager` and a
 :class:`~msl.network.service.Service` on a Raspberry Pi from another computer.
+
+The process of establishing a connection to a :class:`~msl.network.manager.Manager` and linking
+with a particular :class:`~msl.network.service.Service` can be achieved by creating a
+:class:`~msl.network.client.LinkedClient`. This can be useful if you only want to link with a
+single :class:`~msl.network.service.Service` on a :class:`~msl.network.manager.Manager`.
 
 Package Structure
 -----------------
