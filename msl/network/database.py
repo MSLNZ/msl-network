@@ -32,7 +32,7 @@ class Database(object):
         database : :class:`str`
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
-        kwargs : :class:`dict`, optional
+        kwargs
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
         """
         self._path = database if database is not None else DATABASE
@@ -171,7 +171,7 @@ class ConnectionsTable(Database):
         as_datetime : :class:`bool`, optional
             Whether to fetch the timestamps from the database as :class:`datetime.datetime`
             objects. If :data:`False` then the timestamps will be of type :class:`str`.
-        kwargs : :class:`dict`, optional
+        kwargs
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
         """
         if as_datetime and 'detect_types' not in kwargs:
@@ -245,7 +245,7 @@ class HostnamesTable(Database):
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
             If :data:`None` then loads the default database.
-        kwargs : :class:`dict`, optional
+        kwargs
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
        """
         super(HostnamesTable, self).__init__(database, **kwargs)
@@ -309,7 +309,7 @@ class UsersTable(Database):
             The path to the database file, or ``':memory:'`` to open a
             connection to a database that resides in RAM instead of on disk.
             If :data:`None` then loads the default database.
-        kwargs : :class:`dict`, optional
+        kwargs
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
         """
         super(UsersTable, self).__init__(database, **kwargs)
