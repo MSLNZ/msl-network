@@ -808,6 +808,8 @@ class LinkedClient(object):
             Keyword arguments that are passed to :func:`.connect`.
         """
         super(LinkedClient, self).__init__()
+        if 'name' not in kwargs:
+            kwargs['name'] = 'LinkedClient'
         self._kwargs = filter_client_connect_kwargs(**kwargs)
         self._cxn = connect(**self._kwargs)
         self._link = self._cxn.link(service_name)
@@ -888,7 +890,7 @@ class LinkedClient(object):
         """
         pass
 
-    def spawn(self, name='Client'):
+    def spawn(self, name='LinkedClient'):
         """Returns a new connection to the Network :class:`~msl.network.manager.Manager`
         that has a :class:`.Link` with the same :class:`~msl.network.service.Service`.
 
