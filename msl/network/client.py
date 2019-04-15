@@ -785,9 +785,8 @@ class Link(object):
             self._client._send_request(self._service_name, 'disconnect_service', *args, **kwargs)
         except MSLNetworkError as e:
             traceback = str(e).splitlines()
-            if traceback[-1].startswith('ConnectionAbortedError:'):
-                return True
-            raise
+            if not traceback[-1].startswith('ConnectionAbortedError:'):
+                raise
 
 
 class LinkedClient(object):
