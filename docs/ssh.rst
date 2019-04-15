@@ -12,6 +12,7 @@ Your package has the following structure::
     mypackage/
         mypackage/
             __init__.py
+            my_client.py
             rpi_service.py
         setup.py
 
@@ -40,6 +41,7 @@ with ``setup.py`` as
     from msl.network import manager, ssh, LinkedClient
 
     from .rpi_service import RPiService
+    from .my_client import MyClient
 
     def connect(*, host='raspberrypi', rpi_password=None, timeout=10, **kwargs):
         # NOTE: you will need to update the `console_script_path` value below
@@ -52,7 +54,7 @@ with ``setup.py`` as
         # create a Client that is linked with a Service of your choice
         # in this case it is the RPiService
         kwargs['host'] = host
-        return LinkedClient('RPiService', **kwargs)
+        return MyClient('RPiService', **kwargs)
 
     def start_service_on_rpi():
         kwargs = ssh.parse_console_script_kwargs()
@@ -63,7 +65,7 @@ with ``setup.py`` as
             )
         manager.run_services(RPiService(), **kwargs)
 
-and ``rpi_service.py`` as
+``rpi_service.py`` as
 
 .. code-block:: python
 
@@ -84,6 +86,27 @@ and ``rpi_service.py`` as
         def power(self, a, n=2):
             return a ** n
 
+and ``my_client.py`` as
+
+.. code-block:: python
+
+    from msl.network import LinkedClient
+
+    class MyClient(LinkedClient):
+
+        def __init__(self, service_name, **kwargs):
+            super(MyClient, self).__init__(service_name, **kwargs)
+
+        def disconnect(self):
+            # Shut down the RPiService and the Network Manager.
+            self.disconnect_service()
+            super(MyClient, self).disconnect()
+
+        def service_error_handler(self):
+            # Override this method to shut down the RPiService and the
+            # Network Manager if there was an error on the RPiService.
+            self.disconnect()
+
 To create a source distribution of ``mypackage`` run the following in the root folder of your
 package directory
 
@@ -95,14 +118,20 @@ This will create a file in ``dist/mypackage-0.1.0.tar.gz``. Copy this file to th
 
 Install ``mypackage-0.1.0.tar.gz`` on the Raspberry Pi using
 
+.. note::
+
+   The ``libssl-dev`` and ``libffi-dev`` libraries that are specified below are needed to build
+   the cryptography_ package from source on the Raspberry Pi. It is also recommended to install
+   ``mypackage`` and its dependencies in a `virtual environment`_ if you are familiar with them.
+   However, we will install the package without using a virtual environment for simplicity.
+
+   Sometimes running the ``pip3 install mypackage-0.1.0.tar.gz`` command can raise an error.
+   Try running the command a few times since it might just be a temporary network issue.
+
 .. code-block:: console
 
    sudo apt install libssl-dev libffi-dev
    pip3 install mypackage-0.1.0.tar.gz
-
-*NOTE: the* ``libssl-dev`` *and* ``libffi-dev`` *libraries are needed to build the cryptography package*
-*on the Raspberry Pi. It is also recommended to install mypackage and its dependencies in a virtual*
-*environment if you are familiar with them.*
 
 In addition, install ``mypackage-0.1.0.tar.gz`` on another computer.
 
@@ -128,8 +157,8 @@ does not equal ``'raspberrypi'``.
     125
 
 When you are done sending requests to ``RPiService`` you disconnect from the
-:class:`~msl.network.service.Service` which will shut down the
-Network :class:`~msl.network.manager.Manager` that is running on the Raspberry Pi
+:class:`~msl.network.service.Service` which will also shut down the Network
+:class:`~msl.network.manager.Manager` that is running on the Raspberry Pi
 
 .. code-block:: pycon
 
@@ -179,3 +208,6 @@ Network :class:`~msl.network.manager.Manager` that is running on the Raspberry P
       >>> ssh.exec_command(ssh_client, 'sudo kill -9 1367')
       []
       >>> ssh_client.close()
+
+.. _cryptography: https://cryptography.io/en/latest/
+.. _virtual environment: https://docs.python.org/3/tutorial/venv.html
