@@ -47,7 +47,7 @@ for more details.
 .. _MSL Package Manager: https://msl-package-manager.readthedocs.io/en/latest/
 .. _PEP492: https://www.python.org/dev/peps/pep-0492/
 .. _PEP498: https://www.python.org/dev/peps/pep-0498/
-.. _cryptography: https://pypi.python.org/pypi/cryptography
+.. _cryptography: https://cryptography.io/en/latest/
 .. _JSON: https://www.json.org/
 .. _UltraJSON: https://pypi.python.org/pypi/ujson
 .. _RapidJSON: https://pypi.python.org/pypi/python-rapidjson

@@ -56,10 +56,11 @@ Some tips for connecting as a :class:`~msl.network.client.Client`:
     .. note::
 
        Most requests that are for the Network :class:`~msl.network.manager.Manager` to
-       execute require that the request comes from an administrator of the Network
-       :class:`~msl.network.manager.Manager`. Your login credentials will be checked
-       (requested from you) before the Network :class:`~msl.network.manager.Manager`
-       executes the request.
+       execute require that the request comes from a :class:`~msl.network.client.Client`
+       that is connected to the Network :class:`~msl.network.manager.Manager` as an administrator.
+       Your login credentials will be checked (requested from you) before the Network
+       :class:`~msl.network.manager.Manager` executes the request. See the ``user`` command in
+       :ref:`network-cli` for more details on how to become an administrator.
 
   * To request something from a :class:`~msl.network.service.Service` use the following format
 

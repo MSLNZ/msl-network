@@ -20,7 +20,7 @@ different from *parallel programming* where multiple tasks can be executed at th
    :target: https://raw.githubusercontent.com/MSLNZ/msl-network/master/docs/_static/concurrency_vs_parallelism.png
 
 The Network :class:`~msl.network.manager.Manager` uses *concurrent programming*. It runs in a single event loop
-but it can handle multiple :class:`~msl.network.client.Client`\'s and :class:`~msl.network.service.Service`\'s
+but it can handle multiple :class:`~msl.network.client.Client`\s and :class:`~msl.network.service.Service`\s
 connected to it simultaneously.
 
 When a :class:`~msl.network.client.Client` sends a request, the :class:`~msl.network.manager.Manager`
@@ -73,7 +73,7 @@ Synchronous Example
 +++++++++++++++++++
 
 The following code illustrates how to send requests *synchronously*. Before you can run this example on your own
-computer make sure to :ref:`start-manager` and :ref:`start-service`.
+computer make sure to :ref:`start-manager` and start the :ref:`basic-math-service`.
 
 .. code-block:: python
 
@@ -135,7 +135,7 @@ Asynchronous Example
 ++++++++++++++++++++
 
 The following code illustrates how to send requests *asynchronously*. Before you can run this example on your own
-computer make sure to :ref:`start-manager` and :ref:`start-service`.
+computer make sure to :ref:`start-manager` and start the :ref:`basic-math-service`.
 
 .. code-block:: python
 
@@ -193,7 +193,8 @@ The output of the ``asynchronous.py`` program will be::
 
 The *Total execution time* value will be slightly different for you, but the important thing to notice is that
 executing all requests took about 6 seconds (i.e., max(1, 2, 3, 4, 5, 6) for the :func:`time.sleep` functions in the
-:ref:`basic-math-service`) and that the returned object from each request was a :class:`~asyncio.Future` object.
+:ref:`basic-math-service`) and that the returned object from each request was a :class:`~asyncio.Future` object
+which we needed to get the :meth:`~asyncio.Future.result` of.
 
 Synchronous vs Asynchronous comparison
 ++++++++++++++++++++++++++++++++++++++

@@ -7,6 +7,7 @@ The following examples illustrate some ideas on how one could use **MSL-Network*
 
 1. :ref:`digital-multimeter`
 2. :ref:`additional-examples`
+3. RPi-SmartGadget_ -- Uses a Raspberry Pi to communicate with a Sensirion SHTxx sensor.
 
 .. _digital-multimeter:
 
@@ -21,7 +22,9 @@ network. This example is included with **MSL-Network** when it is installed, but
 
 The first task to do is to :ref:`start-manager` on the same computer that the digital multimeter is
 physically connected to (via a GPIB cable or a DB9 cable). Next, on the same computer, copy and paste the
-following script to a file and run the script to start the digital multimeter :class:`~msl.network.service.Service`.
+following script to a file, edit the configuration file used by MSL-Equipment_ for the information relevant
+to your DMM (e.g., the COM#, GPIB address) and then run the script to start the digital multimeter
+:class:`~msl.network.service.Service`.
 
 .. literalinclude:: ../msl/examples/network/dmm.py
 
@@ -121,3 +124,4 @@ MyArray Service
 
 .. _MSL-Equipment: https://msl-equipment.readthedocs.io/en/latest/
 .. _command prompt: https://en.wikipedia.org/wiki/Cmd.exe
+.. _RPi-SmartGadget: https://github.com/MSLNZ/rpi-smartgadget
