@@ -267,12 +267,12 @@ class Network(object):
     def _connection_established(self):
         raise NotImplementedError
 
-    def _create_connection(self, host, port, certificate, disable_tls, assert_hostname, timeout):
+    def _create_connection(self, host, port, certfile, disable_tls, assert_hostname, timeout):
         # common to both Client and Service to connect to the Manager
 
         context = None
         if not disable_tls:
-            certificate, context = get_ssl_context(host=host, port=port, certificate=certificate)
+            certfile, context = get_ssl_context(host=host, port=port, certfile=certfile)
             if not context:
                 return False
 
@@ -299,7 +299,7 @@ class Network(object):
                 err += '\nPerhaps the Network Manager is using a new certificate...\n' \
                        'If you trust the network connection then you can delete ' \
                        'the certificate at\n{}\nand then re-connect to the Network Manager ' \
-                       'to create a new trusted certificate'.format(certificate)
+                       'to create a new trusted certificate'.format(certfile)
             elif ('WRONG_VERSION_NUMBER' in err) or ('UNKNOWN_PROTOCOL' in err):
                 err += '\nTry setting disable_tls=True'
             elif 'Errno 10061' in err:

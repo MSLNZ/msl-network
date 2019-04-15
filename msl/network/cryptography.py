@@ -431,7 +431,7 @@ def get_metadata_as_string(cert):
     return '\n'.join(details)
 
 
-def get_ssl_context(*, host=None, port=None, certificate=None):
+def get_ssl_context(*, host=None, port=None, certfile=None):
     """Get the SSL context.
 
     Gets the context either from connecting to a remote server or from loading
@@ -440,13 +440,16 @@ def get_ssl_context(*, host=None, port=None, certificate=None):
     To get the context from a remote server you must specify both `host`
     and `port`.
 
+    .. versionchanged:: 0.4
+       Renamed `certificate` to `certfile`.
+
     Parameters
     ----------
     host : :class:`str`, optional
-        The hostname of the remote server to connect to.
+        The hostname or IP address of the remote server to connect to.
     port : :class:`int`, optional
         The port number of the remote server to connect to.
-    certificate : :class:`str`, optional
+    certfile : :class:`str`, optional
         The path to the certificate file to load.
 
     Returns
@@ -456,12 +459,12 @@ def get_ssl_context(*, host=None, port=None, certificate=None):
     :class:`ssl.SSLContext`
         The SSL context.
     """
-    if certificate is None:
+    if certfile is None:
 
         # check that the default certificate exists
         # if it does not exist then fetch it
-        certificate = os.path.join(CERT_DIR, host + '.crt')
-        if not os.path.isfile(certificate):
+        certfile = os.path.join(CERT_DIR, host + '.crt')
+        if not os.path.isfile(certfile):
             cert_data = ssl.get_server_certificate((host, port)).encode()
             cert = load_certificate(cert_data)
             fingerprint = get_fingerprint(cert)
@@ -478,15 +481,15 @@ def get_ssl_context(*, host=None, port=None, certificate=None):
             while True:
                 r = input('Continue? y/n: ').lower()
                 if r.startswith('n'):
-                    return certificate, None
+                    return certfile, None
                 elif r.startswith('y'):
                     break
 
-            ensure_root_path(certificate)
-            with open(certificate, 'wb') as f:
+            ensure_root_path(certfile)
+            with open(certfile, 'wb') as f:
                 f.write(cert_data)
 
-    elif not os.path.isfile(certificate):
-        raise IOError('Cannot find certificate ' + certificate)
+    elif not os.path.isfile(certfile):
+        raise IOError('Cannot find certificate ' + certfile)
 
-    return certificate, ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=certificate)
+    return certfile, ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=certfile)
