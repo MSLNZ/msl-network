@@ -97,11 +97,12 @@ Install ``mypackage-0.1.0.tar.gz`` on the Raspberry Pi using
 
 .. code-block:: console
 
-   sudo apt install libssl-dev
+   sudo apt install libssl-dev libffi-dev
    pip3 install mypackage-0.1.0.tar.gz
 
-*NOTE: the* ``libssl-dev`` *library is needed to build the cryptography package on the Raspberry Pi.*
-*It is also recommended to install the package in a virtual environment if you are familiar with them.*
+*NOTE: the* ``libssl-dev`` *and* ``libffi-dev`` *libraries are needed to build the cryptography package*
+*on the Raspberry Pi. It is also recommended to install mypackage and its dependencies in a virtual*
+*environment if you are familiar with them.*
 
 In addition, install ``mypackage-0.1.0.tar.gz`` on another computer.
 
