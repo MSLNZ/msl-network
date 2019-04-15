@@ -777,6 +777,15 @@ class Link(object):
         will raise :class:`~msl.network.exceptions.MSLNetworkError`.
 
         .. versionadded:: 0.4
+
+        Parameters
+        ----------
+        args
+            The positional arguments that are passed to the ``disconnect_service`` method
+            of the :class:`~msl.network.service.Service` that this object is linked with.
+        kwargs
+            The keyword arguments that are passed to the ``disconnect_service`` method
+            of the :class:`~msl.network.service.Service` that this object is linked with.
         """
 
         # If the request is successful then a ConnectionAbortedError will be raised which
