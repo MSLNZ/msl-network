@@ -775,6 +775,8 @@ class Link(object):
         A :class:`~msl.network.service.Service` must also implement a method called
         ``disconnect_service`` otherwise calling this :meth:`disconnect_service` method
         will raise :class:`~msl.network.exceptions.MSLNetworkError`.
+
+        .. versionadded:: 0.4
         """
 
         # If the request is successful then a ConnectionAbortedError will be raised which
