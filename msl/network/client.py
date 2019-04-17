@@ -236,12 +236,12 @@ class Client(Network, asyncio.Protocol):
 
         Raises
         ------
-        TimeoutError
-            If linking with the :class:`~msl.network.service.Service` takes longer
-            than `timeout` seconds.
         :class:`~msl.network.exceptions.MSLNetworkError`
             If there is no :class:`~msl.network.service.Service` available
             with the name `service`.
+        TimeoutError
+            If linking with the :class:`~msl.network.service.Service` takes longer
+            than `timeout` seconds.
         """
         if self._debug:
             log.debug('preparing to link with {!r}'.format(service))
