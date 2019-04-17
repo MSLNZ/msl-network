@@ -26,14 +26,6 @@ Package Structure
 .. toctree::
 
    msl.network <_api/msl.network>
-   msl.network.cli <_api/msl.network.cli>
-   msl.network.cli_argparse <_api/msl.network.cli_argparse>
-   msl.network.cli_certdump <_api/msl.network.cli_certdump>
-   msl.network.cli_certgen <_api/msl.network.cli_certgen>
-   msl.network.cli_hostname <_api/msl.network.cli_hostname>
-   msl.network.cli_keygen <_api/msl.network.cli_keygen>
-   msl.network.cli_start <_api/msl.network.cli_start>
-   msl.network.cli_user <_api/msl.network.cli_user>
    msl.network.client <_api/msl.network.client>
    msl.network.constants <_api/msl.network.constants>
    msl.network.cryptography <_api/msl.network.cryptography>
