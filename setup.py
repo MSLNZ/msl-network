@@ -3,7 +3,7 @@ import sys
 from distutils.cmd import Command
 from setuptools import setup, find_packages
 
-if sys.version_info < (3, 5):
+if sys.version_info[:2] < (3, 5):
     sys.exit('Python < 3.5 is not supported because the asyncio package is required')
 
 
@@ -101,8 +101,8 @@ sphinx = ['sphinx', 'sphinx_rtd_theme'] if needs_sphinx else []
 setup(
     name='msl-network',
     version=fetch_init('__version__'),
-    author=fetch_init('__author__'),
-    author_email='joseph.borbely@measurement.govt.nz',
+    author='Measurement Standards Laboratory of New Zealand',
+    author_email='info@measurement.govt.nz',
     url='https://github.com/MSLNZ/msl-network',
     description='Concurrent and asynchronous network I/O',
     long_description=read('README.rst'),
@@ -110,8 +110,8 @@ setup(
     license='MIT',
     classifiers=[
         'Development Status :: 4 - Beta',
-        'Environment :: Console',
         'Intended Audience :: Science/Research',
+        'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
@@ -119,7 +119,8 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
-        'Topic :: Scientific/Engineering :: Physics',
+        'Topic :: Software Development',
+        'Topic :: Scientific/Engineering',
     ],
     setup_requires=sphinx + pytest_runner + install_requires,
     tests_require=['pytest-cov', 'pytest'],
