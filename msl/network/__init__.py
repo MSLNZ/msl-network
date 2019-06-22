@@ -16,7 +16,7 @@ from .database import (
     UsersTable,
 )
 
-__author__ = 'Joseph Borbely'
+__author__ = 'Measurement Standards Laboratory of New Zealand'
 __copyright__ = '\xa9 2017 - 2019, ' + __author__
 __version__ = '0.4.1.dev0'
 

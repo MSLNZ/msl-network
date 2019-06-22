@@ -101,7 +101,7 @@ sphinx = ['sphinx', 'sphinx_rtd_theme'] if needs_sphinx else []
 setup(
     name='msl-network',
     version=fetch_init('__version__'),
-    author='Measurement Standards Laboratory of New Zealand',
+    author=fetch_init('__author__'),
     author_email='info@measurement.govt.nz',
     url='https://github.com/MSLNZ/msl-network',
     description='Concurrent and asynchronous network I/O',
