@@ -113,28 +113,29 @@ To find out what devices are currently connected to the :class:`~msl.network.man
 
    >>> print(cxn.manager(as_string=True))
    Manager[localhost:1875]
-       attributes:
-           identity: () -> dict
-           link: (service:str) -> bool
-       language: Python 3.6.2
-       os: Windows 10 AMD64
+     attributes:
+       identity() -> dict
+       link(service: str) -> bool
+     language: Python 3.7.3
+     os: Windows 10 AMD64
    Clients [1]:
-       Client[localhost:51065]
-           language: Python 3.6.5
-           os: Windows 10 AMD64
+     Client[localhost:63818]
+       language: Python 3.7.3
+       os: Windows 10 AMD64
    Services [1]:
-       BasicMath[localhost:51042]
-           attributes:
-               add: (x:Union[int, float], y:Union[int, float]) -> Union[int, float]
-               divide: (x:Union[int, float], y:Union[int, float]) -> Union[int, float]
-               ensure_positive: (x:Union[int, float]) -> bool
-               euler: 2.718281828459045
-               multiply: (x:Union[int, float], y:Union[int, float]) -> Union[int, float]
-               pi: 3.141592653589793
-               power: (x:Union[int, float], n=2) -> Union[int, float]
-               subtract: (x:Union[int, float], y:Union[int, float]) -> Union[int, float]
-           language: Python 3.6.2
-           os: Windows 10 AMD64
+     BasicMath[localhost:63815]
+       attributes:
+         add(x: Union[int, float], y: Union[int, float]) -> Union[int, float]
+         divide(x: Union[int, float], y: Union[int, float]) -> Union[int, float]
+         ensure_positive(x: Union[int, float]) -> bool
+         euler() -> 2.718281828459045
+         multiply(x: Union[int, float], y: Union[int, float]) -> Union[int, float]
+         pi() -> 3.141592653589793
+         power(x: Union[int, float], n=2) -> Union[int, float]
+         subtract(x: Union[int, float], y: Union[int, float]) -> Union[int, float]
+       language: Python 3.7.3
+       max_clients: -1
+       os: Windows 10 AMD64
 
 If ``as_string=False``, which is the default boolean value, then the returned value would be a
 :class:`dict`, rather than a :class:`str`, containing the same information.

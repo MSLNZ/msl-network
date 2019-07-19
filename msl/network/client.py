@@ -256,7 +256,7 @@ class Client(Network, asyncio.Protocol):
             self._wait(uid=uid, timeout=self._timeout)
             self._clear_all_futures()
 
-    def manager(self, *, as_string=False, indent=4, timeout=None):
+    def manager(self, *, as_string=False, indent=2, timeout=None):
         """Returns the :obj:`~msl.network.network.Network.identity` of the
         Network :class:`~msl.network.manager.Manager`.
 
@@ -297,7 +297,7 @@ class Client(Network, asyncio.Protocol):
             elif key == 'attributes':
                 s.append(space + 'attributes:')
                 for item in sorted(identity[key]):
-                    s.append(2 * space + '{}: {}'.format(item, identity[key][item]))
+                    s.append(2 * space + '{}{}'.format(item, identity[key][item]))
             else:
                 s.append(space + '{}: {}'.format(key, identity[key]))
         s.append('Clients [{}]:'.format(len(identity['clients'])))
@@ -316,7 +316,11 @@ class Client(Network, asyncio.Protocol):
                 if key == 'attributes':
                     s.append(2 * space + 'attributes:')
                     for item in sorted(service[key]):
-                        s.append(3 * space + '{}: {}'.format(item, service[key][item]))
+                        signature = service[key][item]
+                        if not isinstance(signature, str) or not signature.startswith('('):
+                            # then it is a class constant or a property method
+                            signature = '() -> {}'.format(signature)
+                        s.append(3 * space + '{}{}'.format(item, signature))
                 elif key == 'address':
                     continue
                 else:

@@ -73,7 +73,7 @@ class Manager(Network):
             'port': port,
             'attributes': {
                 'identity': '() -> dict',
-                'link': '(service:str) -> bool',
+                'link': '(service: str) -> bool',
             },
             'language': 'Python ' + platform.python_version(),
             'os': '{} {} {}'.format(platform.system(), platform.release(), platform.machine()),
