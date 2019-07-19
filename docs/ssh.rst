@@ -196,7 +196,7 @@ running on the Raspberry Pi and disconnect ``MyClient`` from the Pi.
       [Errno 98] error while attempting to bind on address ('::', 1875, 0, 0): address already in use
 
    This means that there is probably a :class:`~msl.network.manager.Manager` already running
-   on the Raspberry Pi at port 1875. You have three options to solve this problem using **MSL-Network**.
+   on the Raspberry Pi at port 1875. You have four options to solve this problem using **MSL-Network**.
 
    (1) Start another :class:`~msl.network.manager.Manager` on a different port
 
@@ -229,6 +229,14 @@ running on the Raspberry Pi and disconnect ``MyClient`` from the Pi.
       >>> ssh.exec_command(ssh_client, 'sudo kill -9 1367')
       []
       >>> ssh_client.close()
+
+   (4) Reboot the remote computer
+
+   .. code-block:: pycon
+
+      >>> from msl.network import ssh
+      >>> ssh_client = ssh.connect('pi@192.168.1.65')
+      >>> ssh.exec_command(ssh_client, 'sudo reboot')
 
 .. _cryptography: https://cryptography.io/en/latest/
 .. _virtual environment: https://docs.python.org/3/tutorial/venv.html
