@@ -323,7 +323,7 @@ def test_max_clients():
     services = helper.ServiceStarter((Echo,))
     cxn = connect(**services.kwargs)
     spawns, links = [], []
-    for i in range(50):  # pretend that 50 == infinity
+    for i in range(40):  # pretend that 40 == infinity (approximately the limit for macOS)
         spawns.append(cxn.spawn('Client%d' % i))
         links.append(spawns[-1].link('Echo'))
         assert links[-1].echo(i)[0][0] == i
