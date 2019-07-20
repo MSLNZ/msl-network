@@ -153,4 +153,10 @@ def parse_terminal_input(line):
 
 def localhost_aliases():
     """:class:`tuple` of :class:`str`: Aliases for ``localhost``."""
-    return HOSTNAME, 'localhost', '127.0.0.1', '::1'
+    return (
+        HOSTNAME,
+        'localhost',
+        '127.0.0.1',
+        '::1',
+        '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
+    )
