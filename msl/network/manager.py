@@ -36,6 +36,7 @@ from .utils import (
     parse_terminal_input,
     ensure_root_path,
     _ipv4_regex,
+    localhost_aliases,
 )
 
 log = logging.getLogger(__name__)
@@ -608,7 +609,7 @@ class Peer(object):
         else:
             self.hostname = self.domain.split('.')[0]
 
-        if self.hostname == HOSTNAME:
+        if self.hostname in localhost_aliases():
             self.address = 'localhost:{}'.format(self.port)
             self.network_name = 'localhost:{}'.format(self.port)
         else:
