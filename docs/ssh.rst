@@ -237,6 +237,8 @@ running on the Raspberry Pi and disconnect ``MyClient`` from the Pi.
       >>> from msl.network import ssh
       >>> ssh_client = ssh.connect('pi@192.168.1.65')
       >>> ssh.exec_command(ssh_client, 'sudo reboot')
+      []
+      >>> ssh_client.close()
 
 .. _cryptography: https://cryptography.io/en/latest/
 .. _virtual environment: https://docs.python.org/3/tutorial/venv.html
