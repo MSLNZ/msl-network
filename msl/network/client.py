@@ -823,8 +823,24 @@ class LinkedClient(object):
         super(LinkedClient, self).__init__()
         if 'name' not in kwargs:
             kwargs['name'] = 'LinkedClient'
+        if 'timeout' not in kwargs:
+            kwargs['timeout'] = 10
         self._kwargs = filter_client_connect_kwargs(**kwargs)
+
+        # When starting a Manager and a Service on a remote computer there can
+        # be a race condition for the Manager to start, the Service to start and
+        # for the Client to link with the Service. We consider the `timeout` kwarg
+        # to be the total time to connect to the Manager and link with the Service.
+        t0 = time.perf_counter()
         self._cxn = connect(**self._kwargs)
+
+        while True:
+            if service_name in self._cxn.manager()['services']:
+                break
+            if time.perf_counter() - t0 > self._kwargs['timeout']:
+                raise TimeoutError('The {!r} service is not available'.format(service_name))
+            time.sleep(0.5)
+
         self._link = self._cxn.link(service_name)
 
     @property
