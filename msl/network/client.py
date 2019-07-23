@@ -845,42 +845,42 @@ class LinkedClient(object):
 
     @property
     def address_manager(self):
-        """See :attr:`.Client.address_manager` for more details."""
+        """See :obj:`.Client.address_manager` for more details."""
         return self._cxn.address_manager
 
     @property
     def name(self):
-        """See :attr:`.Client.name` for more details."""
+        """See :obj:`.Client.name` for more details."""
         return self._cxn.name
 
     @property
     def port(self):
-        """See :attr:`.Client.port` for more details."""
+        """See :obj:`.Client.port` for more details."""
         return self._cxn.port
 
     @property
     def service_address(self):
-        """See :attr:`.Link.service_address` for more details."""
+        """See :obj:`.Link.service_address` for more details."""
         return self._link.service_address
 
     @property
     def service_attributes(self):
-        """See :attr:`.Link.service_attributes` for more details."""
+        """See :obj:`.Link.service_attributes` for more details."""
         return self._link.service_attributes
 
     @property
     def service_language(self):
-        """See :attr:`.Link.service_language` for more details."""
+        """See :obj:`.Link.service_language` for more details."""
         return self._link.service_language
 
     @property
     def service_name(self):
-        """See :attr:`.Link.service_name` for more details."""
+        """See :obj:`.Link.service_name` for more details."""
         return self._link.service_name
 
     @property
     def service_os(self):
-        """See :attr:`.Link.service_os` for more details."""
+        """See :obj:`.Link.service_os` for more details."""
         return self._link.service_os
 
     @property
@@ -915,7 +915,7 @@ class LinkedClient(object):
 
         You can override this method to perform any necessary cleanup (e.g., closing
         file handles, shutting down threads, disconnecting from devices, ...) before
-        the :class:`~msl.network.exceptions.MSLNetworkError` is raised.
+        :class:`~msl.network.exceptions.MSLNetworkError` is raised.
         """
         pass
 
