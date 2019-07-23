@@ -2,8 +2,24 @@
 Release Notes
 =============
 
-Version 0.4.1.dev0
-==================
+Version 0.4.1 (2019.07.23)
+==========================
+
+- Added
+
+  * ``1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa`` as a localhost alias
+
+- Changed
+
+  * calling the `Client.manager(as_string=True)` method now prints the attributes
+    analogous to how a `Client` would call the method of a `Service`
+
+- Fixed
+
+  * the `timeout` value for creating a `LinkedClient` is now the total time that it
+    takes to connect to the Network `Manager` plus the time required to link with the
+    `Service` (this fixes a race condition when starting a `Service` on a remote
+    computer and then trying to link to the same `Service`)
 
 Version 0.4.0 (2019.04.16)
 ==========================
