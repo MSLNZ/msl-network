@@ -2,13 +2,16 @@
 Use the :func:`connect` function to connect to the Network
 :class:`~msl.network.manager.Manager` as a :class:`Client`
 """
-import time
 import uuid
 import asyncio
 import getpass
 import logging
 import platform
 import threading
+from time import (
+    perf_counter,
+    sleep,
+)
 
 from .network import Network
 from .json import deserialize
@@ -128,12 +131,11 @@ class Client(Network, asyncio.Protocol):
             Do not instantiate directly. Use :meth:`connect` to connect to
             a Network :class:`~msl.network.manager.Manager`.
         """
+        Network.__init__(self)
+        asyncio.Protocol.__init__(self)
         self._name = name
-        self._network_name = name
         self._port = None
-        self._loop = None
         self._disable_tls = False
-        self._debug = False
         self._username = None
         self._password = None
         self._host_manager = None
@@ -402,15 +404,15 @@ class Client(Network, asyncio.Protocol):
            received from the Network :class:`~msl.network.manager.Manager`.
         """
         if not self._buffer:
-            self._t0 = time.perf_counter()
+            self._t0 = perf_counter()
 
         # there is a chunk-size limit of 2**14 for each reply
         # keep reading data on the stream until the TERMINATION bytes are received
         self._buffer.extend(reply)
-        if not reply.endswith(self.TERMINATION):
+        if not reply.endswith(Network.termination):
             return
 
-        dt = time.perf_counter() - self._t0
+        dt = perf_counter() - self._t0
         buffer_bytes = bytes(self._buffer)
         self._buffer.clear()
 
@@ -600,10 +602,10 @@ class Client(Network, asyncio.Protocol):
         if self._debug:
             log.debug('waiting for futures...')
 
-        t0 = time.perf_counter()
+        t0 = perf_counter()
         while not done():
-            time.sleep(0.01)
-            if timeout and time.perf_counter() - t0 > timeout:
+            sleep(0.01)
+            if timeout and perf_counter() - t0 > timeout:
                 err = 'The following requests are still pending: '
                 requests = []
                 for uid, future in self._futures.items():
@@ -831,15 +833,15 @@ class LinkedClient(object):
         # be a race condition for the Manager to start, the Service to start and
         # for the Client to link with the Service. We consider the `timeout` kwarg
         # to be the total time to connect to the Manager and link with the Service.
-        t0 = time.perf_counter()
+        t0 = perf_counter()
         self._cxn = connect(**self._kwargs)
 
         while True:
             if service_name in self._cxn.manager()['services']:
                 break
-            if time.perf_counter() - t0 > self._kwargs['timeout']:
+            if perf_counter() - t0 > self._kwargs['timeout']:
                 raise TimeoutError('The {!r} service is not available'.format(service_name))
-            time.sleep(0.5)
+            sleep(0.5)
 
         self._link = self._cxn.link(service_name)
 

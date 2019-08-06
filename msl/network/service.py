@@ -2,12 +2,12 @@
 Base class for all Services.
 """
 import os
-import time
 import asyncio
 import inspect
 import logging
 import getpass
 import platform
+from time import perf_counter
 from concurrent.futures import ThreadPoolExecutor
 
 from .network import Network
@@ -44,12 +44,12 @@ class Service(Network, asyncio.Protocol):
             with this :class:`Service`. A value :math:`\\leq` 0 or :data:`None` means that
             there is no limit.
         """
-        self._loop = None
+        Network.__init__(self)
+        asyncio.Protocol.__init__(self)
         self._username = None
         self._password = None
         self._transport = None
         self._identity = dict()
-        self._debug = False
         self._port = None
         self._address_manager = None
         self._name = self.__class__.__name__ if name is None else name
@@ -57,7 +57,6 @@ class Service(Network, asyncio.Protocol):
             self._max_clients = -1
         else:
             self._max_clients = int(max_clients)
-        self._network_name = self._name
         self._buffer = bytearray()
         self._t0 = None  # used for profiling sections of the code
         self._futures = dict()
@@ -155,7 +154,7 @@ class Service(Network, asyncio.Protocol):
         self._transport = transport
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self._name, self._port)
-        log.info(repr(self._network_name) + ' connection made')
+        log.info('{!r} connection made'.format(self._network_name))
 
     def data_received(self, data):
         """
@@ -166,15 +165,15 @@ class Service(Network, asyncio.Protocol):
            :class:`~concurrent.futures.ThreadPoolExecutor`.
         """
         if not self._buffer:
-            self._t0 = time.perf_counter()
+            self._t0 = perf_counter()
 
         # there is a chunk-size limit of 2**14 for each reply
         # keep reading data on the stream until the TERMINATION bytes are received
         self._buffer.extend(data)
-        if not data.endswith(self.TERMINATION):
+        if not data.endswith(Network.termination):
             return
 
-        dt = time.perf_counter() - self._t0
+        dt = perf_counter() - self._t0
         buffer_bytes = bytes(self._buffer)
         self._buffer.clear()
 
@@ -240,8 +239,7 @@ class Service(Network, asyncio.Protocol):
         else:
             self.send_reply(self._transport, attrib, requester=data['requester'], uuid=data['uuid'])
 
-        log.info(repr(data['requester']) + ' requested ' + data['attribute'] + ' [{} executing]'
-                 .format(len(self._futures)))
+        log.info('{!r} requested {} [{} executing]'.format(data['requester'], data['attribute'], len(self._futures)))
 
     def _function(self, attrib, data, uid):
         try:
@@ -258,7 +256,7 @@ class Service(Network, asyncio.Protocol):
            Do not override this method. It is called automatically when the connection
            to the Network :class:`~msl.network.manager.Manager` has been closed.
         """
-        log.info(repr(self._network_name) + ' connection lost')
+        log.info('{!r} connection lost'.format(self._network_name))
         self._futures.clear()
         self._transport = None
         self._port = None
@@ -326,9 +324,7 @@ class Service(Network, asyncio.Protocol):
 
         if host in localhost_aliases():
             host = HOSTNAME
-            self._address_manager = 'localhost:{}'.format(port)
-        else:
-            self._address_manager = '{}:{}'.format(host, port)
+        self._address_manager = '{}:{}'.format(host, port)
 
         self._debug = bool(debug)
         self._username = username
@@ -359,9 +355,9 @@ class Service(Network, asyncio.Protocol):
         except KeyboardInterrupt:
             log.info('CTRL+C keyboard interrupt received')
         finally:
-            log.info(repr(self._network_name) + ' disconnected')
+            log.info('{!r} disconnected'.format(self._network_name))
             self._loop.close()
-            log.info(repr(self._network_name) + ' closed the event loop')
+            log.info('{!r} closed the event loop'.format(self._network_name))
 
     @property
     def _identity_successful(self):

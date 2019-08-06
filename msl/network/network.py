@@ -2,10 +2,10 @@
 Base class for a :class:`~msl.network.manager.Manager`,
 :class:`~msl.network.service.Service` and :class:`~msl.network.client.Client`.
 """
-import time
 import asyncio
 import logging
 import traceback
+from time import perf_counter
 
 from .json import serialize
 from .constants import HOSTNAME
@@ -16,19 +16,24 @@ log = logging.getLogger(__name__)
 
 
 class Network(object):
-    """
-    Base class for the Network :class:`~msl.network.manager.Manager`,
-    :class:`~msl.network.service.Service` and :class:`~msl.network.client.Client`.
-    """
-    TERMINATION = b'\r\n'
+
+    termination = b'\r\n'
     """:class:`bytes`: The sequence of bytes that signify the end of the data being sent."""
 
     encoding = 'utf-8'
     """:class:`str`: The encoding to use to convert :class:`str` to :class:`bytes`."""
 
-    _debug = False
-    _network_name = None  # helpful for debugging who is sending what to where
-    _max_print_size = 256  # the maximum number of characters to display when debugging
+    def __init__(self):
+        """
+        Base class for the Network :class:`~msl.network.manager.Manager`,
+        :class:`~msl.network.service.Service` and :class:`~msl.network.client.Client`.
+        """
+        self._loop = None
+        self._debug = False
+        self._network_name = None  # helpful for debugging who is sending what to where
+        self._max_print_size = 256  # the maximum number of characters to display when debugging
+        self._connection_established = False
+        self._identity_successful = False
 
     def identity(self):
         """The identity of a device on the network.
@@ -166,7 +171,7 @@ class Network(object):
         writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
             The writer to use to send the bytes.
         line : :class:`bytes`
-            The bytes to send (that already end with the :attr:`TERMINATION` bytes).
+            The bytes to send (that already end with the :attr:`termination` bytes).
         """
         if writer is None:
             # could happen if the writer is for a Service and it was executing a
@@ -182,11 +187,11 @@ class Network(object):
             else:
                 log.debug(line)
 
-        t0 = time.perf_counter()
+        t0 = perf_counter()
         writer.write(line)
 
         if self._debug:
-            dt = time.perf_counter() - t0
+            dt = perf_counter() - t0
             if dt > 0:
                 log.debug('{} sent {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
                     self._network_name, n, dt, n*1e-6/dt))
@@ -202,11 +207,11 @@ class Network(object):
         ----------
         writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
             The writer to use to send the data.
-        data : :class:`object`
+        data
             Any object that can be serialized into a JSON_ string.
         """
         try:
-            self.send_line(writer, serialize(data).encode(self.encoding) + self.TERMINATION)
+            self.send_line(writer, serialize(data).encode(Network.encoding) + Network.termination)
         except Exception as e:
             try:
                 self.send_error(writer, e, data['requester'])
@@ -259,14 +264,6 @@ class Network(object):
         """
         self.send_data(writer, {'result': reply, 'requester': requester, 'uuid': uuid, 'error': False})
 
-    @property
-    def _identity_successful(self):
-        raise NotImplementedError
-
-    @property
-    def _connection_established(self):
-        raise NotImplementedError
-
     def _create_connection(self, host, port, certfile, disable_tls, assert_hostname, timeout):
         # common to both Client and Service to connect to the Manager
 
@@ -312,12 +309,12 @@ class Network(object):
         # but the Manager never saw the connection request to register the Client/Service and the
         # Client/Service never raised an exception but just waited at run_forever().
         async def check_for_identity_request():
-            t0 = time.perf_counter()
+            t0 = perf_counter()
             while True:
                 await asyncio.sleep(0.01)
                 if self._connection_established or self._identity_successful:
                     break
-                if timeout and time.perf_counter() - t0 > timeout:
+                if timeout and perf_counter() - t0 > timeout:
                     msg = 'The connection to the Network Manager was not established.'
                     if disable_tls:
                         msg += '\nYou have TLS disabled. Perhaps the Manager is using TLS for the connection.'
