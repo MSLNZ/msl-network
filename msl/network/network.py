@@ -32,7 +32,7 @@ class Network(object):
         self._debug = False
         self._network_name = None  # helpful for debugging who is sending what to where
         self._max_print_size = 256  # the maximum number of characters to display when debugging
-        self._connection_established = False
+        self._connection_successful = False
         self._identity_successful = False
 
     def identity(self):
@@ -312,7 +312,7 @@ class Network(object):
             t0 = perf_counter()
             while True:
                 await asyncio.sleep(0.01)
-                if self._connection_established or self._identity_successful:
+                if self._connection_successful or self._identity_successful:
                     break
                 if timeout and perf_counter() - t0 > timeout:
                     msg = 'The connection to the Network Manager was not established.'

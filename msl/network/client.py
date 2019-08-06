@@ -150,7 +150,6 @@ class Client(Network, asyncio.Protocol):
             'language': 'Python ' + platform.python_version(),
             'os': '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
         }
-        self._handshake_finished = False
         self._latest_error = None
         self._buffer = bytearray()
         self._timeout = None
@@ -159,7 +158,6 @@ class Client(Network, asyncio.Protocol):
         self._futures = dict()
         self._pending_requests_sent = False
         self._assert_hostname = True
-        self._connection_successful = False
 
     @property
     def name(self):
@@ -433,9 +431,9 @@ class Client(Network, asyncio.Protocol):
             self._latest_error = '\n'.join(['\n'] + data['traceback'] + [data['message']])
             for future in self._futures.values():
                 future.cancel()
-        elif not self._handshake_finished:
+        elif not self._identity_successful:
             self.send_reply(self._transport, getattr(self, data['attribute'])(*data['args'], **data['kwargs']))
-            self._handshake_finished = data['attribute'] == 'identity'
+            self._identity_successful = data['attribute'] == 'identity'
         elif data['uuid']:
             self._futures[data['uuid']].set_result(data['result'])
         else:
@@ -715,14 +713,6 @@ class Client(Network, asyncio.Protocol):
                 result = self._futures[uid].result()
                 self._remove_future(uid)
                 return result
-
-    @property
-    def _identity_successful(self):
-        return self._handshake_finished
-
-    @property
-    def _connection_established(self):
-        return self._connection_successful
 
 
 class Link(object):

@@ -60,7 +60,6 @@ class Service(Network, asyncio.Protocol):
         self._buffer = bytearray()
         self._t0 = None  # used for profiling sections of the code
         self._futures = dict()
-        self._connection_successful = False
 
     @property
     def port(self):
@@ -143,6 +142,7 @@ class Service(Network, asyncio.Protocol):
                                 'Rename it to be "_{0}" to avoid seeing this message'.format(item))
                     continue
                 self._identity['attributes'][item] = value
+        self._identity_successful = True
         return self._identity
 
     def connection_made(self, transport):
@@ -358,14 +358,6 @@ class Service(Network, asyncio.Protocol):
             log.info('{!r} disconnected'.format(self._network_name))
             self._loop.close()
             log.info('{!r} closed the event loop'.format(self._network_name))
-
-    @property
-    def _identity_successful(self):
-        return self._identity
-
-    @property
-    def _connection_established(self):
-        return self._connection_successful
 
     def _disconnect(self):
         self.send_data(self._transport, {'service': self._network_name, 'attribute': DISCONNECT_REQUEST})
