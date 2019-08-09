@@ -301,11 +301,11 @@ class Client(Network, asyncio.Protocol):
             else:
                 s.append(space + '{}: {}'.format(key, identity[key]))
         s.append('Clients [{}]:'.format(len(identity['clients'])))
-        for address in sorted(identity['clients']):
-            s.append(space + '{}[{}]'.format(identity['clients'][address]['name'], address))
-            keys = identity['clients'][address]
+        for network_name in sorted(identity['clients']):
+            s.append(space + network_name)
+            keys = identity['clients'][network_name]
             for key in sorted(keys):
-                if key == 'name':
+                if key == 'name' or key == 'address':
                     continue
                 s.append(2 * space + '{}: {}'.format(key, keys[key]))
         s.append('Services [{}]:'.format(len(identity['services'])))
