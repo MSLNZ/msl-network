@@ -3,13 +3,13 @@
 JSON Formats
 ============
 
-Information is exchanged between the :class:`~msl.network.manager.Manager`, a :class:`~msl.network.client.Client`
+Information is exchanged between a :class:`~msl.network.manager.Manager`, a :class:`~msl.network.client.Client`
 and a :class:`~msl.network.service.Service` using JSON_ as the data format. The information is
-`serialized <https://en.wikipedia.org/wiki/Serialization>`_ to bytes and terminated with ``b"\r\n"``.
+`serialized <https://en.wikipedia.org/wiki/Serialization>`_ to bytes and terminated with ``"\r\n"``.
 
 A :class:`~msl.network.client.Client` or a :class:`~msl.network.service.Service` can be written in any programming
 language, but the JSON_ data format must adhere to the specific requirements specified below. The
-:class:`~msl.network.client.Client` and :class:`~msl.network.service.Service` must also check for the ``b"\r\n"``
+:class:`~msl.network.client.Client` and :class:`~msl.network.service.Service` must also check for the ``"\r\n"``
 byte sequence in each packet that it receives in order to ensure that all bytes have been received.
 
 .. _client-format:
@@ -17,7 +17,7 @@ byte sequence in each packet that it receives in order to ensure that all bytes 
 Client Format
 -------------
 
-A :class:`~msl.network.client.Client` must **send** data with the following JSON_ representation:
+A :class:`~msl.network.client.Client` must **send a request** with the following JSON_ representation:
 
 .. code-block:: console
 
@@ -33,10 +33,33 @@ A :class:`~msl.network.client.Client` must **send** data with the following JSON
 The `uuid <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ is only used by the
 :class:`~msl.network.client.Client`. The :class:`~msl.network.manager.Manager` simply forwards the unique id
 to the :class:`~msl.network.service.Service` which just includes the unique id in its reply. Therefore, the value
-can be anything that you want it to be (provided that it does not contain the ``b"\r\n"`` sequence). It is a useful
-value to use when keeping track of which reply belongs with which request when executing asynchronous requests.
+can be anything that you want it to be (provided that it does not contain the ``"\r\n"`` sequence). The uuid is
+useful when keeping track of which reply corresponds with which request when executing asynchronous requests.
 
-A :class:`~msl.network.client.Client` will **receive** data that is in 1 of 3 JSON_ representations.
+A :class:`~msl.network.client.Client` will also have to **send a reply** to a :class:`~msl.network.manager.Manager`
+during the connection procedure (i.e., when sending the :obj:`~msl.network.network.Network.identity` of the
+:class:`~msl.network.client.Client` and possibly providing a username and/or password if requested by the
+:class:`~msl.network.manager.Manager`).
+
+To send a reply to the :class:`~msl.network.manager.Manager` use the following JSON_ representation
+
+.. code-block:: console
+
+    {
+      "error": false (can be omitted)
+      "result": object (the reply from the Client)
+      "requester": string (can be omitted)
+      "uuid": string (can be omitted)
+    }
+
+You only need to include the "result" name-value pair in the reply. The "error", "requester" and "uuid"
+name-value pairs can be omitted, or anything you want, since they are not used by the
+:class:`~msl.network.manager.Manager` to process the reply from a :class:`~msl.network.client.Client`.
+However, including these additional name-value pairs provides symmetry with the way a
+:class:`~msl.network.service.Service` sends a reply to a :class:`~msl.network.manager.Manager`
+when there is no error.
+
+A :class:`~msl.network.client.Client` will **receive a reply** that is in 1 of 3 JSON_ representations.
 
 Before a :class:`~msl.network.client.Client` successfully connects to the :class:`~msl.network.manager.Manager`
 the :class:`~msl.network.manager.Manager` will request information about the connecting device (such as the
@@ -78,7 +101,7 @@ If the bytes received represent an error then the JSON_ object will be:
       "traceback": array of strings (a detailed stack trace of the error)
       "result": null
       "requester": string (the address of the device that made the request)
-      "uuid": string (can be an empty string)
+      "uuid": string
     }
 
 .. _service-format:
