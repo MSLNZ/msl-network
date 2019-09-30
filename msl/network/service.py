@@ -82,13 +82,20 @@ class Service(Network, asyncio.Protocol):
         infinite number of :class:`~msl.network.client.Client`\\s can be linked."""
         return self._max_clients
 
-    def ignore_attributes(self, *names):
+    def ignore_attributes(self, names):
         """Ignore attributes from being added to the :obj:`~msl.network.network.Network.identity`
         of the :class:`Service`.
 
-        If you see a warning that an object is not JSON serializable or that the signature
-        of an attribute cannot be found or if you do not want an attribute to be made publicly
-        known then you can specify the names of the attributes to be ignored.
+        The are a few reasons why you may want to call this method:
+
+        * If you see warnings that an object is not JSON serializable or that the signature
+          of an attribute cannot be found when starting the :class:`Service` and you
+          prefer not to see the warnings.
+        * If you do not want an attribute to be made publicly known that it exists. However,
+          a :class:`~msl.network.client.Client` can still access the ignored attributes.
+
+        Private attributes (i.e., attributes that start with an underscore) are automatically
+        ignored and cannot be accessed from a :class:`~msl.network.client.Client` on the network.
 
         If you want to ignore any attributes then you must call :meth:`.ignore_attributes`
         before calling :meth:`.start`.
@@ -97,11 +104,11 @@ class Service(Network, asyncio.Protocol):
 
         Parameters
         ----------
-        names
+        names : :class:`list` of :class:`str`
             The names of the attributes to not include in the
             :obj:`~msl.network.network.Network.identity` of the :class:`Service`.
         """
-        self._ignore_attribs.extend(list(names))
+        self._ignore_attribs.extend(names)
 
     def password(self, name):
         """
