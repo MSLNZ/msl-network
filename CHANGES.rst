@@ -2,7 +2,7 @@
 Release Notes
 =============
 
-Version 0.4.2.dev0
+Version 0.5.0.dev0
 ==================
 
 Version 0.4.1 (2019.07.23)
