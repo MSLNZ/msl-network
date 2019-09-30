@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.CRITICAL+10)
 
 class ServiceStarter(object):
 
-    def __init__(self, service_classes, sleep=1, **kwargs):
+    def __init__(self, service_classes, sleep=1, ignore_attrs=None, **kwargs):
         """Starts the Network Manager and all specified Services to use for testing.
 
         Parameters
@@ -26,6 +26,8 @@ class ServiceStarter(object):
             The Service sub-classes to start (they have NOT been instantiated).
         sleep : float, optional
             The number of second to wait after starting the Manager and each Service.
+        ignore_attrs : list of str
+            Passed to Service.ignore_attributes
         **kwargs
             These are all sent to Service.__init__ for all `service_classes`.
         """
@@ -82,6 +84,8 @@ class ServiceStarter(object):
         self._service_threads = []
         for cls in service_classes:
             service = cls(**kwargs)
+            if ignore_attrs:
+                service.ignore_attributes(ignore_attrs)
             self._service_threads.append(Thread(target=service.start, kwargs=self.kwargs, daemon=True))
             self._service_threads[-1].start()
             time.sleep(sleep)  # wait for the Service to be running

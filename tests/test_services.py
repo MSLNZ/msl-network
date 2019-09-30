@@ -386,3 +386,30 @@ def test_max_clients():
     link2 = cxn.link('Echo')
     assert link2.echo('bar')[0][0] == 'bar'
     services.shutdown(cxn)
+
+
+def test_ignore_attributes():
+    services = helper.ServiceStarter((MyArray,), ignore_attrs=['linspace'])
+    cxn = connect(**services.kwargs)
+    time.sleep(1)
+
+    # 'linspace' is not a publicly know attribute
+    identity = cxn.manager()['services']['MyArray']
+    assert 'linspace' not in identity['attributes']
+    assert 'scalar_multiply' in identity['attributes']
+
+    my_array = cxn.link('MyArray')
+
+    # however, 'linspace' is accessible
+    result = my_array.linspace(0, 1, n=10)
+    assert len(result) == 10
+    expected = [i*1./9. for i in range(10)]
+    for r, e in zip(result, expected):
+        assert r == approx(e)
+
+    result = my_array.scalar_multiply(10, result)
+    assert len(result) == 10
+    for r, e in zip(result, expected):
+        assert r == approx(e*10)
+
+    services.shutdown(cxn)
