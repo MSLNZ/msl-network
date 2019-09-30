@@ -25,8 +25,9 @@ from .constants import (
 
 log = logging.getLogger(__name__)
 
-IGNORE_ITEMS = ['port', 'address_manager', 'username', 'start', 'password', 'set_debug', 'max_clients']
-IGNORE_ITEMS += dir(Network) + dir(asyncio.Protocol)
+_ignore_attribs = ['port', 'address_manager', 'username', 'start', 'password',
+                   'set_debug', 'max_clients', 'ignore_attributes']
+_ignore_attribs += dir(Network) + dir(asyncio.Protocol)
 
 
 class Service(Network, asyncio.Protocol):
@@ -60,6 +61,7 @@ class Service(Network, asyncio.Protocol):
         self._buffer = bytearray()
         self._t0 = None  # used for profiling sections of the code
         self._futures = dict()
+        self._ignore_attribs = _ignore_attribs.copy()
 
     @property
     def port(self):
@@ -79,6 +81,27 @@ class Service(Network, asyncio.Protocol):
         that can be linked with this :class:`Service`. A value :math:`\\leq` 0 means an
         infinite number of :class:`~msl.network.client.Client`\\s can be linked."""
         return self._max_clients
+
+    def ignore_attributes(self, *names):
+        """Ignore attributes from being added to the :obj:`~msl.network.network.Network.identity`
+        of the :class:`Service`.
+
+        If you see a warning that an object is not JSON serializable or that the signature
+        of an attribute cannot be found or if you do not want an attribute to be made publicly
+        known then you can specify the names of the attributes to be ignored.
+
+        If you want to ignore any attributes then you must call :meth:`.ignore_attributes`
+        before calling :meth:`.start`.
+
+        .. versionadded:: 0.5
+
+        Parameters
+        ----------
+        names
+            The names of the attributes to not include in the
+            :obj:`~msl.network.network.Network.identity` of the :class:`Service`.
+        """
+        self._ignore_attribs.extend(list(names))
 
     def password(self, name):
         """
@@ -128,18 +151,23 @@ class Service(Network, asyncio.Protocol):
             self._identity['max_clients'] = self._max_clients
             self._identity['attributes'] = dict()
             for item in dir(self):
-                if item.startswith('_') or item in IGNORE_ITEMS:
+                if item.startswith('_') or item in self._ignore_attribs:
                     continue
                 attrib = getattr(self, item)
                 try:
                     value = str(inspect.signature(attrib))
                 except TypeError:  # then the attribute is not a callable object
                     value = attrib
+                except ValueError as err:
+                    # Cannot get the signature of the callable object.
+                    # This can happen if the Service is also a subclass of
+                    # some other object, for example a Qt class.
+                    log.warning(err)
+                    continue
                 try:
                     serialize(value)
                 except:
-                    log.warning('The attribute "{0}" is not JSON serializable. '
-                                'Rename it to be "_{0}" to avoid seeing this message'.format(item))
+                    log.warning('The attribute {!r} is not JSON serializable'.format(item))
                     continue
                 self._identity['attributes'][item] = value
         self._identity_successful = True
