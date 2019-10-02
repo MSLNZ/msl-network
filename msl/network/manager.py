@@ -387,6 +387,12 @@ class Manager(Network):
                     except Exception as e:
                         log.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
                         self.send_error(writer, e, reader.peer.network_name, uuid=data.get('uuid', ''))
+                elif data['attribute'] == 'unlink':
+                    try:
+                        self.unlink(writer, data.get('uuid', ''), data['args'][0])
+                    except Exception as e:
+                        log.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
+                        self.send_error(writer, e, reader.peer.network_name, uuid=data.get('uuid', ''))
                 else:
                     # the peer needs administrative rights to send any other request to the Manager
                     log.info('received an admin request from {!r}'.format(reader.peer.network_name))
@@ -460,7 +466,7 @@ class Manager(Network):
             # remove this Client from all Services that it was linked with
             for service_name, client_addresses in self.service_links.items():
                 if writer.peer.network_name in client_addresses:
-                    self.service_links[service_name].remove(writer.peer.network_name)
+                    self.unlink(writer, '', service_name)
         else:
             for service in self.services:
                 if self.services[service]['address'] == writer.peer.address:
@@ -559,6 +565,39 @@ class Manager(Network):
                       'The linked Clients are {}'.format(service, self.service_links[service])
                 log.info(msg)
                 self.send_error(writer, PermissionError(msg), writer.peer.network_name, uuid=uuid)
+
+    def unlink(self, writer, uuid, service):
+        """A request from a :class:`~msl.network.client.Client` to unlink it
+        from a :class:`~msl.network.service.Service`.
+
+        .. versionadded:: 0.5
+
+        Parameters
+        ----------
+        writer : :class:`asyncio.StreamWriter`
+            The stream writer of the :class:`~msl.network.client.Client`.
+        uuid : :class:`str`
+            The universally unique identifier of the request.
+        service : :class:`str`
+            The name of the :class:`~msl.network.service.Service` that the
+            :class:`~msl.network.client.Client` wants to unlink from.
+        """
+        try:
+            network_names = self.service_links[service]
+        except KeyError:
+            msg = '{!r} service does not exist, could not unlink {!r} from it'.format(service, writer.peer.network_name)
+            log.info(msg)
+            self.send_error(writer, KeyError(msg), writer.peer.network_name, uuid=uuid)
+        else:
+            try:
+                network_names.remove(writer.peer.network_name)
+            except KeyError:
+                msg = 'cannot unlink {!r}, it was not linked with {!r}'.format(writer.peer.network_name, service)
+                log.info(msg)
+                self.send_error(writer, KeyError(msg), writer.peer.network_name, uuid=uuid)
+            else:
+                log.info('unlinked {!r} from {!r}'.format(writer.peer.network_name, service))
+                self.send_reply(writer, True, requester=writer.peer.network_name, uuid=uuid)
 
     def send_request(self, writer, attribute, *args, **kwargs):
         """Send a request to a :class:`~msl.network.client.Client` or to a

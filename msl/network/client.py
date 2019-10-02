@@ -252,6 +252,36 @@ class Client(Network, asyncio.Protocol):
         self._links.append(link)
         return link
 
+    def unlink(self, link, *, timeout=None):
+        """Unlink from a :class:`~msl.network.service.Service` on the Network
+        :class:`~msl.network.manager.Manager`.
+
+        .. versionadded:: 0.5
+
+        Parameters
+        ----------
+        link : :class:`~msl.network.client.Link`
+            The object that is linked with the :class:`~msl.network.service.Service`.
+        timeout : :class:`float`, optional
+            The maximum number of seconds to wait for the reply from the Network
+            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
+
+        Raises
+        ------
+        :class:`~msl.network.exceptions.MSLNetworkError`
+            If there was error unlinking.
+        TimeoutError
+            If unlinking from the :class:`~msl.network.service.Service` takes longer
+            than `timeout` seconds.
+        """
+        if not isinstance(link, Link):
+            raise TypeError('Must pass in a Link object')
+        if self._debug:
+            log.debug('preparing to unlink {!r}'.format(link))
+        success = self._send_request_for_manager('unlink', link.service_name, timeout=timeout)
+        if success:
+            self._links.remove(link)  # ideally this will never raise a ValueError
+
     def disconnect(self):
         """Disconnect from the Network :class:`~msl.network.manager.Manager`."""
         if self._transport is not None:
@@ -767,8 +797,11 @@ class Link(object):
         return self._service_identity['os']
 
     def __repr__(self):
-        return '<Link with {}[{}] at Manager[{}]>'.format(
-            self.service_name, self.service_address, self._client.address_manager)
+        if self._client is None:
+            return '<Un-Link from {}[{}]>'.format(self.service_name, self.service_address)
+        else:
+            return '<Link with {}[{}] at Manager[{}]>'.format(
+                self.service_name, self.service_address, self._client.address_manager)
 
     def __getattr__(self, item):
         def service_request(*args, **kwargs):
@@ -855,6 +888,29 @@ class Link(object):
         :meth:`~msl.network.service.Service.emit_notification`
         """
         pass
+
+    def unlink(self, *, timeout=None):
+        """Unlink from the :class:`~msl.network.service.Service` on the Network
+        :class:`~msl.network.manager.Manager`.
+
+        .. versionadded:: 0.5
+
+        Parameters
+        ----------
+        timeout : :class:`float`, optional
+            The maximum number of seconds to wait for the reply from the Network
+            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
+
+        Raises
+        ------
+        :class:`~msl.network.exceptions.MSLNetworkError`
+            If there was error unlinking.
+        TimeoutError
+            If unlinking from the :class:`~msl.network.service.Service` takes longer
+            than `timeout` seconds.
+        """
+        self._client.unlink(self, timeout=timeout)
+        self._client = None
 
 
 class LinkedClient(object):
@@ -995,10 +1051,21 @@ class LinkedClient(object):
         """See :meth:`.Client.wait` for more details."""
         self._cxn.wait(timeout=timeout)
 
+    def unlink(self, *, timeout=None):
+        """See :obj:`.Link.unlink` for more details."""
+        self._link.unlink(self, timeout=timeout)
+        self._link = None
+        self._cxn = None
+
     def __repr__(self):
-        return '<Link[name={}] with {}[{}] at Manager[{}]>'.format(
-            self.name, self.service_name, self.service_address, self.address_manager
-        )
+        if self._cxn is None:
+            return '<Un-Link[name={}] from {}[{}]>'.format(
+                self.name, self.service_name, self.service_address
+            )
+        else:
+            return '<Link[name={}] with {}[{}] at Manager[{}]>'.format(
+                self.name, self.service_name, self.service_address, self.address_manager
+            )
 
     def __getattr__(self, item):
         # all other methods that are called get sent to the Link object
