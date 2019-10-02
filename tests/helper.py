@@ -94,7 +94,10 @@ class ServiceStarter(object):
         time.sleep(0.5)
         for item in (self.keyfile, self.certfile, self.database):
             if os.path.isfile(item):
-                os.remove(item)
+                try:
+                    os.remove(item)
+                except PermissionError:
+                    pass
 
     def shutdown(self, connection):
         # shutdown the Manager and delete the dummy files that were created
