@@ -33,8 +33,9 @@ A :class:`~msl.network.client.Client` must **send a request** with the following
 The `uuid <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ is only used by the
 :class:`~msl.network.client.Client`. The :class:`~msl.network.manager.Manager` simply forwards the unique id
 to the :class:`~msl.network.service.Service` which just includes the unique id in its reply. Therefore, the value
-can be anything that you want it to be (provided that it does not contain the ``"\r\n"`` sequence). The uuid is
-useful when keeping track of which reply corresponds with which request when executing asynchronous requests.
+can be anything that you want it to be (provided that it does not contain the ``"\r\n"`` sequence and it cannot
+be equal to ``"notification"`` since this is a reserved uuid). The uuid is useful when keeping track of which
+reply corresponds with which request when executing asynchronous requests.
 
 A :class:`~msl.network.client.Client` will also have to **send a reply** to a :class:`~msl.network.manager.Manager`
 during the connection procedure (i.e., when sending the :obj:`~msl.network.network.Network.identity` of the
@@ -104,6 +105,20 @@ If the bytes received represent an error then the JSON_ object will be:
       "uuid": string
     }
 
+A :class:`~msl.network.service.Service` can also emit a notification to all
+:class:`~msl.network.client.Client`\'s that are :class:`~msl.network.client.Link`\ed with the
+:class:`~msl.network.service.Service`. Each :class:`~msl.network.client.Client` will
+**receive a notification** that has the following JSON_ representation
+
+.. code-block:: console
+
+    {
+      "error": false
+      "result": array (a 2-element list of [args, kwargs], e.g., [[1, 2, 3], {"x": 4, "y": 5}])
+      "service": string (the name of the Service that emitted the notification)
+      "uuid": "notification"
+    }
+
 .. _service-format:
 
 Service Format
@@ -163,6 +178,20 @@ If the :class:`~msl.network.service.Service` successfully executed the request t
       "result": object (the reply from the Service)
       "requester": string (the address of the device that made the request)
       "uuid": string (the universally unique identifier of the request)
+    }
+
+A :class:`~msl.network.service.Service` can also emit a notification to all
+:class:`~msl.network.client.Client`\'s that are :class:`~msl.network.client.Link`\ed with the
+:class:`~msl.network.service.Service`. A :class:`~msl.network.service.Service` must
+**emit a notification** that has the following JSON_ representation
+
+.. code-block:: console
+
+    {
+      "error": false
+      "result": array (a 2-element list of [args, kwargs], e.g., [[1, 2, 3], {"x": 4, "y": 5}])
+      "service": string (the name of the Service that is emitting the notification)
+      "uuid": "notification"
     }
 
 .. _JSON: https://www.json.org/

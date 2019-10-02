@@ -26,6 +26,7 @@ from .constants import (
     DATABASE,
     DISCONNECT_REQUEST,
     NETWORK_MANAGER_RUNNING_PREFIX,
+    NOTIFICATION_UUID,
 )
 from .database import (
     ConnectionsTable,
@@ -67,7 +68,7 @@ class Manager(Network):
         self.clients = dict()  # keys: Client network name, values: the identity dictionary
         self.services = dict()  # keys: Service name, values: the identity dictionary
         self.service_writers = dict()  # keys: Service name, values: StreamWriter of the Service
-        self.service_links = dict()  # keys: Service name, values: set() of StreamWriter's of the linked Clients
+        self.service_links = dict()  # keys: Service name, values: set() of network name's of the linked Clients
         self.client_writers = dict()  # keys: Client network name, values: StreamWriter of the Client
 
         self._identity = {
@@ -325,7 +326,7 @@ class Manager(Network):
 
     async def handler(self, reader, writer):
         """Handles requests from the connected :class:`~msl.network.client.Client`\\s and
-        replies from the connected :class:`~msl.network.service.Service`\\s.
+        replies or notifications from the connected :class:`~msl.network.service.Service`\\s.
 
         Parameters
         ----------
@@ -360,13 +361,21 @@ class Manager(Network):
                     continue
 
             if 'result' in data:
-                # then data is a reply from a Service so send it back to the Client
-                if data['requester'] is None:
+                # then data is a reply or notification from a Service so send it to the Client(s)
+                if data['uuid'] == NOTIFICATION_UUID:
+                    # emit the notification from the Service to all linked Clients
+                    log.info('{!r} sent a notification'.format(data['service']))
+                    for client_address in self.service_links[data['service']]:
+                        try:
+                            self.send_line(self.client_writers[client_address], line)
+                        except:
+                            log.info('{!r} is no longer available to send the notification to'.format(client_address))
+                elif data['requester'] is None:
                     log.info('{!r} was not able to deserialize the bytes'.format(reader.peer.network_name))
                 else:
                     try:
                         self.send_line(self.client_writers[data['requester']], line)
-                    except KeyError:
+                    except:
                         log.info('{!r} is no longer available to send the reply to'.format(data['requester']))
             elif data['service'] == 'Manager':
                 # then the Client is requesting something from the Manager

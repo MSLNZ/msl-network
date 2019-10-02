@@ -21,13 +21,14 @@ from .constants import (
     HOSTNAME,
     IS_WINDOWS,
     DISCONNECT_REQUEST,
+    NOTIFICATION_UUID,
 )
 
 log = logging.getLogger(__name__)
 
 _ignore_attribs = ['port', 'address_manager', 'username', 'start', 'password',
-                   'set_debug', 'max_clients', 'ignore_attributes']
-_ignore_attribs += dir(Network) + dir(asyncio.Protocol)
+                   'set_debug', 'max_clients', 'ignore_attributes', 'emit_notification']
+_ignore_attribs += list(a for a in dir(Network) + dir(asyncio.Protocol) if not a.startswith('_'))
 
 
 class Service(Network, asyncio.Protocol):
@@ -310,6 +311,26 @@ class Service(Network, asyncio.Protocol):
             Whether to enable or disable :py:ref:`DEBUG <levels>` logging messages.
         """
         self._debug = bool(boolean)
+
+    def emit_notification(self, *args, **kwargs):
+        """Emit a notification to all :class:`~msl.network.client.Client`\'s that are
+        :class:`~msl.network.client.Link`\ed with this :class:`Service`.
+
+        .. versionadded:: 0.5
+
+        Parameters
+        ----------
+        args
+            The arguments to emit.
+        kwargs
+            The keyword arguments to emit.
+
+        See Also
+        --------
+        :meth:`~msl.network.client.Link.notification_handler`
+        """
+        self.send_data(self._transport, {'result': [args, kwargs], 'service': self._name,
+                                         'uuid': NOTIFICATION_UUID, 'error': False})
 
     def start(self, *, host='localhost', port=PORT, timeout=10, username=None, password=None,
               password_manager=None, certfile=None, disable_tls=False, assert_hostname=True, debug=False):

@@ -121,6 +121,13 @@ MyArray Service
 
 .. literalinclude:: ../msl/examples/network/array.py
 
+.. _heartbeat-service:
+
+Heartbeat Service
++++++++++++++++++
+
+.. literalinclude:: ../msl/examples/network/heartbeat.py
+
 
 .. _MSL-Equipment: https://msl-equipment.readthedocs.io/en/latest/
 .. _command prompt: https://en.wikipedia.org/wiki/Cmd.exe

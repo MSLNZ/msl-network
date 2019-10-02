@@ -25,6 +25,7 @@ from .constants import (
     PORT,
     HOSTNAME,
     DISCONNECT_REQUEST,
+    NOTIFICATION_UUID,
 )
 
 log = logging.getLogger(__name__)
@@ -158,6 +159,7 @@ class Client(Network, asyncio.Protocol):
         self._futures = dict()
         self._pending_requests_sent = False
         self._assert_hostname = True
+        self._links = []
 
     @property
     def name(self):
@@ -246,7 +248,9 @@ class Client(Network, asyncio.Protocol):
         if self._debug:
             log.debug('preparing to link with {!r}'.format(service))
         identity = self._send_request_for_manager('link', service, timeout=timeout)
-        return Link(self, service, identity)
+        link = Link(self, service, identity)
+        self._links.append(link)
+        return link
 
     def disconnect(self):
         """Disconnect from the Network :class:`~msl.network.manager.Manager`."""
@@ -435,7 +439,13 @@ class Client(Network, asyncio.Protocol):
             self.send_reply(self._transport, getattr(self, data['attribute'])(*data['args'], **data['kwargs']))
             self._identity_successful = data['attribute'] == 'identity'
         elif data['uuid']:
-            self._futures[data['uuid']].set_result(data['result'])
+            if data['uuid'] == NOTIFICATION_UUID:
+                for link in self._links:
+                    if link.service_name == data['service']:
+                        args, kwargs = data['result']
+                        link.notification_handler(*args, **kwargs)
+            else:
+                self._futures[data['uuid']].set_result(data['result'])
         else:
             # performing an admin_request
             assert len(self._futures) == 1, 'uuid not defined and {} futures are available'.format(len(self._futures))
@@ -794,6 +804,56 @@ class Link(object):
             traceback = str(e).splitlines()
             if not traceback[-1].startswith('ConnectionAbortedError:'):
                 raise
+
+    def notification_handler(self, *args, **kwargs):
+        """Handle a notification from the :class:`~msl.network.service.Service` that
+        emitted a notification.
+
+        .. important::
+           You must re-assign this method in order to handle the notification.
+
+        .. versionadded:: 0.5
+
+        Parameters
+        ----------
+        args
+            The arguments that were emitted.
+        kwargs
+            The keyword arguments that were emitted.
+
+        Examples
+        --------
+        The following assumes that the :ref:`heartbeat-service` is running on the
+        same computer ::
+
+            >>> from msl.network import connect  # doctest: +SKIP
+            >>> cxn = connect()  # doctest: +SKIP
+            >>> heartbeat = cxn.link('Heartbeat')  # doctest: +SKIP
+            >>> def heartbeat_notification(*args, **kwargs):  # doctest: +SKIP
+            ...     print('The Heartbeat Service emitted', args, kwargs)  # doctest: +SKIP
+            ...
+            >>> heartbeat.notification_handler = heartbeat_notification  # doctest: +SKIP
+            The Heartbeat Service emitted (72.0,) {}
+            The Heartbeat Service emitted (73.0,) {}
+            The Heartbeat Service emitted (74.0,) {}
+            The Heartbeat Service emitted (75.0,) {}
+            The Heartbeat Service emitted (76.0,) {}
+            The Heartbeat Service emitted (77.0,) {}
+            >>> heartbeat.reset()  # doctest: +SKIP
+            The Heartbeat Service emitted (1.0,) {}
+            The Heartbeat Service emitted (2.0,) {}
+            The Heartbeat Service emitted (3.0,) {}
+            The Heartbeat Service emitted (4.0,) {}
+            The Heartbeat Service emitted (5.0,) {}
+            The Heartbeat Service emitted (6.0,) {}
+            >>> heartbeat.kill()  # doctest: +SKIP
+            >>> cxn.disconnect()    # doctest: +SKIP
+
+        See Also
+        --------
+        :meth:`~msl.network.service.Service.emit_notification`
+        """
+        pass
 
 
 class LinkedClient(object):
