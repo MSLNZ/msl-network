@@ -829,10 +829,10 @@ class Link(object):
             >>> from msl.network import connect  # doctest: +SKIP
             >>> cxn = connect()  # doctest: +SKIP
             >>> heartbeat = cxn.link('Heartbeat')  # doctest: +SKIP
-            >>> def heartbeat_notification(*args, **kwargs):  # doctest: +SKIP
+            >>> def print_notification(*args, **kwargs):  # doctest: +SKIP
             ...     print('The Heartbeat Service emitted', args, kwargs)  # doctest: +SKIP
             ...
-            >>> heartbeat.notification_handler = heartbeat_notification  # doctest: +SKIP
+            >>> heartbeat.notification_handler = print_notification  # doctest: +SKIP
             The Heartbeat Service emitted (72.0,) {}
             The Heartbeat Service emitted (73.0,) {}
             The Heartbeat Service emitted (74.0,) {}
@@ -840,6 +840,7 @@ class Link(object):
             The Heartbeat Service emitted (76.0,) {}
             The Heartbeat Service emitted (77.0,) {}
             >>> heartbeat.reset()  # doctest: +SKIP
+            The Heartbeat Service emitted (0.0,) {}
             The Heartbeat Service emitted (1.0,) {}
             The Heartbeat Service emitted (2.0,) {}
             The Heartbeat Service emitted (3.0,) {}
@@ -847,7 +848,7 @@ class Link(object):
             The Heartbeat Service emitted (5.0,) {}
             The Heartbeat Service emitted (6.0,) {}
             >>> heartbeat.kill()  # doctest: +SKIP
-            >>> cxn.disconnect()    # doctest: +SKIP
+            >>> cxn.disconnect()  # doctest: +SKIP
 
         See Also
         --------
