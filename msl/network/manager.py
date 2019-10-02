@@ -364,7 +364,7 @@ class Manager(Network):
                 # then data is a reply or notification from a Service so send it to the Client(s)
                 if data['uuid'] == NOTIFICATION_UUID:
                     # emit the notification from the Service to all linked Clients
-                    log.info('{!r} sent a notification'.format(data['service']))
+                    log.info('{!r} emitted a notification'.format(data['service']))
                     for client_address in self.service_links[data['service']]:
                         try:
                             self.send_line(self.client_writers[client_address], line)
