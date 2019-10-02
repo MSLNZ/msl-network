@@ -951,6 +951,7 @@ class LinkedClient(object):
             sleep(0.5)
 
         self._link = self._cxn.link(service_name)
+        self._link.notification_handler = self.notification_handler
 
     @property
     def address_manager(self):
@@ -1013,6 +1014,10 @@ class LinkedClient(object):
         """See :meth:`.Client.manager` for more details."""
         return self._cxn.manager(as_string=as_string, indent=indent, timeout=timeout)
 
+    def notification_handler(self, *args, **kwargs):
+        """See :obj:`.Link.notification_handler` for more details."""
+        pass
+
     def send_pending_requests(self, *, wait=True, timeout=None):
         """See :meth:`.Client.send_pending_requests` for more details."""
         self._cxn.send_pending_requests(wait=wait, timeout=timeout)
@@ -1047,15 +1052,15 @@ class LinkedClient(object):
         kwargs['name'] = name
         return LinkedClient(self.service_name, **kwargs)
 
-    def wait(self, timeout=None):
-        """See :meth:`.Client.wait` for more details."""
-        self._cxn.wait(timeout=timeout)
-
     def unlink(self, *, timeout=None):
         """See :obj:`.Link.unlink` for more details."""
         self._link.unlink(self, timeout=timeout)
         self._link = None
         self._cxn = None
+
+    def wait(self, timeout=None):
+        """See :meth:`.Client.wait` for more details."""
+        self._cxn.wait(timeout=timeout)
 
     def __repr__(self):
         if self._cxn is None:
