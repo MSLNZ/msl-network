@@ -20,7 +20,7 @@ from msl.network import Service
 class Heartbeat(Service):
 
     def __init__(self):
-        """A heartbeat Service that emits a counter value."""
+        """A Service that emits a counter value."""
         super(Heartbeat, self).__init__()
         self._sleep = 1.0
         self._counter = 0.0
@@ -37,16 +37,15 @@ class Heartbeat(Service):
         self._counter = 0.0
 
     def set_heart_rate(self, beats_per_second: int) -> None:
-        """Change the rate that the heartbeat is emitted."""
+        """Change the rate that the value of the counter is emitted."""
         self._sleep = 1.0 / float(beats_per_second)
 
     def _start_heartbeat(self):
         """Private method that emits the heartbeat in a thread."""
         while self._alive:
             self.emit_notification(self._counter)
-            print('Emitted {}'.format(self._counter))
-            time.sleep(self._sleep)
             self._counter += 1.0
+            time.sleep(self._sleep)
 
 
 if __name__ == '__main__':
