@@ -314,7 +314,7 @@ class Service(Network, asyncio.Protocol):
 
     def emit_notification(self, *args, **kwargs):
         """Emit a notification to all :class:`~msl.network.client.Client`\'s that are
-        :class:`~msl.network.client.Link`\ed with this :class:`Service`.
+        :class:`~msl.network.client.Link`\\ed with this :class:`Service`.
 
         .. versionadded:: 0.5
 
@@ -329,6 +329,10 @@ class Service(Network, asyncio.Protocol):
         --------
         :meth:`~msl.network.client.Link.notification_handler`
         """
+        # the Network.send_line method also checks if the `writer` is None, but,
+        # there is no need to json-serialize [args, kwargs] if self._transport is None
+        if self._transport is None:
+            return
         self.send_data(self._transport, {'result': [args, kwargs], 'service': self._name,
                                          'uuid': NOTIFICATION_UUID, 'error': False})
 
