@@ -65,12 +65,6 @@ class Service(Network, asyncio.Protocol):
         self._ignore_attribs = _ignore_attribs.copy()
 
     @property
-    def port(self):
-        """:class:`int`: The port number on ``localhost`` that is being used for the
-        connection to the Network :class:`~msl.network.manager.Manager`."""
-        return self._port
-
-    @property
     def address_manager(self):
         """:class:`str`: The address of the Network :class:`~msl.network.manager.Manager`
         that this :class:`Service` is connected to."""
@@ -82,6 +76,36 @@ class Service(Network, asyncio.Protocol):
         that can be linked with this :class:`Service`. A value :math:`\\leq` 0 means an
         infinite number of :class:`~msl.network.client.Client`\\s can be linked."""
         return self._max_clients
+
+    @property
+    def port(self):
+        """:class:`int`: The port number on ``localhost`` that is being used for the
+        connection to the Network :class:`~msl.network.manager.Manager`."""
+        return self._port
+
+    def emit_notification(self, *args, **kwargs):
+        """Emit a notification to all :class:`~msl.network.client.Client`\'s that are
+        :class:`~msl.network.client.Link`\\ed with this :class:`Service`.
+
+        .. versionadded:: 0.5
+
+        Parameters
+        ----------
+        args
+            The arguments to emit.
+        kwargs
+            The keyword arguments to emit.
+
+        See Also
+        --------
+        :meth:`~msl.network.client.Link.notification_handler`
+        """
+        # the Network.send_line method also checks if the `writer` is None, but,
+        # there is no need to json-serialize [args, kwargs] if self._transport is None
+        if self._transport is None:
+            return
+        self.send_data(self._transport, {'result': [args, kwargs], 'service': self._name,
+                                         'uuid': NOTIFICATION_UUID, 'error': False})
 
     def ignore_attributes(self, names):
         """Ignore attributes from being added to the :obj:`~msl.network.network.Network.identity`
@@ -111,75 +135,114 @@ class Service(Network, asyncio.Protocol):
         """
         self._ignore_attribs.extend(names)
 
-    def password(self, name):
-        """
-        .. attention::
-           Do not override this method. It is called automatically when the Network
-           :class:`~msl.network.manager.Manager` requests a password.
-        """
-        if self._identity:
-            # once the Service sends its identity to the Manager any subsequent password requests
-            # can only be from a Client that is linked with the Service and therefore something
-            # peculiar is happening because a Client never needs to know a password from a Service.
-            # Without this self._identity check a Client could potentially retrieve the password
-            # of a user in plain-text format. Also, if the getpass function is called it is a
-            # blocking function and therefore the Service blocks all other requests until getpass returns
-            return 'You do not have permission to receive the password'
-        self._connection_successful = True
-        if self._password is not None:
-            return self._password
-        return getpass.getpass('Enter the password for ' + name + ' > ')
+    def set_debug(self, boolean):
+        """Set the debug mode of the :class:`Service`.
 
-    def username(self, name):
+        Parameters
+        ----------
+        boolean : :class:`bool`
+            Whether to enable or disable :py:ref:`DEBUG <levels>` logging messages.
         """
-        .. attention::
-           Do not override this method. It is called automatically when the Network
-           :class:`~msl.network.manager.Manager` requests the name of the user.
-        """
-        if self._identity:
-            # see the comment in the password() method why we do this self._identity check
-            return 'You do not have permission to receive the username'
-        self._connection_successful = True
-        if self._username is None:
-            return input('Enter a username for ' + name + ' > ')
-        return self._username
+        self._debug = bool(boolean)
 
-    def identity(self):
+    def start(self, *, host='localhost', port=PORT, timeout=10, username=None, password=None,
+              password_manager=None, certfile=None, disable_tls=False, assert_hostname=True, debug=False):
+        """Start the :class:`Service`.
+
+        .. versionchanged:: 0.4
+           Renamed `certificate` to `certfile`.
+
+        Parameters
+        ----------
+        host : :class:`str`, optional
+            The hostname (or IP address) of the Network :class:`~msl.network.manager.Manager`
+            that the :class:`Service` should connect to.
+        port : :class:`int`, optional
+            The port number of the Network :class:`~msl.network.manager.Manager` that
+            the :class:`Service` should connect to.
+        timeout : :class:`float`, optional
+            The maximum number of seconds to wait to establish the connection to the
+            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
+        username : :class:`str`, optional
+            The username to use to connect to the Network :class:`~msl.network.manager.Manager`.
+            You need to specify a username only if the Network :class:`~msl.network.manager.Manager`
+            was started with the ``--auth-login`` flag. If a username is required and you have not
+            specified it when you called this method then you will be asked for a username.
+        password : :class:`str`, optional
+            The password that is associated with `username`. If a password is required and you
+            have not specified it when you called this method then you will be asked for the password.
+        password_manager : :class:`str`, optional
+            The password that is associated with the Network :class:`~msl.network.manager.Manager`.
+            You need to specify the password only if the Network :class:`~msl.network.manager.Manager`
+            was started with the ``--auth-password`` flag. If a password is required and you
+            have not specified it when you called this method then you will be asked for the password.
+        certfile : :class:`str`, optional
+            The path to the certificate file to use for the TLS connection
+            with the Network :class:`~msl.network.manager.Manager`.
+        disable_tls : :class:`bool`, optional
+            Whether to connect to the Network :class:`~msl.network.manager.Manager`
+            without using the TLS protocol.
+        assert_hostname : :class:`bool`, optional
+            Whether to force the hostname of the Network :class:`~msl.network.manager.Manager`
+            to match the value of `host`.
+        debug : :class:`bool`, optional
+            Whether to log :py:ref:`DEBUG <levels>` messages for the :class:`Service`.
+        """
+        if self._transport is not None:
+            raise RuntimeError('The Service has already started')
+
+        if host in localhost_aliases():
+            host = HOSTNAME
+        self._address_manager = '{}:{}'.format(host, port)
+
+        self._debug = bool(debug)
+        self._username = username
+
+        if password and password_manager:
+            raise ValueError('Specify either "password" or "password_manager" but not both.\n'
+                             'A Manager cannot be started using multiple authentication methods.')
+        self._password = password or password_manager
+
+        # create a new event loop, rather than using asyncio.get_event_loop()
+        # (in case the Service does not run in the threading._MainThread)
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
+
+        if not self._create_connection(host, port, certfile, disable_tls, assert_hostname, timeout):
+            return
+
+        # https://bugs.python.org/issue23057
+        # enable this hack only in debug mode and only on Windows
+        if debug and IS_WINDOWS:
+            async def wakeup():
+                while True:
+                    await asyncio.sleep(1)
+            self._loop.create_task(wakeup())
+
+        try:
+            self._loop.run_forever()
+        except KeyboardInterrupt:
+            log.info('CTRL+C keyboard interrupt received')
+        finally:
+            log.info('{!r} disconnected'.format(self._network_name))
+            self._loop.close()
+            log.info('{!r} closed the event loop'.format(self._network_name))
+
+    def connection_lost(self, exc):
         """
         .. attention::
-           Do not override this method. It is called automatically when the Network
-           :class:`~msl.network.manager.Manager` requests the
-           :obj:`~msl.network.network.Network.identity` of the :class:`Service`
+           Do not override this method. It is called automatically when the connection
+           to the Network :class:`~msl.network.manager.Manager` has been closed.
         """
-        if not self._identity:
-            self._identity['type'] = 'service'
-            self._identity['name'] = self._name
-            self._identity['language'] = 'Python ' + platform.python_version()
-            self._identity['os'] = '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
-            self._identity['max_clients'] = self._max_clients
-            self._identity['attributes'] = dict()
-            for item in dir(self):
-                if item.startswith('_') or item in self._ignore_attribs:
-                    continue
-                attrib = getattr(self, item)
-                try:
-                    value = str(inspect.signature(attrib))
-                except TypeError:  # then the attribute is not a callable object
-                    value = attrib
-                except ValueError as err:
-                    # Cannot get the signature of the callable object.
-                    # This can happen if the Service is also a subclass of
-                    # some other object, for example a Qt class.
-                    log.warning(err)
-                    continue
-                try:
-                    serialize(value)
-                except:
-                    log.warning('The attribute {!r} is not JSON serializable'.format(item))
-                    continue
-                self._identity['attributes'][item] = value
-        self._identity_successful = True
-        return self._identity
+        log.info('{!r} connection lost'.format(self._network_name))
+        self._futures.clear()
+        self._transport = None
+        self._port = None
+        self._address_manager = None
+        self._loop.stop()
+        if exc:
+            log.error(exc)
+            raise exc
 
     def connection_made(self, transport):
         """
@@ -277,6 +340,76 @@ class Service(Network, asyncio.Protocol):
 
         log.info('{!r} requested {} [{} executing]'.format(data['requester'], data['attribute'], len(self._futures)))
 
+    def identity(self):
+        """
+        .. attention::
+           Do not override this method. It is called automatically when the Network
+           :class:`~msl.network.manager.Manager` requests the
+           :obj:`~msl.network.network.Network.identity` of the :class:`Service`
+        """
+        if not self._identity:
+            self._identity['type'] = 'service'
+            self._identity['name'] = self._name
+            self._identity['language'] = 'Python ' + platform.python_version()
+            self._identity['os'] = '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
+            self._identity['max_clients'] = self._max_clients
+            self._identity['attributes'] = dict()
+            for item in dir(self):
+                if item.startswith('_') or item in self._ignore_attribs:
+                    continue
+                attrib = getattr(self, item)
+                try:
+                    value = str(inspect.signature(attrib))
+                except TypeError:  # then the attribute is not a callable object
+                    value = attrib
+                except ValueError as err:
+                    # Cannot get the signature of the callable object.
+                    # This can happen if the Service is also a subclass of
+                    # some other object, for example a Qt class.
+                    log.warning(err)
+                    continue
+                try:
+                    serialize(value)
+                except:
+                    log.warning('The attribute {!r} is not JSON serializable'.format(item))
+                    continue
+                self._identity['attributes'][item] = value
+        self._identity_successful = True
+        return self._identity
+
+    def password(self, name):
+        """
+        .. attention::
+           Do not override this method. It is called automatically when the Network
+           :class:`~msl.network.manager.Manager` requests a password.
+        """
+        if self._identity:
+            # once the Service sends its identity to the Manager any subsequent password requests
+            # can only be from a Client that is linked with the Service and therefore something
+            # peculiar is happening because a Client never needs to know a password from a Service.
+            # Without this self._identity check a Client could potentially retrieve the password
+            # of a user in plain-text format. Also, if the getpass function is called it is a
+            # blocking function and therefore the Service blocks all other requests until getpass returns
+            return 'You do not have permission to receive the password'
+        self._connection_successful = True
+        if self._password is not None:
+            return self._password
+        return getpass.getpass('Enter the password for ' + name + ' > ')
+
+    def username(self, name):
+        """
+        .. attention::
+           Do not override this method. It is called automatically when the Network
+           :class:`~msl.network.manager.Manager` requests the name of the user.
+        """
+        if self._identity:
+            # see the comment in the password() method why we do this self._identity check
+            return 'You do not have permission to receive the username'
+        self._connection_successful = True
+        if self._username is None:
+            return input('Enter a username for ' + name + ' > ')
+        return self._username
+
     def _function(self, attrib, data, uid):
         try:
             reply = attrib(*data['args'], **data['kwargs'])
@@ -285,139 +418,6 @@ class Service(Network, asyncio.Protocol):
             log.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
             self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
         self._futures.pop(uid, None)
-
-    def connection_lost(self, exc):
-        """
-        .. attention::
-           Do not override this method. It is called automatically when the connection
-           to the Network :class:`~msl.network.manager.Manager` has been closed.
-        """
-        log.info('{!r} connection lost'.format(self._network_name))
-        self._futures.clear()
-        self._transport = None
-        self._port = None
-        self._address_manager = None
-        self._loop.stop()
-        if exc:
-            log.error(exc)
-            raise exc
-
-    def set_debug(self, boolean):
-        """Set the debug mode of the :class:`Service`.
-
-        Parameters
-        ----------
-        boolean : :class:`bool`
-            Whether to enable or disable :py:ref:`DEBUG <levels>` logging messages.
-        """
-        self._debug = bool(boolean)
-
-    def emit_notification(self, *args, **kwargs):
-        """Emit a notification to all :class:`~msl.network.client.Client`\'s that are
-        :class:`~msl.network.client.Link`\\ed with this :class:`Service`.
-
-        .. versionadded:: 0.5
-
-        Parameters
-        ----------
-        args
-            The arguments to emit.
-        kwargs
-            The keyword arguments to emit.
-
-        See Also
-        --------
-        :meth:`~msl.network.client.Link.notification_handler`
-        """
-        # the Network.send_line method also checks if the `writer` is None, but,
-        # there is no need to json-serialize [args, kwargs] if self._transport is None
-        if self._transport is None:
-            return
-        self.send_data(self._transport, {'result': [args, kwargs], 'service': self._name,
-                                         'uuid': NOTIFICATION_UUID, 'error': False})
-
-    def start(self, *, host='localhost', port=PORT, timeout=10, username=None, password=None,
-              password_manager=None, certfile=None, disable_tls=False, assert_hostname=True, debug=False):
-        """Start the :class:`Service`.
-
-        .. versionchanged:: 0.4
-           Renamed `certificate` to `certfile`.
-
-        Parameters
-        ----------
-        host : :class:`str`, optional
-            The hostname (or IP address) of the Network :class:`~msl.network.manager.Manager`
-            that the :class:`Service` should connect to.
-        port : :class:`int`, optional
-            The port number of the Network :class:`~msl.network.manager.Manager` that
-            the :class:`Service` should connect to.
-        timeout : :class:`float`, optional
-            The maximum number of seconds to wait to establish the connection to the
-            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
-        username : :class:`str`, optional
-            The username to use to connect to the Network :class:`~msl.network.manager.Manager`.
-            You need to specify a username only if the Network :class:`~msl.network.manager.Manager`
-            was started with the ``--auth-login`` flag. If a username is required and you have not
-            specified it when you called this method then you will be asked for a username.
-        password : :class:`str`, optional
-            The password that is associated with `username`. If a password is required and you
-            have not specified it when you called this method then you will be asked for the password.
-        password_manager : :class:`str`, optional
-            The password that is associated with the Network :class:`~msl.network.manager.Manager`.
-            You need to specify the password only if the Network :class:`~msl.network.manager.Manager`
-            was started with the ``--auth-password`` flag. If a password is required and you
-            have not specified it when you called this method then you will be asked for the password.
-        certfile : :class:`str`, optional
-            The path to the certificate file to use for the TLS connection
-            with the Network :class:`~msl.network.manager.Manager`.
-        disable_tls : :class:`bool`, optional
-            Whether to connect to the Network :class:`~msl.network.manager.Manager`
-            without using the TLS protocol.
-        assert_hostname : :class:`bool`, optional
-            Whether to force the hostname of the Network :class:`~msl.network.manager.Manager`
-            to match the value of `host`.
-        debug : :class:`bool`, optional
-            Whether to log :py:ref:`DEBUG <levels>` messages for the :class:`Service`.
-        """
-        if self._transport is not None:
-            raise RuntimeError('The Service has already started')
-
-        if host in localhost_aliases():
-            host = HOSTNAME
-        self._address_manager = '{}:{}'.format(host, port)
-
-        self._debug = bool(debug)
-        self._username = username
-
-        if password and password_manager:
-            raise ValueError('Specify either "password" or "password_manager" but not both.\n'
-                             'A Manager cannot be started using multiple authentication methods.')
-        self._password = password or password_manager
-
-        # create a new event loop, rather than using asyncio.get_event_loop()
-        # (in case the Service does not run in the threading._MainThread)
-        self._loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._loop)
-
-        if not self._create_connection(host, port, certfile, disable_tls, assert_hostname, timeout):
-            return
-
-        # https://bugs.python.org/issue23057
-        # enable this hack only in debug mode and only on Windows
-        if debug and IS_WINDOWS:
-            async def wakeup():
-                while True:
-                    await asyncio.sleep(1)
-            self._loop.create_task(wakeup())
-
-        try:
-            self._loop.run_forever()
-        except KeyboardInterrupt:
-            log.info('CTRL+C keyboard interrupt received')
-        finally:
-            log.info('{!r} disconnected'.format(self._network_name))
-            self._loop.close()
-            log.info('{!r} closed the event loop'.format(self._network_name))
 
     def _disconnect(self):
         self.send_data(self._transport, {'service': self._network_name, 'attribute': DISCONNECT_REQUEST})
