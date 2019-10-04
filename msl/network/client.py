@@ -909,8 +909,9 @@ class Link(object):
             If unlinking from the :class:`~msl.network.service.Service` takes longer
             than `timeout` seconds.
         """
-        self._client.unlink(self, timeout=timeout)
-        self._client = None
+        if self._client is not None:  # calling this multiple times should not raise an error
+            self._client.unlink(self, timeout=timeout)
+            self._client = None
 
 
 class LinkedClient(object):
