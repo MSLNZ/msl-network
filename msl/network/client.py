@@ -798,7 +798,7 @@ class Link(object):
 
     def __repr__(self):
         if self._client is None:
-            return '<Un-Link from {}[{}]>'.format(self.service_name, self.service_address)
+            return '<Un-Linked from {}[{}]>'.format(self.service_name, self.service_address)
         else:
             return '<Link with {}[{}] at Manager[{}]>'.format(
                 self.service_name, self.service_address, self._client.address_manager)
@@ -807,6 +807,13 @@ class Link(object):
         def service_request(*args, **kwargs):
             return self._client._send_request(self._service_name, item, *args, **kwargs)
         return service_request
+
+    def disconnect(self, *, timeout=None):
+        """An alias for :meth:`unlink`.
+
+        .. versionadded:: 0.5
+        """
+        self.unlink(timeout=timeout)
 
     def disconnect_service(self, *args, **kwargs):
         """Send a request for the :class:`~msl.network.service.Service` to shut down.
@@ -942,32 +949,32 @@ class LinkedClient(object):
         # for the Client to link with the Service. We consider the `timeout` kwarg
         # to be the total time to connect to the Manager and link with the Service.
         t0 = perf_counter()
-        self._cxn = connect(**self._kwargs)
+        self._client = connect(**self._kwargs)
 
         while True:
-            if service_name in self._cxn.manager()['services']:
+            if service_name in self._client.manager()['services']:
                 break
             if perf_counter() - t0 > self._kwargs['timeout']:
                 raise TimeoutError('The {!r} service is not available'.format(service_name))
             sleep(0.5)
 
-        self._link = self._cxn.link(service_name)
+        self._link = self._client.link(service_name)
         self._link.notification_handler = self.notification_handler
 
     @property
     def address_manager(self):
         """See :obj:`.Client.address_manager` for more details."""
-        return self._cxn.address_manager
+        return self._client.address_manager
 
     @property
     def name(self):
         """See :obj:`.Client.name` for more details."""
-        return self._cxn.name
+        return self._client.name
 
     @property
     def port(self):
         """See :obj:`.Client.port` for more details."""
-        return self._cxn.port
+        return self._client.port
 
     @property
     def service_address(self):
@@ -1001,19 +1008,25 @@ class LinkedClient(object):
 
     def admin_request(self, attrib, *args, **kwargs):
         """See :meth:`.Client.admin_request` for more details."""
-        return self._cxn.admin_request(attrib, *args, **kwargs)
+        return self._client.admin_request(attrib, *args, **kwargs)
 
     def disconnect(self):
         """See :meth:`.Client.disconnect` for more details."""
-        self._cxn.disconnect()
+        if self._client is not None:
+            self._client.disconnect()
+            self._client = None
+
+    def disconnect_service(self, *args, **kwargs):
+        """See :obj:`.Link.disconnect_service` for more details."""
+        self._link.disconnect_service(*args, **kwargs)
 
     def identity(self):
         """See :meth:`.Client.identity` for more details."""
-        return self._cxn.identity()
+        return self._client.identity()
 
     def manager(self, *, as_string=False, indent=4, timeout=None):
         """See :meth:`.Client.manager` for more details."""
-        return self._cxn.manager(as_string=as_string, indent=indent, timeout=timeout)
+        return self._client.manager(as_string=as_string, indent=indent, timeout=timeout)
 
     def notification_handler(self, *args, **kwargs):
         """See :obj:`.Link.notification_handler` for more details."""
@@ -1021,7 +1034,7 @@ class LinkedClient(object):
 
     def send_pending_requests(self, *, wait=True, timeout=None):
         """See :meth:`.Client.send_pending_requests` for more details."""
-        self._cxn.send_pending_requests(wait=wait, timeout=timeout)
+        self._client.send_pending_requests(wait=wait, timeout=timeout)
 
     def service_error_handler(self):
         """This method is called immediately before an exception is raised if there
@@ -1055,17 +1068,17 @@ class LinkedClient(object):
 
     def unlink(self, *, timeout=None):
         """See :obj:`.Link.unlink` for more details."""
-        self._link.unlink(self, timeout=timeout)
-        self._link = None
-        self._cxn = None
+        if self._link is not None:
+            self._link.unlink(timeout=timeout)
+            self._link = None
 
     def wait(self, timeout=None):
         """See :meth:`.Client.wait` for more details."""
-        self._cxn.wait(timeout=timeout)
+        self._client.wait(timeout=timeout)
 
     def __repr__(self):
-        if self._cxn is None:
-            return '<Un-Link[name={}] from {}[{}]>'.format(
+        if self._link is None:
+            return '<Un-Linked[name={}] from {}[{}]>'.format(
                 self.name, self.service_name, self.service_address
             )
         else:
