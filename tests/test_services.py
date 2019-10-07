@@ -264,7 +264,7 @@ def test_basic_math_timeout_asynchronous():
 def test_echo_json_not_serializable_synchronous():
     services = helper.ServiceStarter((Echo,))
     cxn = connect(**services.kwargs)
-    time.sleep(1)
+    time.sleep(2)
     e = cxn.link('Echo')
 
     # make sure that this is okay
@@ -288,7 +288,7 @@ def test_echo_json_not_serializable_synchronous():
 def test_echo_json_not_serializable_asynchronous():
     services = helper.ServiceStarter((Echo,))
     cxn = connect(**services.kwargs)
-    time.sleep(1)
+    time.sleep(2)
     e = cxn.link('Echo')
 
     # make sure that this is okay
@@ -324,7 +324,7 @@ def test_max_clients():
     # no limit
     services = helper.ServiceStarter((Echo,))
     cxn = connect(**services.kwargs)
-    time.sleep(1)
+    time.sleep(2)
     spawns, links = [], []
     for i in range(40):  # pretend that 40 == infinity (approximately the limit for macOS)
         spawns.append(cxn.spawn('Client%d' % i))
@@ -338,7 +338,7 @@ def test_max_clients():
     # only 1 Client at a time
     services = helper.ServiceStarter((Echo, BasicMath), max_clients=1)
     client1 = connect(**services.kwargs)
-    time.sleep(1)
+    time.sleep(2)
     echo1 = client1.link('Echo')
     assert echo1.echo('abc123')[0][0] == 'abc123'
     math1 = client1.link('BasicMath')
@@ -360,7 +360,7 @@ def test_max_clients():
     # only 5 Clients at a time
     services = helper.ServiceStarter((Echo,), max_clients=5)
     cxn = connect(**services.kwargs)
-    time.sleep(1)
+    time.sleep(2)
     spawns, links = [], []
     for i in range(5):
         spawns.append(cxn.spawn('Client%d' % i))
@@ -379,10 +379,10 @@ def test_max_clients():
     # the same Client link multiple times to the same Service
     services = helper.ServiceStarter((Echo,), max_clients=1)
     cxn = connect(**services.kwargs)
-    time.sleep(1)
+    time.sleep(2)
     link1 = cxn.link('Echo')
     assert link1.echo('foo')[0][0] == 'foo'
-    time.sleep(1)
+    time.sleep(2)
     link2 = cxn.link('Echo')
     assert link2.echo('bar')[0][0] == 'bar'
     services.shutdown(cxn)
@@ -391,7 +391,7 @@ def test_max_clients():
 def test_ignore_attributes():
     services = helper.ServiceStarter((MyArray,), ignore_attrs=['linspace'])
     cxn = connect(**services.kwargs)
-    time.sleep(1)
+    time.sleep(2)
 
     # 'linspace' is not a publicly know attribute
     identity = cxn.manager()['services']['MyArray']
