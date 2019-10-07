@@ -771,6 +771,14 @@ class Link(object):
             log.debug("linked with '{}[{}]'".format(service, identity['address']))
 
     @property
+    def client(self):
+        """:class:`Client`: The :class:`Client` that is providing the :class:`Link`.
+
+        .. versionadded:: 0.5
+        """
+        return self._client
+
+    @property
     def service_name(self):
         """:class:`str`: The name of the :class:`~msl.network.service.Service` that this object is linked with."""
         return self._service_name
@@ -965,6 +973,14 @@ class LinkedClient(object):
     def address_manager(self):
         """See :obj:`.Client.address_manager` for more details."""
         return self._client.address_manager
+
+    @property
+    def client(self):
+        """:class:`Client`: The :class:`Client` that is providing the :class:`Link`.
+
+        .. versionadded:: 0.5
+        """
+        return self._client
 
     @property
     def name(self):
