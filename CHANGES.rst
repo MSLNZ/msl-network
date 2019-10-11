@@ -5,6 +5,18 @@ Release Notes
 Version 0.5.0.dev0
 ==================
 
+- Added
+
+  * A `Service` can emit notifications to all `Clients` that are linked with it
+  * The `Service.ignore_attributes` method
+  * A `Link` can unlink from a `Service`
+  * The `LinkedClient.client` property
+
+- Changed
+
+  * renamed the `disconnect_service` method for a `Link` and a `Service`
+    (which was added in 0.4.0) to be `Service.shutdown_service`
+
 Version 0.4.1 (2019.07.23)
 ==========================
 
