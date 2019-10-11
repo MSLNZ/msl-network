@@ -77,8 +77,14 @@ with ``setup.py`` as
         def __init__(self):
             super(RPiService, self).__init__()
 
-        def shutdown_service(self):
-            # allows for RPiService to be shut down remotely by MyClient
+        def shutdown_service(self, *args, **kwargs):
+            # Implementing this method allows for the RPiService to be
+            # shut down remotely by MyClient. MyClient can also include
+            # *args and **kwargs to the shutdown_service() method.
+            # Once the RPiService receives the request to shut down it
+            # should clean up all system resources (e.g., close file handles)
+            # and then call the private self._shutdown() method to disconnect
+            # the RPiService from the Manager and shut down the RPiService.
             self._shutdown()
 
         def add_numbers(self, a, b, c, d):
@@ -110,6 +116,8 @@ and ``my_client.py`` as
             # in a particular way that MyClient is intended to be the only
             # Client connected to the Manager and when MyClient is done
             # communicating with the RPiService then everything shuts down.
+            # The Client can also include *args and **kwargs in the
+            # shutdown_service() request, but we don't use them in this example.
             self.shutdown_service()
             super(MyClient, self).disconnect()
 
