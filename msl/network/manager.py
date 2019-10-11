@@ -117,7 +117,9 @@ class Manager(Network):
             if peer.hostname not in self.hostnames:
                 log.info('{!r} is not a trusted hostname, closing connection'.format(peer.hostname))
                 self.connections_table.insert(peer, 'rejected: untrusted hostname')
-                self.send_error(writer, ValueError('{!r} is not a trusted hostname'.format(peer.hostname)), self._network_name)
+                self.send_error(
+                    writer, ValueError('{!r} is not a trusted hostname'.format(peer.hostname)), self._network_name
+                )
                 await self.close_writer(writer)
                 return
             log.debug('{!r} is a trusted hostname'.format(peer.hostname))
@@ -339,7 +341,7 @@ class Manager(Network):
 
             try:
                 line = await reader.readline()
-            except ConnectionResetError as e:
+            except ConnectionResetError:
                 return  # then the device disconnected abruptly
 
             if self._debug:
@@ -664,7 +666,8 @@ class Peer(object):
         else:
             self.address = '{}:{}'.format(self.hostname, self.port)
 
-        self.network_name = '<Unknown>[{}]'.format(self.address)  # this value will be updated when the identity is requested
+        # this value will be updated when the identity is requested
+        self.network_name = '<Unknown>[{}]'.format(self.address)
 
 
 def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
@@ -752,7 +755,7 @@ def run_services(*services, **kwargs):
 
     Parameters
     ----------
-    services : :class:`~msl.network.service.Service`
+    services
         The :class:`~msl.network.service.Service`\\s to run on the :class:`.Manager`.
         Each :class:`~msl.network.service.Service` must be instantiated but not started.
         This :func:`run_services` function will start each :class:`~msl.network.service.Service`.
