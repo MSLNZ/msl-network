@@ -772,8 +772,7 @@ def run_services(*services, **kwargs):
 
     .. code-block:: python
 
-        from msl.network import Service
-        from msl.network.manager import run_services
+        from msl.network import Service, run_services
 
         class ShutdownableService(Service):
 
@@ -798,11 +797,6 @@ def run_services(*services, **kwargs):
     cannot call ``_shutdown()`` directly unless you intentionally make the public ``shutdown_service()``
     method available on the :class:`~msl.network.service.Service`.
 
-    .. important::
-
-       Do not rename the ``shutdown_service()`` method to be something that you prefer. The name
-       ``shutdown_service`` is important.
-
     Then the :class:`~msl.network.client.Client` script could be
 
     .. code-block:: python
@@ -817,9 +811,9 @@ def run_services(*services, **kwargs):
         a.shutdown_service()
         s.shutdown_service()
 
-    When this :class:`~msl.network.client.Client` script is finished running the Network
-    :class:`.Manager` would have been shut down and the :func:`run_services` function
-    will return.
+    When both :class:`~msl.network.service.Service`\\s have shut down then the Network
+    :class:`.Manager` will also shut down and the :func:`run_services` function
+    will no longer be blocking the execution of the `ShutdownableService` script.
     """
     if not services:
         msg = 'Warning... no services have been specified'

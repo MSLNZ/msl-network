@@ -38,7 +38,7 @@ with ``setup.py`` as
 
 .. code-block:: python
 
-    from msl.network import manager, ssh, LinkedClient
+    from msl.network import run_services, ssh, LinkedClient
 
     from .rpi_service import RPiService
     from .my_client import MyClient
@@ -64,7 +64,7 @@ with ``setup.py`` as
                 'The Manager is using a login for authentication but RPiService '
                 'does not know the username and password to use to connect to the Manager'
             )
-        manager.run_services(RPiService(), **kwargs)
+        run_services(RPiService(), **kwargs)
 
 ``rpi_service.py`` as
 
