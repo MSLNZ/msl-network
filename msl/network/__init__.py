@@ -7,13 +7,21 @@ from collections import namedtuple
 from .client import (
     connect,
     LinkedClient,
+    filter_client_connect_kwargs,
 )
-from .service import Service
+from .service import (
+    Service,
+    filter_service_start_kwargs,
+)
 from .exceptions import MSLNetworkError
 from .database import (
     ConnectionsTable,
     HostnamesTable,
     UsersTable,
+)
+from .manager import (
+    run_services,
+    filter_run_forever_kwargs,
 )
 
 __author__ = 'Measurement Standards Laboratory of New Zealand'
