@@ -419,7 +419,7 @@ class Service(Network, asyncio.Protocol):
             self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
         self._futures.pop(uid, None)
 
-    def _disconnect(self):
+    def _shutdown(self):
         self.send_data(self._transport, {'service': self._network_name, 'attribute': DISCONNECT_REQUEST})
 
 

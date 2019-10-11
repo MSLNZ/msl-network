@@ -113,26 +113,26 @@ def test_unlink_linkedclient_max10():
         sock.bind(('', 0))  # get any available port
         port = sock.getsockname()[1]
 
-    class DisconnectableEcho(Echo):
+    class ShutdownableEcho(Echo):
 
         def __init__(self):
-            super(DisconnectableEcho, self).__init__(max_clients=10)
+            super(ShutdownableEcho, self).__init__(max_clients=10)
 
-        def disconnect_service(self):
-            self._disconnect()
+        def shutdown_service(self):
+            self._shutdown()
 
     def run_client():
         time.sleep(1)  # allow for the Manager and Service to start
-        linked_clients = [LinkedClient('DisconnectableEcho', port=port, name='foobar%d' % i) for i in range(10)]
+        linked_clients = [LinkedClient('ShutdownableEcho', port=port, name='foobar%d' % i) for i in range(10)]
 
         for i, link in enumerate(linked_clients):
-            assert link.service_name == 'DisconnectableEcho'
+            assert link.service_name == 'ShutdownableEcho'
             assert link.name == 'foobar%d' % i
             assert link.echo(1, x=2) == [[1], {'x': 2}]
 
         # creating another LinkedClient is not allowed
         with pytest.raises(MSLNetworkError) as err:
-            LinkedClient('DisconnectableEcho', port=port, name='foobar10')
+            LinkedClient('ShutdownableEcho', port=port, name='foobar10')
         assert 'The maximum number of Clients are already linked' in str(err.value)
 
         linked_clients[0].unlink()
@@ -142,8 +142,8 @@ def test_unlink_linkedclient_max10():
         assert str(err.value).startswith("'NoneType' object has no attribute")
 
         # another LinkedClient can now be created
-        link2 = LinkedClient('DisconnectableEcho', port=port, name='foobar10')
-        assert link2.service_name == 'DisconnectableEcho'
+        link2 = LinkedClient('ShutdownableEcho', port=port, name='foobar10')
+        assert link2.service_name == 'ShutdownableEcho'
         assert link2.name == 'foobar10'
         assert link2.echo(1, x=2) == [[1], {'x': 2}]
         assert repr(link2).startswith('<Link[name=foobar10]')
@@ -159,21 +159,21 @@ def test_unlink_linkedclient_max10():
             link2.unlink()
         link2.disconnect()  # a linkedClient can disconnect the Client via self._client
 
-        # shutdown the DisconnectableEcho Service and disconnect the LinkedClient
+        # shutdown the ShutdownableEcho Service and disconnect the LinkedClient
         # from the Manager, the second item in the LinkedClient list is still linked
         # and can therefore still send requests
-        assert linked_clients[1].service_name == 'DisconnectableEcho'
+        assert linked_clients[1].service_name == 'ShutdownableEcho'
         assert linked_clients[1].name == 'foobar1'
         assert linked_clients[1].echo(1, x=2) == [[1], {'x': 2}]
-        linked_clients[1].disconnect_service()
+        linked_clients[1].shutdown_service()
         linked_clients[1].unlink()
         linked_clients[1].disconnect()
 
         # this LinkedClient was already unlinked but calling disconnect should not raise an error
         linked_clients[0].disconnect()
 
-        # once the DisconnectableEcho shuts down the Manager also automatically shuts down
-        # since the DisconnectableEcho was started using the run_services() function
+        # once the ShutdownableEcho shuts down the Manager also automatically shuts down
+        # since the ShutdownableEcho was started using the run_services() function
         for client in linked_clients[2:]:
             # can either raise MSLNetworkError (if the Manager is still running)
             # or ConnectionError (if the Manager has also shut down)
@@ -189,7 +189,7 @@ def test_unlink_linkedclient_max10():
     client_thread.start()
 
     # the `run_services` function will block the unittests forever if a
-    # LinkedClient does not shutdown DisconnectableEcho
-    run_services(DisconnectableEcho(), port=port)
+    # LinkedClient does not shutdown ShutdownableEcho
+    run_services(ShutdownableEcho(), port=port)
 
     client_thread.join()

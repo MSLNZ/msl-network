@@ -14,13 +14,13 @@ def test_linked_echo():
         sock.bind(('', 0))  # get any available port
         port = sock.getsockname()[1]
 
-    class DisconnectableEcho(Echo):
-        def disconnect_service(self):
-            self._disconnect()
+    class ShutdownableEcho(Echo):
+        def shutdown_service(self):
+            self._shutdown()
 
     def run_client():
         time.sleep(1)  # wait for the Services to be running on the Manager
-        link = LinkedClient('DisconnectableEcho', port=port, name='foobar')
+        link = LinkedClient('ShutdownableEcho', port=port, name='foobar')
 
         args, kwargs = link.echo(1, 2, 3)
         assert len(args) == 3
@@ -46,20 +46,20 @@ def test_linked_echo():
 
         assert len(link.service_attributes) == 2
         assert 'echo' in link.service_attributes
-        assert 'disconnect_service' in link.service_attributes
+        assert 'shutdown_service' in link.service_attributes
         assert link.name == 'foobar'
 
         with pytest.raises(MSLNetworkError):
             link.does_not_exist()
 
-        link.disconnect_service()
+        link.shutdown_service()
         link.disconnect()
 
     client_thread = threading.Thread(target=run_client)
     client_thread.start()
 
     # the `run_services` function will block the unittests forever if the
-    # LinkedClient did not shutdown DisconnectableEcho
-    run_services(DisconnectableEcho(), port=port)
+    # LinkedClient did not shutdown ShutdownableEcho
+    run_services(ShutdownableEcho(), port=port)
 
     client_thread.join()

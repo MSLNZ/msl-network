@@ -16,17 +16,17 @@ def test_run_servers():
 
     password_manager = '<hey~you>'
 
-    class DisconnectableService(Service):
+    class ShutdownableService(Service):
 
-        def disconnect_service(self):
-            self._disconnect()
+        def shutdown_service(self):
+            self._shutdown()
 
-    class AddService(DisconnectableService):
+    class AddService(ShutdownableService):
 
         def add(self, a, b):
             return a + b
 
-    class SubtractService(DisconnectableService):
+    class SubtractService(ShutdownableService):
 
         def subtract(self, a, b):
             return a - b
@@ -38,8 +38,8 @@ def test_run_servers():
         s = cxn.link('SubtractService')
         assert a.add(1, 2) == 3
         assert s.subtract(1, 2) == -1
-        a.disconnect_service()
-        s.disconnect_service()
+        a.shutdown_service()
+        s.shutdown_service()
         time.sleep(1)  # wait for the Manager to shut down
         with pytest.raises(MSLNetworkError):
             a.add(1, 2)

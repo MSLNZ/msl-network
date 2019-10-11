@@ -823,31 +823,31 @@ class Link(object):
         """
         self.unlink(timeout=timeout)
 
-    def disconnect_service(self, *args, **kwargs):
+    def shutdown_service(self, *args, **kwargs):
         """Send a request for the :class:`~msl.network.service.Service` to shut down.
 
         A :class:`~msl.network.service.Service` must also implement a method called
-        ``disconnect_service`` otherwise calling this :meth:`disconnect_service` method
+        ``shutdown_service`` otherwise calling this :meth:`shutdown_service` method
         will raise :class:`~msl.network.exceptions.MSLNetworkError`.
 
-        .. versionadded:: 0.4
+        .. versionadded:: 0.5
 
         Parameters
         ----------
         args
-            The positional arguments that are passed to the ``disconnect_service`` method
+            The positional arguments that are passed to the ``shutdown_service`` method
             of the :class:`~msl.network.service.Service` that this object is linked with.
         kwargs
-            The keyword arguments that are passed to the ``disconnect_service`` method
+            The keyword arguments that are passed to the ``shutdown_service`` method
             of the :class:`~msl.network.service.Service` that this object is linked with.
         """
 
         # If the request is successful then a ConnectionAbortedError will be raised which
         # is an exception that we expect.
-        # However, if a disconnect_service is not available on the Service then we want
+        # However, if a shutdown_service is not available on the Service then we want
         # the AttributeError to be raised
         try:
-            self._client._send_request(self._service_name, 'disconnect_service', *args, **kwargs)
+            self._client._send_request(self._service_name, 'shutdown_service', *args, **kwargs)
         except MSLNetworkError as e:
             traceback = str(e).splitlines()
             if not traceback[-1].startswith('ConnectionAbortedError:'):
@@ -1032,9 +1032,9 @@ class LinkedClient(object):
             self._client.disconnect()
             self._client = None
 
-    def disconnect_service(self, *args, **kwargs):
-        """See :obj:`.Link.disconnect_service` for more details."""
-        self._link.disconnect_service(*args, **kwargs)
+    def shutdown_service(self, *args, **kwargs):
+        """See :obj:`.Link.shutdown_service` for more details."""
+        self._link.shutdown_service(*args, **kwargs)
 
     def identity(self):
         """See :meth:`.Client.identity` for more details."""

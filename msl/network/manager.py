@@ -764,7 +764,7 @@ def run_services(*services, **kwargs):
     --------
 
     If you want to allow a :class:`~msl.network.client.Client` to be able to shut down a
-    :class:`~msl.network.service.Service` then implement a public ``disconnect_service()``
+    :class:`~msl.network.service.Service` then implement a public ``shutdown_service()``
     method on the :class:`~msl.network.service.Service`. For example,
 
     .. code-block:: python
@@ -772,33 +772,33 @@ def run_services(*services, **kwargs):
         from msl.network import Service
         from msl.network.manager import run_services
 
-        class DisconnectableService(Service):
+        class ShutdownableService(Service):
 
-            def disconnect_service(self):
-                self._disconnect()
+            def shutdown_service(self):
+                self._shutdown()
 
-        class AddService(DisconnectableService):
+        class AddService(ShutdownableService):
 
             def add(self, a, b):
                 return a + b
 
-        class SubtractService(DisconnectableService):
+        class SubtractService(ShutdownableService):
 
             def subtract(self, a, b):
                 return a - b
 
         run_services(AddService(), SubtractService())
 
-    Since the ``_disconnect()`` method of a :class:`~msl.network.service.Service` is private
+    Since the ``_shutdown()`` method of a :class:`~msl.network.service.Service` is private
     (i.e., it starts with a ``_``), and a :class:`~msl.network.client.Client` cannot access
     private methods of a :class:`~msl.network.service.Service`, a :class:`~msl.network.client.Client`
-    cannot call ``_disconnect()`` directly unless you intentionally make the public ``disconnect_service()``
+    cannot call ``_shutdown()`` directly unless you intentionally make the public ``shutdown_service()``
     method available on the :class:`~msl.network.service.Service`.
 
     .. important::
 
-       Do not rename the ``disconnect_service()`` method to be something that you prefer. The name
-       ``disconnect_service`` is important.
+       Do not rename the ``shutdown_service()`` method to be something that you prefer. The name
+       ``shutdown_service`` is important.
 
     Then the :class:`~msl.network.client.Client` script could be
 
@@ -811,8 +811,8 @@ def run_services(*services, **kwargs):
         s = cxn.link('SubtractService')
         assert a.add(1, 2) == 3
         assert s.subtract(1, 2) == -1
-        a.disconnect_service()
-        s.disconnect_service()
+        a.shutdown_service()
+        s.shutdown_service()
 
     When this :class:`~msl.network.client.Client` script is finished running the Network
     :class:`.Manager` would have been shut down and the :func:`run_services` function
