@@ -151,7 +151,7 @@ class Client(Network, asyncio.Protocol):
             'language': 'Python ' + platform.python_version(),
             'os': '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
         }
-        self._latest_error = None
+        self._latest_error = ''
         self._buffer = bytearray()
         self._timeout = None
         self._t0 = None  # used for profiling sections of the code
@@ -160,6 +160,15 @@ class Client(Network, asyncio.Protocol):
         self._pending_requests_sent = False
         self._assert_hostname = True
         self._links = []
+
+    def __repr__(self):
+        return '<{} manager={} port={}>'.format(self._name, self._address_manager, self._port)
+
+    @property
+    def address_manager(self):
+        """:class:`str`: The address of the Network :class:`~msl.network.manager.Manager`
+        that this :class:`Client` is connected to."""
+        return self._address_manager
 
     @property
     def name(self):
@@ -173,44 +182,69 @@ class Client(Network, asyncio.Protocol):
         connection to the Network :class:`~msl.network.manager.Manager`."""
         return self._port
 
-    @property
-    def address_manager(self):
-        """:class:`str`: The address of the Network :class:`~msl.network.manager.Manager`
-        that this :class:`Client` is connected to."""
-        return self._address_manager
+    def admin_request(self, attrib, *args, **kwargs):
+        """Request something from the Network :class:`~msl.network.manager.Manager`
+        as an administrator.
 
-    def __repr__(self):
-        return '<{} manager={} port={}>'.format(self._name, self._address_manager, self._port)
+        The user that calls this method must have administrative privileges for that
+        Network :class:`~msl.network.manager.Manager`. See also :mod:`msl.network.cli_user`
+        for details on how to create a user that is an administrator .
 
-    def password(self, name):
-        """
-        .. attention::
-           Do not call this method. It is called by the Network
-           :class:`~msl.network.manager.Manager` when verifying the login credentials.
-        """
-        # note that a Service has a special check in its password() method so that a password
-        # remains secure, however, a Client does not need this security check because a Client
-        # cannot send a request to other Clients
-        self._connection_successful = True
-        if _is_manager_regex.search(name) is not None:
-            if self._password_manager is None:
-                self._password_manager = getpass.getpass('Enter the password for ' + name + ' > ')
-            return self._password_manager
-        if self._password is None:
-            self._password = getpass.getpass('Enter the password for ' + name + ' > ')
-        return self._password
+        .. versionchanged:: 0.3
+           Added the `timeout` option as one of the `**kwargs`.
 
-    def username(self, name):
+        Parameters
+        ----------
+        attrib : :class:`str`
+            The attribute of the Network :class:`~msl.network.manager.Manager`. Can contain
+            dots ``.`` to access sub-attributes.
+        *args
+            The arguments to send to the Network :class:`~msl.network.manager.Manager`.
+        **kwargs
+            The keyword arguments to send to the Network :class:`~msl.network.manager.Manager`.
+            Also accepts a `timeout` parameter as a :class:`float`.
+
+        Returns
+        -------
+        The reply from the Network :class:`~msl.network.manager.Manager`.
+
+        Examples
+        --------
+        ::
+
+            >>> from msl.network import connect  # doctest: +SKIP
+            >>> cxn = connect()  # doctest: +SKIP
+            >>> unames = cxn.admin_request('users_table.usernames')  # doctest: +SKIP
+            >>> is_niels = cxn.admin_request('users_table.is_user_registered', 'n.bohr')  # doctest: +SKIP
+            >>> conns = cxn.admin_request('connections_table.connections', timestamp1='2017-11-29', timestamp2='2017-11-30')  # doctest: +SKIP
+            >>> cxn.admin_request('shutdown_manager')  # doctest: +SKIP
         """
-        .. attention::
-           Do not call this method. It is called by the Network
-           :class:`~msl.network.manager.Manager` when verifying the login credentials.
-        """
-        # see the comment in the Client.password() method and in the Service.username() method
-        self._connection_successful = True
-        if self._username is None:
-            self._username = input('Enter the username for ' + name + ' > ')
-        return self._username
+        # don't pop() the timeout, _send_request_for_manager uses it also
+        timeout = kwargs.get('timeout', None)
+        reply = self._send_request_for_manager(attrib, *args, **kwargs)
+        if 'result' not in reply:
+            # then we need to send an admin username and password
+            result = None
+            for method in ('username', 'password'):
+                uid = self._create_future()
+                if method == 'username':
+                    self.send_reply(self._transport, self.username(reply['requester']))
+                else:
+                    self.send_reply(self._transport, self.password(self._username))
+                self._wait(uid=uid, timeout=timeout)
+                if method == 'password' and attrib != 'shutdown_manager':
+                    result = self._futures[uid].result()['result']
+                self._remove_future(uid)
+            return result
+        return reply['result']
+
+    def disconnect(self):
+        """Disconnect from the Network :class:`~msl.network.manager.Manager`."""
+        if self._transport is not None:
+            uid = self._create_request(self._network_name, DISCONNECT_REQUEST)
+            self.send_data(self._transport, self._requests[uid])
+            self._wait(uid=uid, timeout=self._timeout)
+            self._clear_all_futures()
 
     def identity(self):
         """:class:`dict`: Returns the :obj:`~msl.network.network.Network.identity` of the :class:`Client`."""
@@ -251,44 +285,6 @@ class Client(Network, asyncio.Protocol):
         link = Link(self, service, identity)
         self._links.append(link)
         return link
-
-    def unlink(self, link, *, timeout=None):
-        """Unlink from a :class:`~msl.network.service.Service` on the Network
-        :class:`~msl.network.manager.Manager`.
-
-        .. versionadded:: 0.5
-
-        Parameters
-        ----------
-        link : :class:`~msl.network.client.Link`
-            The object that is linked with the :class:`~msl.network.service.Service`.
-        timeout : :class:`float`, optional
-            The maximum number of seconds to wait for the reply from the Network
-            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
-
-        Raises
-        ------
-        :class:`~msl.network.exceptions.MSLNetworkError`
-            If there was error unlinking.
-        TimeoutError
-            If unlinking from the :class:`~msl.network.service.Service` takes longer
-            than `timeout` seconds.
-        """
-        if not isinstance(link, Link):
-            raise TypeError('Must pass in a Link object')
-        if self._debug:
-            log.debug('preparing to unlink {!r}'.format(link))
-        success = self._send_request_for_manager('unlink', link.service_name, timeout=timeout)
-        if success:
-            self._links.remove(link)  # ideally this will never raise a ValueError
-
-    def disconnect(self):
-        """Disconnect from the Network :class:`~msl.network.manager.Manager`."""
-        if self._transport is not None:
-            uid = self._create_request(self._network_name, DISCONNECT_REQUEST)
-            self.send_data(self._transport, self._requests[uid])
-            self._wait(uid=uid, timeout=self._timeout)
-            self._clear_all_futures()
 
     def manager(self, *, as_string=False, indent=2, timeout=None):
         """Returns the :obj:`~msl.network.network.Network.identity` of the
@@ -361,61 +357,141 @@ class Client(Network, asyncio.Protocol):
                     s.append(2 * space + '{}: {}'.format(key, service[key]))
         return '\n'.join(s)
 
-    def admin_request(self, attrib, *args, **kwargs):
-        """Request something from the Network :class:`~msl.network.manager.Manager`
-        as an administrator.
+    def raise_latest_error(self):
+        """
+        Raises the latest error that was received from the Network
+        :class:`~msl.network.manager.Manager` as a
+        :exc:`~msl.network.exceptions.MSLNetworkError` exception.
 
-        The user that calls this method must have administrative privileges for that
-        Network :class:`~msl.network.manager.Manager`. See also :mod:`msl.network.cli_user`
-        for details on how to create a user that is an administrator .
+        Calling this method is not necessary. An error is raised automatically
+        if one occurs.
+
+        If there is no error then calling this method does nothing.
+        """
+        if self._latest_error:
+            # need to clear the latest error message and all futures in case
+            # the Client is connected to the Manager using Python's interactive console
+            msg = str(self._latest_error)
+            self._latest_error = ''
+            self._clear_all_futures()
+            raise MSLNetworkError(msg)
+
+    def send_pending_requests(self, *, wait=True, timeout=None):
+        """Send all pending requests to the Network :class:`~msl.network.manager.Manager`.
 
         .. versionchanged:: 0.3
-           Added the `timeout` option as one of the `**kwargs`.
+           Added the `timeout` keyword argument.
 
         Parameters
         ----------
-        attrib : :class:`str`
-            The attribute of the Network :class:`~msl.network.manager.Manager`. Can contain
-            dots ``.`` to access sub-attributes.
-        *args
-            The arguments to send to the Network :class:`~msl.network.manager.Manager`.
-        **kwargs
-            The keyword arguments to send to the Network :class:`~msl.network.manager.Manager`.
-            Also accepts a `timeout` parameter as a :class:`float`.
+        wait : :class:`bool`, optional
+            Whether to wait for all pending requests to finish before returning to
+            the calling program. If `wait` is :data:`True` then this method will block
+            until all requests are done executing. If `wait` is :data:`False` then this
+            method will return immediately and you must call the :meth:`wait` method
+            to ensure that all pending requests have a result.
+        timeout : :class:`float`, optional
+            The maximum number of seconds to wait for all pending requests to be
+            returned from the Network :class:`~msl.network.manager.Manager` before
+            raising a :exc:`TimeoutError`.
+        """
+        for request in self._requests.values():
+            if self._debug:
+                log.debug('sending request to {}.{}'.format(request['service'], request['attribute']))
+            try:
+                self.send_data(self._transport, request)
+            except Exception:
+                # fixes Issue #5 for asynchronous requests
+                self._futures[request['uuid']].cancel()
+                self._remove_future(request['uuid'])
+                raise
+        self._pending_requests_sent = True
+        if wait:
+            self._wait(timeout=timeout)
+
+    def spawn(self, name='Client'):
+        """Returns a new connection to the Network :class:`~msl.network.manager.Manager`.
+
+        Parameters
+        ----------
+        name : :class:`str`, optional
+            The name to assign to the new :class:`Client`.
 
         Returns
         -------
-        The reply from the Network :class:`~msl.network.manager.Manager`.
-
-        Examples
-        --------
-        ::
-
-            >>> from msl.network import connect  # doctest: +SKIP
-            >>> cxn = connect()  # doctest: +SKIP
-            >>> unames = cxn.admin_request('users_table.usernames')  # doctest: +SKIP
-            >>> is_niels = cxn.admin_request('users_table.is_user_registered', 'n.bohr')  # doctest: +SKIP
-            >>> conns = cxn.admin_request('connections_table.connections', timestamp1='2017-11-29', timestamp2='2017-11-30')  # doctest: +SKIP
-            >>> cxn.admin_request('shutdown_manager')  # doctest: +SKIP
+        :class:`Client`:
+            A new Client.
         """
-        # don't pop() the timeout, _send_request_for_manager uses it also
-        timeout = kwargs.get('timeout', None)
-        reply = self._send_request_for_manager(attrib, *args, **kwargs)
-        if 'result' not in reply:
-            # then we need to send an admin username and password
-            result = None
-            for method in ('username', 'password'):
-                uid = self._create_future()
-                if method == 'username':
-                    self.send_reply(self._transport, self.username(reply['requester']))
-                else:
-                    self.send_reply(self._transport, self.password(self._username))
-                self._wait(uid=uid, timeout=timeout)
-                if method == 'password' and attrib != 'shutdown_manager':
-                    result = self._futures[uid].result()['result']
-                self._remove_future(uid)
-            return result
-        return reply['result']
+        return connect(name=name, host=self._host_manager, port=self._port_manager,
+                       timeout=self._timeout, username=self._username, password=self._password,
+                       password_manager=self._password_manager, certfile=self._certificate,
+                       disable_tls=self._disable_tls, assert_hostname=self._assert_hostname,
+                       debug=self._debug)
+
+    def unlink(self, link, *, timeout=None):
+        """Unlink from a :class:`~msl.network.service.Service` on the Network
+        :class:`~msl.network.manager.Manager`.
+
+        .. versionadded:: 0.5
+
+        Parameters
+        ----------
+        link : :class:`~msl.network.client.Link`
+            The object that is linked with the :class:`~msl.network.service.Service`.
+        timeout : :class:`float`, optional
+            The maximum number of seconds to wait for the reply from the Network
+            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
+
+        Raises
+        ------
+        :class:`~msl.network.exceptions.MSLNetworkError`
+            If there was error unlinking.
+        TimeoutError
+            If unlinking from the :class:`~msl.network.service.Service` takes longer
+            than `timeout` seconds.
+        """
+        if not isinstance(link, Link):
+            raise TypeError('Must pass in a Link object')
+        if self._debug:
+            log.debug('preparing to unlink {!r}'.format(link))
+        success = self._send_request_for_manager('unlink', link.service_name, timeout=timeout)
+        if success:
+            self._links.remove(link)  # ideally this will never raise a ValueError
+
+    def wait(self, timeout=None):
+        """This method will not return until all pending requests are done executing.
+
+        .. versionchanged:: 0.3
+           Added the `timeout` keyword argument.
+
+        Parameters
+        ----------
+        timeout : :class:`float`, optional
+            The maximum number of seconds to wait for the reply from the Network
+            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
+        """
+        if not self._pending_requests_sent:
+            self.send_pending_requests(wait=False, timeout=timeout)
+        self._wait(timeout=timeout)
+        self._pending_requests_sent = False
+
+    def connection_lost(self, exc):
+        """
+        .. attention::
+           Do not call this method. It is called automatically when the connection
+           to the Network :class:`~msl.network.manager.Manager` has been closed.
+           Call :meth:`disconnect` to close the connection.
+        """
+        if self._debug:
+            log.debug(str(self) + ' connection lost')
+        for future in self._futures.values():
+            future.cancel()
+        self._transport = None
+        self._address_manager = None
+        self._port = None
+        self._loop.stop()
+        if exc:
+            raise exc
 
     def connection_made(self, transport):
         """
@@ -482,91 +558,23 @@ class Client(Network, asyncio.Protocol):
             uid = list(self._futures.keys())[0]
             self._futures[uid].set_result(data)
 
-    def connection_lost(self, exc):
+    def password(self, name):
         """
         .. attention::
-           Do not call this method. It is called automatically when the connection
-           to the Network :class:`~msl.network.manager.Manager` has been closed.
-           Call :meth:`disconnect` to close the connection.
+           Do not call this method. It is called by the Network
+           :class:`~msl.network.manager.Manager` when verifying the login credentials.
         """
-        if self._debug:
-            log.debug(str(self) + ' connection lost')
-        for future in self._futures.values():
-            future.cancel()
-        self._transport = None
-        self._address_manager = None
-        self._port = None
-        self._loop.stop()
-        if exc:
-            raise exc
-
-    def spawn(self, name='Client'):
-        """Returns a new connection to the Network :class:`~msl.network.manager.Manager`.
-
-        Parameters
-        ----------
-        name : :class:`str`, optional
-            The name to assign to the new :class:`Client`.
-
-        Returns
-        -------
-        :class:`Client`:
-            A new Client.
-        """
-        return connect(name=name, host=self._host_manager, port=self._port_manager,
-                       timeout=self._timeout, username=self._username, password=self._password,
-                       password_manager=self._password_manager, certfile=self._certificate,
-                       disable_tls=self._disable_tls, assert_hostname=self._assert_hostname,
-                       debug=self._debug)
-
-    def raise_latest_error(self):
-        """
-        Raises the latest error that was received from the Network
-        :class:`~msl.network.manager.Manager` as a :exc:`~msl.network.exceptions.MSLNetworkError`
-        exception.
-
-        If there is no error then calling this method does nothing.
-        """
-        if self._latest_error:
-            # need to clear the latest error message and all futures in case
-            # the Client is connected to the Manager using Python's interactive console
-            msg = self._latest_error
-            self._latest_error = ''
-            self._clear_all_futures()
-            raise MSLNetworkError(msg)
-
-    def send_pending_requests(self, *, wait=True, timeout=None):
-        """Send all pending requests to the Network :class:`~msl.network.manager.Manager`.
-
-        .. versionchanged:: 0.3
-           Added the `timeout` keyword argument.
-
-        Parameters
-        ----------
-        wait : :class:`bool`, optional
-            Whether to wait for all pending requests to finish before returning to
-            the calling program. If `wait` is :data:`True` then this method will block
-            until all requests are done executing. If `wait` is :data:`False` then this
-            method will return immediately and you must call the :meth:`wait` method
-            to ensure that all pending requests have a result.
-        timeout : :class:`float`, optional
-            The maximum number of seconds to wait for all pending requests to be
-            returned from the Network :class:`~msl.network.manager.Manager` before
-            raising a :exc:`TimeoutError`.
-        """
-        for request in self._requests.values():
-            if self._debug:
-                log.debug('sending request to {}.{}'.format(request['service'], request['attribute']))
-            try:
-                self.send_data(self._transport, request)
-            except Exception:
-                # fixes Issue #5 for asynchronous requests
-                self._futures[request['uuid']].cancel()
-                self._remove_future(request['uuid'])
-                raise
-        self._pending_requests_sent = True
-        if wait:
-            self._wait(timeout=timeout)
+        # note that a Service has a special check in its password() method so that a password
+        # remains secure, however, a Client does not need this security check because a Client
+        # cannot send a request to other Clients
+        self._connection_successful = True
+        if _is_manager_regex.search(name) is not None:
+            if self._password_manager is None:
+                self._password_manager = getpass.getpass('Enter the password for ' + name + ' > ')
+            return self._password_manager
+        if self._password is None:
+            self._password = getpass.getpass('Enter the password for ' + name + ' > ')
+        return self._password
 
     def start(self, host, port, timeout, username, password, password_manager,
               certfile, disable_tls, assert_hostname, debug):
@@ -607,22 +615,17 @@ class Client(Network, asyncio.Protocol):
         thread.start()
         return True
 
-    def wait(self, timeout=None):
-        """This method will not return until all pending requests are done executing.
-
-        .. versionchanged:: 0.3
-           Added the `timeout` keyword argument.
-
-        Parameters
-        ----------
-        timeout : :class:`float`, optional
-            The maximum number of seconds to wait for the reply from the Network
-            :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
+    def username(self, name):
         """
-        if not self._pending_requests_sent:
-            self.send_pending_requests(wait=False, timeout=timeout)
-        self._wait(timeout=timeout)
-        self._pending_requests_sent = False
+        .. attention::
+           Do not call this method. It is called by the Network
+           :class:`~msl.network.manager.Manager` when verifying the login credentials.
+        """
+        # see the comment in the Client.password() method and in the Service.username() method
+        self._connection_successful = True
+        if self._username is None:
+            self._username = input('Enter the username for ' + name + ' > ')
+        return self._username
 
     def _wait(self, *, uid=None, timeout=None):
         # Do not use asyncio.wait_for and asyncio.wait since they are coroutines.
@@ -771,11 +774,6 @@ class Link(object):
             log.debug("linked with '{}[{}]'".format(service, identity['address']))
 
     @property
-    def service_name(self):
-        """:class:`str`: The name of the :class:`~msl.network.service.Service` that this object is linked with."""
-        return self._service_name
-
-    @property
     def service_address(self):
         """:class:`str`: The address of the :class:`~msl.network.service.Service` that this object is linked with."""
         return self._service_identity['address']
@@ -792,58 +790,21 @@ class Link(object):
         return self._service_identity['language']
 
     @property
+    def service_name(self):
+        """:class:`str`: The name of the :class:`~msl.network.service.Service` that this object is linked with."""
+        return self._service_name
+
+    @property
     def service_os(self):
         """:class:`str`: The operating system that the :class:`~msl.network.service.Service` is running on."""
         return self._service_identity['os']
 
-    def __repr__(self):
-        if self._client is None:
-            return '<Un-Linked from {}[{}]>'.format(self.service_name, self.service_address)
-        else:
-            return '<Link with {}[{}] at Manager[{}]>'.format(
-                self.service_name, self.service_address, self._client.address_manager)
-
-    def __getattr__(self, item):
-        def service_request(*args, **kwargs):
-            return self._client._send_request(self._service_name, item, *args, **kwargs)
-        return service_request
-
-    def disconnect(self, *, timeout=None):
+    def disconnect(self, timeout=None):
         """An alias for :meth:`unlink`.
 
         .. versionadded:: 0.5
         """
         self.unlink(timeout=timeout)
-
-    def shutdown_service(self, *args, **kwargs):
-        """Send a request for the :class:`~msl.network.service.Service` to shut down.
-
-        A :class:`~msl.network.service.Service` must also implement a method called
-        ``shutdown_service`` otherwise calling this :meth:`shutdown_service` method
-        will raise :class:`~msl.network.exceptions.MSLNetworkError`.
-
-        .. versionadded:: 0.5
-
-        Parameters
-        ----------
-        args
-            The positional arguments that are passed to the ``shutdown_service`` method
-            of the :class:`~msl.network.service.Service` that this object is linked with.
-        kwargs
-            The keyword arguments that are passed to the ``shutdown_service`` method
-            of the :class:`~msl.network.service.Service` that this object is linked with.
-        """
-
-        # If the request is successful then a ConnectionAbortedError will be raised which
-        # is an exception that we expect.
-        # However, if a shutdown_service is not available on the Service then we want
-        # the AttributeError to be raised
-        try:
-            self._client._send_request(self._service_name, 'shutdown_service', *args, **kwargs)
-        except MSLNetworkError as e:
-            traceback = str(e).splitlines()
-            if not traceback[-1].startswith('ConnectionAbortedError:'):
-                raise
 
     def notification_handler(self, *args, **kwargs):
         """Handle a notification from the :class:`~msl.network.service.Service` that
@@ -896,7 +857,39 @@ class Link(object):
         """
         pass
 
-    def unlink(self, *, timeout=None):
+    def shutdown_service(self, *args, **kwargs):
+        """Send a request for the :class:`~msl.network.service.Service` to shut down.
+
+        A :class:`~msl.network.service.Service` must also implement a method called
+        ``shutdown_service`` otherwise calling this :meth:`shutdown_service` method
+        will raise :class:`~msl.network.exceptions.MSLNetworkError`.
+
+        See :ref:`ssh-example` for an example use case.
+
+        .. versionadded:: 0.5
+
+        Parameters
+        ----------
+        args
+            The positional arguments that are passed to the ``shutdown_service`` method
+            of the :class:`~msl.network.service.Service` that this object is linked with.
+        kwargs
+            The keyword arguments that are passed to the ``shutdown_service`` method
+            of the :class:`~msl.network.service.Service` that this object is linked with.
+        """
+
+        # If the request is successful then a ConnectionAbortedError will be raised which
+        # is an exception that we expect.
+        # However, if a shutdown_service is not available on the Service then we want
+        # the AttributeError to be raised
+        try:
+            self._client._send_request(self._service_name, 'shutdown_service', *args, **kwargs)
+        except MSLNetworkError as e:
+            traceback = str(e).splitlines()
+            if not traceback[-1].startswith('ConnectionAbortedError:'):
+                raise
+
+    def unlink(self, timeout=None):
         """Unlink from the :class:`~msl.network.service.Service` on the Network
         :class:`~msl.network.manager.Manager`.
 
@@ -911,7 +904,7 @@ class Link(object):
         Raises
         ------
         :class:`~msl.network.exceptions.MSLNetworkError`
-            If there was error unlinking.
+            If there was an error unlinking.
         TimeoutError
             If unlinking from the :class:`~msl.network.service.Service` takes longer
             than `timeout` seconds.
@@ -919,6 +912,18 @@ class Link(object):
         if self._client is not None:  # calling this multiple times should not raise an error
             self._client.unlink(self, timeout=timeout)
             self._client = None
+
+    def __repr__(self):
+        if self._client is None:
+            return '<Un-Linked from {}[{}]>'.format(self.service_name, self.service_address)
+        else:
+            return '<Link with {}[{}] at Manager[{}]>'.format(
+                self.service_name, self.service_address, self._client.address_manager)
+
+    def __getattr__(self, item):
+        def service_request(*args, **kwargs):
+            return self._client._send_request(self._service_name, item, *args, **kwargs)
+        return service_request
 
 
 class LinkedClient(object):
@@ -933,7 +938,7 @@ class LinkedClient(object):
         ----------
         service_name : :class:`str`
             The name of the :class:`~msl.network.service.Service` to
-            :meth:`~msl.network.client.Client.link` with.
+            :obj:`~msl.network.client.Client.link` with.
         kwargs
             Keyword arguments that are passed to :func:`.connect`.
         """
@@ -959,7 +964,6 @@ class LinkedClient(object):
             sleep(0.5)
 
         self._link = self._client.link(service_name)
-        self._link.notification_handler = self.notification_handler
 
     @property
     def address_manager(self):
@@ -973,6 +977,11 @@ class LinkedClient(object):
         .. versionadded:: 0.5
         """
         return self._client
+
+    @property
+    def link(self):
+        """:class:`.Link`: The :class:`.Link` with the :class:`~msl.network.service.Service`."""
+        return self._link
 
     @property
     def name(self):
@@ -1009,39 +1018,33 @@ class LinkedClient(object):
         """See :obj:`.Link.service_os` for more details."""
         return self._link.service_os
 
-    @property
-    def link(self):
-        """:class:`.Link`: The :class:`.Link` with the :class:`~msl.network.service.Service`."""
-        return self._link
-
     def admin_request(self, attrib, *args, **kwargs):
-        """See :meth:`.Client.admin_request` for more details."""
+        """See :obj:`.Client.admin_request` for more details."""
         return self._client.admin_request(attrib, *args, **kwargs)
 
     def disconnect(self):
-        """See :meth:`.Client.disconnect` for more details."""
+        """See :obj:`.Client.disconnect` for more details."""
         if self._client is not None:
             self._client.disconnect()
             self._client = None
 
-    def shutdown_service(self, *args, **kwargs):
-        """See :obj:`.Link.shutdown_service` for more details."""
-        self._link.shutdown_service(*args, **kwargs)
-
     def identity(self):
-        """See :meth:`.Client.identity` for more details."""
+        """See :obj:`.Client.identity` for more details."""
         return self._client.identity()
 
     def manager(self, *, as_string=False, indent=4, timeout=None):
-        """See :meth:`.Client.manager` for more details."""
+        """See :obj:`.Client.manager` for more details."""
         return self._client.manager(as_string=as_string, indent=indent, timeout=timeout)
 
     def notification_handler(self, *args, **kwargs):
         """See :obj:`.Link.notification_handler` for more details."""
+        # This method is implemented so that is appears in the documentation.
+        # The __setattr__ method is what actually gets called when
+        # LinkedClient.notification_handler gets re-assigned in the users code.
         pass
 
     def send_pending_requests(self, *, wait=True, timeout=None):
-        """See :meth:`.Client.send_pending_requests` for more details."""
+        """See :obj:`.Client.send_pending_requests` for more details."""
         self._client.send_pending_requests(wait=wait, timeout=timeout)
 
     def service_error_handler(self):
@@ -1054,6 +1057,10 @@ class LinkedClient(object):
         :class:`~msl.network.exceptions.MSLNetworkError` is raised.
         """
         pass
+
+    def shutdown_service(self, *args, **kwargs):
+        """See :obj:`.Link.shutdown_service` for more details."""
+        self._link.shutdown_service(*args, **kwargs)
 
     def spawn(self, name='LinkedClient'):
         """Returns a new connection to the Network :class:`~msl.network.manager.Manager`
@@ -1074,14 +1081,14 @@ class LinkedClient(object):
         kwargs['name'] = name
         return LinkedClient(self.service_name, **kwargs)
 
-    def unlink(self, *, timeout=None):
+    def unlink(self, timeout=None):
         """See :obj:`.Link.unlink` for more details."""
         if self._link is not None:
             self._link.unlink(timeout=timeout)
             self._link = None
 
     def wait(self, timeout=None):
-        """See :meth:`.Client.wait` for more details."""
+        """See :obj:`.Client.wait` for more details."""
         self._client.wait(timeout=timeout)
 
     def __repr__(self):
@@ -1093,6 +1100,13 @@ class LinkedClient(object):
             return '<Link[name={}] with {}[{}] at Manager[{}]>'.format(
                 self.name, self.service_name, self.service_address, self.address_manager
             )
+
+    def __setattr__(self, name, value):
+        # the notification_handler is a special attribute that must be directly set to self._link
+        if name == 'notification_handler':
+            self._link.notification_handler = value
+        else:
+            super(LinkedClient, self).__setattr__(name, value)
 
     def __getattr__(self, item):
         # all other methods that are called get sent to the Link object
