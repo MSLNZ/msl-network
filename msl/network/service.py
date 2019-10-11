@@ -338,7 +338,7 @@ class Service(Network, asyncio.Protocol):
         else:
             self.send_reply(self._transport, attrib, requester=data['requester'], uuid=data['uuid'])
 
-        log.info('{!r} requested {} [{} executing]'.format(data['requester'], data['attribute'], len(self._futures)))
+        log.info('{!r} requested {!r} [{} executing]'.format(data['requester'], data['attribute'], len(self._futures)))
 
     def identity(self):
         """
