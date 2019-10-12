@@ -445,7 +445,7 @@ class Client(Network, asyncio.Protocol):
         Raises
         ------
         :class:`~msl.network.exceptions.MSLNetworkError`
-            If there was error unlinking.
+            If there was an error unlinking.
         TimeoutError
             If unlinking from the :class:`~msl.network.service.Service` takes longer
             than `timeout` seconds.
