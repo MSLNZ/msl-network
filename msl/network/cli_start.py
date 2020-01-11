@@ -134,6 +134,12 @@ def add_parser_start(parser):
         help='The port number to use for the Network Manager.\n'
              'Default is %(default)s.'
     )
+    p.add_argument(
+        '-l', '--logfile',
+        help='The file path to save logging messages to. Default is\n'
+             'to create a new file in the $HOME/.msl/network/logs\n'
+             'directory.'
+    )
     p.set_defaults(func=execute)
 
 
