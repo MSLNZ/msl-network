@@ -7,15 +7,26 @@ Version 0.5.0.dev0
 
 - Added
 
-  * A `Service` can emit notifications to all `Clients` that are linked with it
-  * The `Service.ignore_attributes` method
-  * A `Link` can unlink from a `Service`
-  * The `LinkedClient.client` property
+  * support for Python 3.8
+  * the `utils.new_selector_event_loop` function to create a new `asyncio.SelectorEventLoop`
+  * the ``--logfile`` command line argument for the `start` command
+  * a `Service` can emit notifications to all `Clients` that are linked with it
+  * a `Service` now accepts an `ignore_attributes` keyword argument when it is instantiated
+    and also has an `ignore_attributes` method
+  * a `Link` can unlink from a `Service`
+  * the `LinkedClient.client` property
 
 - Changed
 
+  * the `FileHandler` and `StreamHandler` that are added to the root logger now use a
+    decimal point instead of a comma between the seconds and milliseconds values
   * renamed the `disconnect_service` method for a `Link` and a `Service`
-    (which was added in 0.4.0) to be `Service.shutdown_service`
+    (which was added in version 0.4.0) to be `shutdown_service`
+
+- Removed
+
+  * the `Service._shutdown` method since it is no longer necessary to call this method
+    from the `Service` subclass because shutting down happens automatically behind the scenes
 
 Version 0.4.1 (2019.07.23)
 ==========================
