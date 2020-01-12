@@ -1,65 +1,45 @@
-import time
-import threading
-from socket import socket
+import helper
 
 import pytest
 
 from msl.network import LinkedClient, MSLNetworkError
 from msl.examples.network import Echo
-from msl.network.manager import run_services
 
 
 def test_linked_echo():
-    with socket() as sock:
-        sock.bind(('', 0))  # get any available port
-        port = sock.getsockname()[1]
 
-    class ShutdownableEcho(Echo):
-        def shutdown_service(self):
-            self._shutdown()
+    service = helper.ServiceStarter(Echo)
 
-    def run_client():
-        time.sleep(1)  # wait for the Services to be running on the Manager
-        link = LinkedClient('ShutdownableEcho', port=port, name='foobar')
+    service.kwargs['name'] = 'foobar'
+    link = LinkedClient('Echo', **service.kwargs)
 
-        args, kwargs = link.echo(1, 2, 3)
-        assert len(args) == 3
-        assert args[0] == 1
-        assert args[1] == 2
-        assert args[2] == 3
-        assert len(kwargs) == 0
+    args, kwargs = link.echo(1, 2, 3)
+    assert len(args) == 3
+    assert args[0] == 1
+    assert args[1] == 2
+    assert args[2] == 3
+    assert len(kwargs) == 0
 
-        args, kwargs = link.echo(x=4, y=5, z=6)
-        assert len(args) == 0
-        assert kwargs['x'] == 4
-        assert kwargs['y'] == 5
-        assert kwargs['z'] == 6
+    args, kwargs = link.echo(x=4, y=5, z=6)
+    assert len(args) == 0
+    assert kwargs['x'] == 4
+    assert kwargs['y'] == 5
+    assert kwargs['z'] == 6
 
-        args, kwargs = link.echo(1, 2, 3, x=4, y=5, z=6)
-        assert len(args) == 3
-        assert args[0] == 1
-        assert args[1] == 2
-        assert args[2] == 3
-        assert kwargs['x'] == 4
-        assert kwargs['y'] == 5
-        assert kwargs['z'] == 6
+    args, kwargs = link.echo(1, 2, 3, x=4, y=5, z=6)
+    assert len(args) == 3
+    assert args[0] == 1
+    assert args[1] == 2
+    assert args[2] == 3
+    assert kwargs['x'] == 4
+    assert kwargs['y'] == 5
+    assert kwargs['z'] == 6
 
-        assert len(link.service_attributes) == 2
-        assert 'echo' in link.service_attributes
-        assert 'shutdown_service' in link.service_attributes
-        assert link.name == 'foobar'
+    assert len(link.service_attributes) == 1
+    assert 'echo' in link.service_attributes
+    assert link.name == 'foobar'
 
-        with pytest.raises(MSLNetworkError):
-            link.does_not_exist()
+    with pytest.raises(MSLNetworkError):
+        link.does_not_exist()
 
-        link.shutdown_service()
-        link.disconnect()
-
-    client_thread = threading.Thread(target=run_client)
-    client_thread.start()
-
-    # the `run_services` function will block the unittests forever if the
-    # LinkedClient did not shutdown ShutdownableEcho
-    run_services(ShutdownableEcho(), port=port)
-
-    client_thread.join()
+    service.shutdown(link.client)

@@ -47,6 +47,10 @@ NETWORK_MANAGER_RUNNING_PREFIX = 'Network Manager running on'
 
 NOTIFICATION_UUID = 'notification'
 
+SHUTDOWN_SERVICE = 'shutdown_service'
+
+SHUTDOWN_MANAGER = 'shutdown_manager'
+
 
 class JSONPackage(enum.Enum):
     """

@@ -25,7 +25,7 @@ def test_client_linkedclient_handlers():
     def handler4(*args, **kwargs):
         values4.append(1)
 
-    services = helper.ServiceStarter((Heartbeat, Echo))
+    services = helper.ServiceStarter(Heartbeat, Echo)
 
     cxn = connect(**services.kwargs)
 
@@ -38,6 +38,9 @@ def test_client_linkedclient_handlers():
     link_echo.notification_handler = handler3
     lc_echo = LinkedClient('Echo', **services.kwargs)
     lc_echo.notification_handler = handler4
+
+    assert link_echo.echo('foo', x=-1) == [['foo'], {'x': -1}]
+    assert lc_echo.echo('bar', 0) == [['bar', 0], {}]
 
     link_hb.set_heart_rate(10)
     link_hb.reset()
@@ -59,8 +62,11 @@ def test_client_linkedclient_handlers():
     assert values1.count(5.0) == 2  # the value 5 should appear twice since reset() was called twice
     assert values2.count(5.0) == 1
 
-    link_hb.disconnect()
-    lc_hb.disconnect()
-    link_echo.disconnect()
+    assert link_echo.echo(foo='bar') == [[], {'foo': 'bar'}]
+    assert lc_echo.echo() == [[], {}]
+
+    link_hb.unlink()
+    lc_hb.unlink()
+    link_echo.disconnect()  # disconnect is an alias for unlink for a LinkedClient
     lc_echo.disconnect()
     services.shutdown(cxn)

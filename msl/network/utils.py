@@ -4,6 +4,8 @@ Common functions used by **MSL-Network**.
 import re
 import os
 import ast
+import asyncio
+import selectors
 
 from .constants import (
     HOSTNAME,
@@ -23,15 +25,13 @@ _oid_regex = re.compile(r'oid=(.+), name=(.+)\)')
 
 def ensure_root_path(path):
     """Ensure that the root directory of the file path exists.
-        
+
     Parameters
     ----------
     path : :class:`str`
-        The file path.
-        
-        For example, if `path` is ``/the/path/to/my/test/file.txt`` then
-        this function would ensure that ``/the/path/to/my/test`` directory
-        exists (creating the intermediate directories if necessary).
+        A file path. For example, if `path` is ``/the/path/to/my/test/file.txt``
+        then this function would ensure that the ``/the/path/to/my/test`` directories
+        exist (creating the intermediate directories if necessary).
     """
     if path is not None:
         root = os.path.dirname(path)
@@ -160,3 +160,24 @@ def localhost_aliases():
         '::1',
         '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
     )
+
+
+def new_selector_event_loop():
+    """Create a new :class:`~asyncio.SelectorEventLoop`.
+
+    .. versionadded:: 0.5
+
+    Returns
+    -------
+    :class:`~asyncio.SelectorEventLoop`
+        The event loop.
+    """
+    # TODO For Python 3.8 on Windows the default event loop became ProactorEventLoop.
+    #  This causes unpredictable issues when calling loop.close() for a
+    #  Client and a Service since the IocpProactor.close() method can sometimes hang
+    #  in the "while self._cache:" block. Therefore, use the SelectorEventLoop for
+    #  both UNIX and Windows for the event loop of a Client and a Service. The
+    #  hanging issue does not affect the Manager's loop and therefore it uses the
+    #  default event loop for the platform.
+    selector = selectors.SelectSelector()
+    return asyncio.SelectorEventLoop(selector)

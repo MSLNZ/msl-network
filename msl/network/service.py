@@ -7,11 +7,17 @@ import inspect
 import logging
 import getpass
 import platform
-from time import perf_counter
+from time import (
+    perf_counter,
+    sleep,
+)
 from concurrent.futures import ThreadPoolExecutor
 
 from .network import Network
-from .utils import localhost_aliases
+from .utils import (
+    localhost_aliases,
+    new_selector_event_loop,
+)
 from .json import (
     deserialize,
     serialize,
@@ -22,6 +28,7 @@ from .constants import (
     IS_WINDOWS,
     DISCONNECT_REQUEST,
     NOTIFICATION_UUID,
+    SHUTDOWN_SERVICE,
 )
 
 log = logging.getLogger(__name__)
@@ -33,8 +40,14 @@ _ignore_attribs += list(a for a in dir(Network) + dir(asyncio.Protocol) if not a
 
 class Service(Network, asyncio.Protocol):
 
-    def __init__(self, *, name=None, max_clients=None):
+    def __init__(self, *, name=None, max_clients=None, ignore_attributes=None):
         """Base class for all Services.
+
+        .. versionadded:: 0.4
+            The `name` and `max_clients` keyword argument.
+
+        .. versionadded:: 0.5
+            The `ignore_attributes` keyword argument.
 
         Parameters
         ----------
@@ -45,6 +58,10 @@ class Service(Network, asyncio.Protocol):
             The maximum number of :class:`~msl.network.client.Client`\\s that can be linked
             with this :class:`Service`. A value :math:`\\leq` 0 or :data:`None` means that
             there is no limit.
+        ignore_attributes : :class:`list` of :class:`str`, optional
+            The names of the attributes to not include in the
+            :obj:`~msl.network.network.Network.identity` of the :class:`Service`.
+            See :meth:`.ignore_attributes` for more details.
         """
         Network.__init__(self)
         asyncio.Protocol.__init__(self)
@@ -63,6 +80,8 @@ class Service(Network, asyncio.Protocol):
         self._t0 = None  # used for profiling sections of the code
         self._futures = dict()
         self._ignore_attribs = _ignore_attribs.copy()
+        if ignore_attributes:
+            self.ignore_attributes(ignore_attributes)
 
     @property
     def address_manager(self):
@@ -203,30 +222,20 @@ class Service(Network, asyncio.Protocol):
                              'A Manager cannot be started using multiple authentication methods.')
         self._password = password or password_manager
 
-        # create a new event loop, rather than using asyncio.get_event_loop()
-        # (in case the Service does not run in the threading._MainThread)
-        self._loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._loop)
+        self._loop = new_selector_event_loop()
 
         if not self._create_connection(host, port, certfile, disable_tls, assert_hostname, timeout):
             return
 
-        # https://bugs.python.org/issue23057
-        # enable this hack only in debug mode and only on Windows
-        if debug and IS_WINDOWS:
+        # enable this hack only in DEBUG mode and only on Windows when the SelectorEventLoop is being used
+        # See: https://bugs.python.org/issue23057
+        if debug and IS_WINDOWS and isinstance(self._loop, asyncio.SelectorEventLoop):
             async def wakeup():
                 while True:
                     await asyncio.sleep(1)
             self._loop.create_task(wakeup())
 
-        try:
-            self._loop.run_forever()
-        except KeyboardInterrupt:
-            log.info('CTRL+C keyboard interrupt received')
-        finally:
-            log.info('{!r} disconnected'.format(self._network_name))
-            self._loop.close()
-            log.info('{!r} closed the event loop'.format(self._network_name))
+        self._run_forever()
 
     def connection_lost(self, exc):
         """
@@ -235,6 +244,8 @@ class Service(Network, asyncio.Protocol):
            to the Network :class:`~msl.network.manager.Manager` has been closed.
         """
         log.info('{!r} connection lost'.format(self._network_name))
+        for future in self._futures.values():
+            future.cancel()
         self._futures.clear()
         self._transport = None
         self._port = None
@@ -314,8 +325,9 @@ class Service(Network, asyncio.Protocol):
             log.error(self._network_name + ' ' + msg)
             return
 
+        attribute = data['attribute']
         # do not allow access to private attributes from the Service
-        if data['attribute'].startswith('_'):
+        if attribute.startswith('_'):
             self.send_error(
                 self._transport,
                 AttributeError('Cannot request a private attribute from {!r}'.format(self._name)),
@@ -325,13 +337,20 @@ class Service(Network, asyncio.Protocol):
             return
 
         try:
-            attrib = getattr(self, data['attribute'])
+            attrib = getattr(self, attribute)
         except Exception as e:
             log.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
             self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
             return
 
-        if callable(attrib):
+        if attribute == SHUTDOWN_SERVICE:
+            reply = attrib(*data['args'], **data['kwargs'])
+            self.send_reply(self._transport, reply, requester=data['requester'], uuid=data['uuid'])
+            for future in self._futures.values():
+                while not (future.done() or future.cancelled()):
+                    sleep(0.01)
+            self.send_data(self._transport, {'service': self._network_name, 'attribute': DISCONNECT_REQUEST})
+        elif callable(attrib):
             uid = os.urandom(16)
             executor = ThreadPoolExecutor(max_workers=1)
             self._futures[uid] = self._loop.run_in_executor(executor, self._function, attrib, data, uid)
@@ -418,9 +437,6 @@ class Service(Network, asyncio.Protocol):
             log.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
             self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
         self._futures.pop(uid, None)
-
-    def _shutdown(self):
-        self.send_data(self._transport, {'service': self._network_name, 'attribute': DISCONNECT_REQUEST})
 
 
 def filter_service_start_kwargs(**kwargs):

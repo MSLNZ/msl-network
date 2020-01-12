@@ -19,6 +19,7 @@ from .exceptions import MSLNetworkError
 from .service import filter_service_start_kwargs
 from .utils import (
     localhost_aliases,
+    new_selector_event_loop,
     _is_manager_regex,
 )
 from .constants import (
@@ -26,6 +27,8 @@ from .constants import (
     HOSTNAME,
     DISCONNECT_REQUEST,
     NOTIFICATION_UUID,
+    SHUTDOWN_SERVICE,
+    SHUTDOWN_MANAGER,
 )
 
 log = logging.getLogger(__name__)
@@ -232,7 +235,7 @@ class Client(Network, asyncio.Protocol):
                 else:
                     self.send_reply(self._transport, self.password(self._username))
                 self._wait(uid=uid, timeout=timeout)
-                if method == 'password' and attrib != 'shutdown_manager':
+                if method == 'password' and attrib != SHUTDOWN_MANAGER:
                     result = self._futures[uid].result()['result']
                 self._remove_future(uid)
             return result
@@ -272,7 +275,7 @@ class Client(Network, asyncio.Protocol):
 
         Raises
         ------
-        :class:`~msl.network.exceptions.MSLNetworkError`
+        ~msl.network.exceptions.MSLNetworkError
             If there is no :class:`~msl.network.service.Service` available
             with the name `service`.
         TimeoutError
@@ -444,7 +447,7 @@ class Client(Network, asyncio.Protocol):
 
         Raises
         ------
-        :class:`~msl.network.exceptions.MSLNetworkError`
+        ~msl.network.exceptions.MSLNetworkError
             If there was an error unlinking.
         TimeoutError
             If unlinking from the :class:`~msl.network.service.Service` takes longer
@@ -595,24 +598,12 @@ class Client(Network, asyncio.Protocol):
         self._timeout = timeout
         self._assert_hostname = bool(assert_hostname)
 
-        self._loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._loop)
+        self._loop = new_selector_event_loop()
 
         if not self._create_connection(self._host_manager, port, certfile, disable_tls, assert_hostname, timeout):
             return False
 
-        def run_forever():
-            try:
-                self._loop.run_forever()
-            except KeyboardInterrupt:
-                log.debug('CTRL+C keyboard interrupt received')
-            finally:
-                log.debug('closing the event loop')
-                self._loop.close()
-
-        thread = threading.Thread(target=run_forever)
-        thread.daemon = True
-        thread.start()
+        threading.Thread(target=self._run_forever, daemon=True).start()
         return True
 
     def username(self, name):
@@ -876,18 +867,12 @@ class Link(object):
         kwargs
             The keyword arguments that are passed to the ``shutdown_service`` method
             of the :class:`~msl.network.service.Service` that this object is linked with.
-        """
 
-        # If the request is successful then a ConnectionAbortedError will be raised which
-        # is an exception that we expect.
-        # However, if a shutdown_service is not available on the Service then we want
-        # the AttributeError to be raised
-        try:
-            self._client._send_request(self._service_name, 'shutdown_service', *args, **kwargs)
-        except MSLNetworkError as e:
-            traceback = str(e).splitlines()
-            if not traceback[-1].startswith('ConnectionAbortedError:'):
-                raise
+        Returns
+        -------
+        Whatever the ``shutdown_service`` method of the :class:`~msl.network.service.Service` returns.
+        """
+        return self._client._send_request(self._service_name, SHUTDOWN_SERVICE, *args, **kwargs)
 
     def unlink(self, timeout=None):
         """Unlink from the :class:`~msl.network.service.Service` on the Network
@@ -903,7 +888,7 @@ class Link(object):
 
         Raises
         ------
-        :class:`~msl.network.exceptions.MSLNetworkError`
+        ~msl.network.exceptions.MSLNetworkError
             If there was an error unlinking.
         TimeoutError
             If unlinking from the :class:`~msl.network.service.Service` takes longer

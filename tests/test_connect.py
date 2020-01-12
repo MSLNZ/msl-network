@@ -1,155 +1,99 @@
 import os
-import time
 import tempfile
-from socket import socket
-from threading import Thread
+
+import helper  # located in the tests folder
 
 import pytest
 
-from msl.network import connect, manager, cryptography, UsersTable, MSLNetworkError
+from msl.network import connect, cryptography, MSLNetworkError
 
 
-def get_available_port():
-    with socket() as sock:
-        sock.bind(('', 0))  # get any available port
-        return sock.getsockname()[1]
+def test_wrong_port():
+    manager = helper.ServiceStarter()
 
-
-class Manager(object):
-
-    def __init__(self, sleep=1.0):
-        # create the default command-line arguments that are used to start a Manager
-        self.auth_hostname = False
-        self.auth_login = False
-        self.auth_password = None
-        self.certfile = None
-        self.database = tempfile.gettempdir() + '/msl-network-testing.db'
-        if os.path.isfile(self.database):
-            os.remove(self.database)
-        self.debug = False
-        self.disable_tls = False
-        self.keyfile = None
-        self.keyfile_password = None
-        self.port = get_available_port()
-
-        self._sleep = sleep
-
-        # need a UsersTable with an administrator to be able to shutdown the Manager
-        ut = UsersTable(database=self.database)
-        self.admin_username, self.admin_password = 'admin', 'whatever'
-        ut.insert(self.admin_username, self.admin_password, True)
-        ut.close()
-
-        self._manager_thread = None
-
-    def start(self):
-        # start the Network Manager
-        self._manager_thread = Thread(
-            target=manager.run_forever,
-            kwargs={'port': self.port, 'database': self.database, 'disable_tls': self.disable_tls,
-                    'auth_password': self.auth_password, 'auth_hostname': self.auth_hostname,
-                    'auth_login': self.auth_login},
-            daemon=True
-        )
-        self._manager_thread.start()
-        time.sleep(self._sleep)
-
-    def shutdown(self, **kwargs):
-        cxn = connect(port=self.port, username=self.admin_username, password=self.admin_password, **kwargs)
-        cxn.admin_request('shutdown_manager')
-        cxn.disconnect()
-        self._manager_thread.join()
-        os.remove(self.database)
-
-
-def test_default_settings():
-
-    mgr = Manager()
-
-    # start the Network Manager with the default settings
-    mgr.start()
-
-    # test that connecting to the wrong port fails
-    with pytest.raises(MSLNetworkError):
-        connect(port=get_available_port())
-
-    # test that connecting with the wrong certificate fails
-    path = tempfile.gettempdir() + '/msl-network-wrong-certificate.crt'
-    cryptography.generate_certificate(path=path)
     with pytest.raises(MSLNetworkError) as e:
-        connect(port=mgr.port, certfile=path)
+        connect(port=manager.get_available_port())
+    assert e.match('[refused|failed]')
+
+    manager.shutdown()
+
+
+def test_wrong_certificate():
+    manager = helper.ServiceStarter()
+
+    # connecting with the wrong certificate fails
+    path = os.path.join(tempfile.gettempdir(), 'msl-network-wrong-certificate.crt')
+    cryptography.generate_certificate(path=path)
+    kwargs = manager.kwargs.copy()
+    kwargs['certfile'] = path
+    with pytest.raises(MSLNetworkError) as e:
+        connect(**kwargs, timeout=5)
+    assert e.match('CERTIFICATE_VERIFY_FAILED')
     os.remove(path)
-    assert 'CERTIFICATE_VERIFY_FAILED' in str(e.value)
 
-    # test that connecting with TLS disabled fails
-    with pytest.raises(TimeoutError):
-        connect(port=mgr.port, disable_tls=True)
+    manager.shutdown()
 
-    # shutdown the Manager
-    mgr.shutdown()
+
+def test_tls_enabled():
+    manager = helper.ServiceStarter(disable_tls=False)
+
+    # connecting with TLS disabled fails
+    kwargs = manager.kwargs.copy()
+    kwargs['disable_tls'] = True
+    with pytest.raises(TimeoutError) as e:
+        connect(**kwargs, timeout=5)
+    assert e.match('You have TLS disabled')
+
+    manager.shutdown()
 
 
 def test_tls_disabled():
+    manager = helper.ServiceStarter(disable_tls=True)
 
-    mgr = Manager()
-
-    # start the Network Manager without TLS
-    mgr.disable_tls = True
-    mgr.start()
-
-    # test that connecting with TLS enabled fails
+    # connecting with TLS enabled fails
+    kwargs = manager.kwargs.copy()
+    kwargs['disable_tls'] = False
     with pytest.raises(MSLNetworkError) as e:
-        connect(port=mgr.port, disable_tls=False)
-    assert 'disable_tls=True' in str(e.value)
+        connect(**kwargs, timeout=5)
+    assert e.match('disable_tls=True')
 
-    mgr.shutdown(disable_tls=True)
+    manager.shutdown()
 
 
 def test_invalid_manager_password():
+    manager = helper.ServiceStarter(password_manager='asdvgbaw4bn')
 
-    mgr = Manager()
-
-    password = 'the correct password'
-    # start the Network Manager requiring a valid password
-    mgr.auth_password = [password]  # the CLI expects a list
-    mgr.start()
-
-    # test that connecting with the wrong Manager password fails
+    # connecting with the wrong Manager password fails
+    kwargs = manager.kwargs.copy()
+    kwargs['password_manager'] = 'xxxxxxxxxxxxxxxx'
     with pytest.raises(MSLNetworkError) as e:
-        connect(port=mgr.port, password_manager='xxxxxxxxxxxxxxxx')
-    assert 'Wrong Manager password' in str(e.value)
+        connect(**kwargs, timeout=5)
+    assert e.match('Wrong Manager password')
 
-    mgr.shutdown(password_manager=password)
+    manager.shutdown()
 
 
 def test_valid_hostname():
-    # since we are using 'localhost' this test is a dummy test
-
-    mgr = Manager()
-
-    # start the Network Manager requiring a valid hostname
-    mgr.auth_hostname = True
-    mgr.start()
-
-    # the shutdown method contains a connect() method which will use 'localhost' as the hostname
-    mgr.shutdown()
+    manager = helper.ServiceStarter(auth_hostname=True)
+    cxn = connect(**manager.kwargs)
+    manager.shutdown(cxn)
 
 
 def test_invalid_login():
-    mgr = Manager()
+    manager = helper.ServiceStarter()
 
-    # start the Network Manager requiring a valid login
-    mgr.auth_login = True
-    mgr.start()
-
-    # test that connecting with an invalid username fails
+    # connecting with an invalid username fails
+    kwargs = manager.kwargs.copy()
+    kwargs['username'] = 'xxxxxxxxxxxxx'
     with pytest.raises(MSLNetworkError) as e:
-        connect(port=mgr.port, username='someone invalid', password='will fail before asking')
-    assert 'Unregistered username' in str(e.value)
+        connect(**kwargs, timeout=5)
+    assert e.match('Unregistered username')
 
-    # test that connecting with a valid username but the wrong password fails
+    # connecting with a valid username but the wrong password fails
+    kwargs = manager.kwargs.copy()
+    kwargs['password'] = 'xxxxxxxxxxxxx'
     with pytest.raises(MSLNetworkError) as e:
-        connect(port=mgr.port, username=mgr.admin_username, password='xxxxxxxxxxxxx')
-    assert 'Wrong login password' in str(e.value)
+        connect(**kwargs, timeout=5)
+    assert e.match('Wrong login password')
 
-    mgr.shutdown()
+    manager.shutdown()

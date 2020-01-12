@@ -5,7 +5,7 @@ from msl.network.utils import localhost_aliases
 
 
 def test_admin_requests():
-    services = helper.ServiceStarter([])
+    services = helper.ServiceStarter()
 
     cxn = connect(**services.kwargs)
 
@@ -20,7 +20,17 @@ def test_admin_requests():
     assert not cxn.admin_request('users_table.is_user_registered', 'no one special')
 
     assert len(cxn.admin_request('connections_table.connections')) > 0
-    assert cxn.admin_request('connections_table.connections')[0][4] == cxn.port
+    conns = cxn.admin_request('connections_table.connections')
+    # conns[0] and conns[1] are from the Client that is created in ServiceStarter
+    assert conns[0][5] == 'new connection request'
+    assert conns[1][4] == conns[0][4]
+    assert conns[1][5] == 'connected as a client'
+    assert conns[2][4] == conns[0][4]
+    assert conns[2][5] == 'disconnected'
+    assert conns[3][4] == cxn.port
+    assert conns[3][5] == 'new connection request'
+    assert conns[4][4] == cxn.port
+    assert conns[4][5] == 'connected as a client'
 
     hostnames = cxn.admin_request('hostnames_table.hostnames')
     for alias in localhost_aliases():

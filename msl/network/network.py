@@ -328,3 +328,18 @@ class Network(object):
             return False
         else:
             return True
+
+    def _run_forever(self):
+        # common to both Client and Service to connect to the Manager
+        try:
+            self._loop.run_forever()
+        except KeyboardInterrupt:
+            log.debug('CTRL+C keyboard interrupt received')
+            self._transport.close()
+        except SystemExit:
+            log.debug('SystemExit was raised')
+            self._transport.close()
+        finally:
+            log.info('{!r} disconnected'.format(self._network_name))
+            self._loop.close()
+            log.info('{!r} closed the event loop'.format(self._network_name))

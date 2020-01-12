@@ -2,6 +2,8 @@ import os
 import sys
 import tempfile
 
+import helper
+
 from msl.network import cli
 from msl.network.database import UsersTable
 
@@ -33,7 +35,7 @@ def test_cannot_use_multiple_auth_methods():
     ]
     for flag in flags:
         sys.stdout = open(out, 'w')
-        args = get_args('start ' + flag)
+        args = get_args('start ' + flag + ' --logfile ' + helper.ServiceStarter.logfile)
         args.func(args)
         sys.stdout.close()
         lines = [line.strip() for line in open(out, 'r').readlines()]
@@ -42,7 +44,7 @@ def test_cannot_use_multiple_auth_methods():
 
 def test_invalid_port():
     sys.stdout = open(out, 'w')
-    args = get_args('start --port 1234x')
+    args = get_args('start --port 1234x --logfile ' + helper.ServiceStarter.logfile)
     args.func(args)
     sys.stdout.close()
     lines = [line.strip() for line in open(out, 'r').readlines()]
@@ -51,7 +53,7 @@ def test_invalid_port():
 
 def test_cannot_use_auth_login_with_empty_table():
     sys.stdout = open(out, 'w')
-    args = get_args('start --auth-login --database ' + db)
+    args = get_args('start --auth-login --database ' + db + ' --logfile ' + helper.ServiceStarter.logfile)
     args.func(args)
     sys.stdout.close()
     lines = [line.strip() for line in open(out, 'r').readlines()]

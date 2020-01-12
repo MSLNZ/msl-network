@@ -27,6 +27,7 @@ from .constants import (
     DISCONNECT_REQUEST,
     NETWORK_MANAGER_RUNNING_PREFIX,
     NOTIFICATION_UUID,
+    SHUTDOWN_MANAGER,
 )
 from .database import (
     ConnectionsTable,
@@ -337,6 +338,8 @@ class Manager(Network):
         writer : :class:`asyncio.StreamWriter`
             The stream writer.
         """
+        reader_name = reader.peer.network_name
+        writer_name = writer.peer.network_name
         while True:
 
             try:
@@ -345,7 +348,7 @@ class Manager(Network):
                 return  # then the device disconnected abruptly
 
             if self._debug:
-                log.debug('{!r} sent {} bytes'.format(reader.peer.network_name, len(line)))
+                log.debug('{!r} sent {} bytes'.format(reader_name, len(line)))
                 if len(line) > self._max_print_size:
                     log.debug(line[:self._max_print_size//2] + b' ... ' + line[-self._max_print_size//2:])
                 else:
@@ -359,7 +362,7 @@ class Manager(Network):
             except Exception as e:
                 data = parse_terminal_input(line.decode(Network.encoding))
                 if not data:
-                    self.send_error(writer, e, reader.peer.network_name)
+                    self.send_error(writer, e, reader_name)
                     continue
 
             if 'result' in data:
@@ -373,7 +376,7 @@ class Manager(Network):
                         except:
                             log.info('{!r} is no longer available to send the notification to'.format(client_address))
                 elif data['requester'] is None:
-                    log.info('{!r} was not able to deserialize the bytes'.format(reader.peer.network_name))
+                    log.info('{!r} was not able to deserialize the bytes'.format(reader_name))
                 else:
                     try:
                         self.send_line(self.client_writers[data['requester']], line)
@@ -382,34 +385,33 @@ class Manager(Network):
             elif data['service'] == 'Manager':
                 # then the Client is requesting something from the Manager
                 if data['attribute'] == 'identity':
-                    self.send_reply(writer, self.identity(), requester=reader.peer.network_name, uuid=data['uuid'])
+                    self.send_reply(writer, self.identity(), requester=reader_name, uuid=data['uuid'])
                 elif data['attribute'] == 'link':
                     try:
                         self.link(writer, data.get('uuid', ''), data['args'][0])
                     except Exception as e:
                         log.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
-                        self.send_error(writer, e, reader.peer.network_name, uuid=data.get('uuid', ''))
+                        self.send_error(writer, e, reader_name, uuid=data.get('uuid', ''))
                 elif data['attribute'] == 'unlink':
                     try:
                         self.unlink(writer, data.get('uuid', ''), data['args'][0])
                     except Exception as e:
                         log.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
-                        self.send_error(writer, e, reader.peer.network_name, uuid=data.get('uuid', ''))
+                        self.send_error(writer, e, reader_name, uuid=data.get('uuid', ''))
                 else:
                     # the peer needs administrative rights to send any other request to the Manager
-                    log.info('received an admin request from {!r}'.format(reader.peer.network_name))
+                    log.info('received an admin request {!r} from {!r}'.format(data['attribute'], reader_name))
                     if not reader.peer.is_admin:
                         await self.check_user(reader, writer)
                         if not reader.peer.is_admin:
                             self.send_error(
                                 writer,
                                 ValueError('You must be an administrator to send this request to the Manager'),
-                                reader.peer.network_name
+                                reader_name
                             )
                             continue
                     # the peer is an administrator, so execute the request
-                    if data['attribute'] == 'shutdown_manager':
-                        log.info('received shutdown request from {!r}'.format(reader.peer.network_name))
+                    if data['attribute'] == SHUTDOWN_MANAGER:
                         self._loop.stop()
                         return
                     try:
@@ -419,7 +421,7 @@ class Manager(Network):
                             attrib = getattr(attrib, item)
                     except AttributeError as e:
                         log.error('{!r} AttributeError: {}'.format(self._network_name, e))
-                        self.send_error(writer, e, reader.peer.network_name)
+                        self.send_error(writer, e, reader_name)
                         continue
                     try:
                         # send the reply back to the Client
@@ -428,24 +430,24 @@ class Manager(Network):
                         else:
                             reply = attrib
                         # do not include the uuid in the reply
-                        self.send_reply(writer, reply, requester=reader.peer.network_name)
+                        self.send_reply(writer, reply, requester=reader_name)
                     except Exception as e:
                         log.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
-                        self.send_error(writer, e, reader.peer.network_name)
+                        self.send_error(writer, e, reader_name)
             elif data['attribute'] == DISCONNECT_REQUEST:
                 # then the device requested to disconnect
                 return
             else:
                 # send the request to the appropriate Service
                 try:
-                    data['requester'] = writer.peer.network_name
+                    data['requester'] = writer_name
                     self.send_data(self.service_writers[data['service']], data)
-                    log.info('{!r} sent a request to {!r}'.format(writer.peer.network_name, data['service']))
+                    log.info('{!r} sent a request to {!r}'.format(writer_name, data['service']))
                 except KeyError:
                     msg = 'the {!r} Service is not connected to the Network Manager at {!r}'.format(
                         data['service'], self._network_name)
                     log.info('{!r} KeyError: {}'.format(self._network_name, msg))
-                    self.send_error(writer, KeyError(msg), reader.peer.network_name)
+                    self.send_error(writer, KeyError(msg), reader_name)
 
     def remove_peer(self, id_type, writer):
         """Remove this peer from the registry of connected peers.
@@ -457,39 +459,29 @@ class Manager(Network):
         writer : :class:`asyncio.StreamWriter`
             The stream writer of the peer.
         """
+        name = writer.peer.network_name
         if id_type == 'client':
             try:
-                del self.clients[writer.peer.network_name]
-                del self.client_writers[writer.peer.network_name]
-                log.info('{!r} has been removed from the registry'.format(writer.peer.network_name))
+                del self.clients[name]
+                del self.client_writers[name]
+                log.info('{!r} has been removed from the registry'.format(name))
             except KeyError:  # ideally this exception should never occur
-                log.error('{!r} is not in the Client dictionaries'.format(writer.peer.network_name))
+                log.error('{!r} is not in the Client dictionaries'.format(name))
 
             # remove this Client from all Services that it was linked with
             for service_name, client_addresses in self.service_links.items():
-                if writer.peer.network_name in client_addresses:
+                if name in client_addresses:
                     self.unlink(writer, '', service_name)
         else:
             for service in self.services:
                 if self.services[service]['address'] == writer.peer.address:
-                    # notify all Clients that are linked with this Service
-                    for client_address in self.service_links[service]:
-                        try:
-                            client_writer = self.client_writers[client_address]
-                        except KeyError:  # in case the Client already disconnected
-                            continue
-                        self.send_error(
-                            client_writer,
-                            ConnectionAbortedError('The {!r} service has been disconnected'.format(service)),
-                            self._network_name,
-                        )
                     try:
                         del self.service_links[service]
                         del self.services[service]
                         del self.service_writers[service]
-                        log.info('{!r} service has been removed from the registry'.format(writer.peer.network_name))
+                        log.info('{!r} service has been removed from the registry'.format(name))
                     except KeyError:  # ideally this exception should never occur
-                        log.error('{!r} is not in the Service dictionaries'.format(writer.peer.network_name))
+                        log.error('{!r} is not in the Service dictionaries'.format(name))
                     finally:
                         # must break from the iteration, otherwise will get
                         # RuntimeError: dictionary changed size during iteration
@@ -547,26 +539,27 @@ class Manager(Network):
             The name of the :class:`~msl.network.service.Service` that the
             :class:`~msl.network.client.Client` wants to link with.
         """
+        writer_name = writer.peer.network_name
         try:
             identity = self.services[service]
         except KeyError:
-            msg = '{!r} service does not exist, could not link with {!r}'.format(service, writer.peer.network_name)
+            msg = '{!r} service does not exist, could not link with {!r}'.format(service, writer_name)
             log.info(msg)
-            self.send_error(writer, KeyError(msg), writer.peer.network_name, uuid=uuid)
+            self.send_error(writer, KeyError(msg), writer_name, uuid=uuid)
         else:
-            if writer.peer.network_name in self.service_links[service]:
+            if writer_name in self.service_links[service]:
                 # a Client wants to re-link with the same Service
-                log.info('re-linked {!r} with {!r}'.format(writer.peer.network_name, service))
-                self.send_reply(writer, identity, requester=writer.peer.network_name, uuid=uuid)
+                log.info('re-linked {!r} with {!r}'.format(writer_name, service))
+                self.send_reply(writer, identity, requester=writer_name, uuid=uuid)
             elif identity['max_clients'] <= 0 or len(self.service_links[service]) < identity['max_clients']:
-                self.service_links[service].add(writer.peer.network_name)
-                log.info('linked {!r} with {!r}'.format(writer.peer.network_name, service))
-                self.send_reply(writer, identity, requester=writer.peer.network_name, uuid=uuid)
+                self.service_links[service].add(writer_name)
+                log.info('linked {!r} with {!r}'.format(writer_name, service))
+                self.send_reply(writer, identity, requester=writer_name, uuid=uuid)
             else:
                 msg = 'The maximum number of Clients are already linked with {!r}. ' \
                       'The linked Clients are {}'.format(service, self.service_links[service])
                 log.info(msg)
-                self.send_error(writer, PermissionError(msg), writer.peer.network_name, uuid=uuid)
+                self.send_error(writer, PermissionError(msg), writer_name, uuid=uuid)
 
     def unlink(self, writer, uuid, service):
         """A request from a :class:`~msl.network.client.Client` to unlink it
@@ -584,22 +577,23 @@ class Manager(Network):
             The name of the :class:`~msl.network.service.Service` that the
             :class:`~msl.network.client.Client` wants to unlink from.
         """
+        writer_name = writer.peer.network_name
         try:
             network_names = self.service_links[service]
         except KeyError:
-            msg = '{!r} service does not exist, could not unlink {!r} from it'.format(service, writer.peer.network_name)
+            msg = '{!r} service does not exist, could not unlink {!r} from it'.format(service, writer_name)
             log.info(msg)
-            self.send_error(writer, KeyError(msg), writer.peer.network_name, uuid=uuid)
+            self.send_error(writer, KeyError(msg), writer_name, uuid=uuid)
         else:
             try:
-                network_names.remove(writer.peer.network_name)
+                network_names.remove(writer_name)
             except KeyError:
-                msg = 'cannot unlink {!r}, it was not linked with {!r}'.format(writer.peer.network_name, service)
+                msg = 'cannot unlink {!r}, it was not linked with {!r}'.format(writer_name, service)
                 log.info(msg)
-                self.send_error(writer, KeyError(msg), writer.peer.network_name, uuid=uuid)
+                self.send_error(writer, KeyError(msg), writer_name, uuid=uuid)
             else:
-                log.info('unlinked {!r} from {!r}'.format(writer.peer.network_name, service))
-                self.send_reply(writer, True, requester=writer.peer.network_name, uuid=uuid)
+                log.info('unlinked {!r} from {!r}'.format(writer_name, service))
+                self.send_reply(writer, True, requester=writer_name, uuid=uuid)
 
     def send_request(self, writer, attribute, *args, **kwargs):
         """Send a request to a :class:`~msl.network.client.Client` or to a
@@ -720,7 +714,7 @@ def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_passwo
         Can be a path to a file that contains the password on the first line in the file
         *(WARNING if the path is invalid then the value of the path becomes the password).*
     logfile : :class:`str`, optional
-        The file path to write logging messages to. If :data:`None` then use the default file path.
+        The file path to write logging messages to. If :data:`None` then uses the default file path.
     """
     output = _create_manager_and_loop(
         port=port, auth_hostname=auth_hostname, auth_login=auth_login, auth_password=auth_password,
@@ -760,42 +754,45 @@ def run_services(*services, **kwargs):
         Each :class:`~msl.network.service.Service` must be instantiated but not started.
         This :func:`run_services` function will start each :class:`~msl.network.service.Service`.
     kwargs
-        The keyword arguments that can be passed to either :func:`run_forever` or to
-        :meth:`~msl.network.service.Service.start`.
+        Keyword arguments are passed to :func:`run_forever` and to
+        :meth:`~msl.network.service.Service.start`. The keyword arguments that are passed to
+        :func:`run_forever` and :meth:`~msl.network.service.Service.start` that are not valid
+        for that function are silently ignored.
 
     Examples
     --------
 
     If you want to allow a :class:`~msl.network.client.Client` to be able to shut down a
     :class:`~msl.network.service.Service` then implement a public ``shutdown_service()``
-    method on the :class:`~msl.network.service.Service`. For example,
+    method on the :class:`~msl.network.service.Service`. For example, the following
+    ``shutdownable_example.py`` is a script that starts a Network :class:`.Manager`
+    and two :class:`~msl.network.service.Service`\\s
 
     .. code-block:: python
 
+        # shutdownable_example.py
+
         from msl.network import Service, run_services
 
-        class ShutdownableService(Service):
-
-            def shutdown_service(self):
-                self._shutdown()
-
-        class AddService(ShutdownableService):
+        class AddService(Service):
 
             def add(self, a, b):
                 return a + b
 
-        class SubtractService(ShutdownableService):
+            def shutdown_service(self, *args, **kwargs):
+                # do whatever you need to do before the AddService shuts down
+                return None
+
+        class SubtractService(Service):
 
             def subtract(self, a, b):
                 return a - b
 
-        run_services(AddService(), SubtractService())
+            def shutdown_service(self, *args, **kwargs):
+                # do whatever you need to do before the SubtractService shuts down
+                return None
 
-    Since the ``_shutdown()`` method of a :class:`~msl.network.service.Service` is private
-    (i.e., it starts with a ``_``), and a :class:`~msl.network.client.Client` cannot access
-    private methods of a :class:`~msl.network.service.Service`, a :class:`~msl.network.client.Client`
-    cannot call ``_shutdown()`` directly unless you intentionally make the public ``shutdown_service()``
-    method available on the :class:`~msl.network.service.Service`.
+        run_services(AddService(), SubtractService())
 
     Then the :class:`~msl.network.client.Client` script could be
 
@@ -813,7 +810,7 @@ def run_services(*services, **kwargs):
 
     When both :class:`~msl.network.service.Service`\\s have shut down then the Network
     :class:`.Manager` will also shut down and the :func:`run_services` function
-    will no longer be blocking the execution of the `ShutdownableService` script.
+    will no longer be blocking the execution of ``shutdownable_example.py``.
     """
     if not services:
         msg = 'Warning... no services have been specified'
@@ -893,13 +890,17 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
     # add a FileHandler and it will always log at the debug level
     fh = logging.FileHandler(logfile, mode='w')
     fh.setLevel(logging.DEBUG)
-    fh.setFormatter(logging.Formatter('%(asctime)s [%(levelname)-8s] %(name)s - %(message)s'))
+    ff = logging.Formatter('%(asctime)s [%(levelname)-8s] %(name)s - %(message)s')
+    ff.default_msec_format = '%s.%03d'
+    fh.setFormatter(ff)
     root_logger.addHandler(fh)
 
     # add a StreamHandler and its log level can be decided from the command line
     sh = logging.StreamHandler(sys.stdout)
     sh.setLevel(logging.DEBUG if debug else logging.INFO)
-    sh.setFormatter(logging.Formatter('%(asctime)s [%(levelname)-5s] %(name)s - %(message)s'))
+    sf = logging.Formatter('%(asctime)s [%(levelname)-5s] %(name)s - %(message)s')
+    sf.default_msec_format = '%s.%03d'
+    sh.setFormatter(sf)
     root_logger.addHandler(sh)
 
     # get the port number
@@ -1005,8 +1006,6 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
     else:
         log.info('not using authentication')
 
-    # create a new event loop, rather than using asyncio.get_event_loop()
-    # (in case the Manager does not run in the threading._MainThread)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
@@ -1015,7 +1014,7 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
 
     try:
         server = loop.run_until_complete(
-            asyncio.start_server(manager.new_connection, port=port, ssl=context, loop=loop, limit=sys.maxsize)
+            asyncio.start_server(manager.new_connection, port=port, ssl=context, limit=sys.maxsize)
         )
     except OSError as err:
         users_table.close()
@@ -1025,9 +1024,9 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
         print(err, file=sys.stderr)
         return
 
-    # https://bugs.python.org/issue23057
-    # enable this hack only in debug mode and only on Windows
-    if debug and IS_WINDOWS:
+    # enable this hack only in DEBUG mode and only on Windows when the SelectorEventLoop is being used
+    # See: https://bugs.python.org/issue23057
+    if debug and IS_WINDOWS and isinstance(loop, asyncio.SelectorEventLoop):
         async def wakeup():
             while True:
                 await asyncio.sleep(1)

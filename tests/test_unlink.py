@@ -1,6 +1,4 @@
-import time
 import threading
-from socket import socket
 
 import helper  # located in the tests folder
 
@@ -14,7 +12,7 @@ from msl.network.manager import run_services
 
 def test_unlink_client_max1():
 
-    services = helper.ServiceStarter((Echo,), max_clients=1)
+    services = helper.ServiceStarter(Echo, max_clients=1)
 
     cxn1 = connect(**services.kwargs)
     cxn2 = connect(**services.kwargs)
@@ -67,7 +65,7 @@ def test_unlink_client_max1():
 
 def test_unlink_client_max10():
 
-    services = helper.ServiceStarter((Echo,), max_clients=10)
+    services = helper.ServiceStarter(Echo, max_clients=10)
 
     clients = [connect(**services.kwargs) for _ in range(10)]
     links = [client.link('Echo') for client in clients]
@@ -109,20 +107,18 @@ def test_unlink_client_max10():
 
 def test_unlink_linkedclient_max10():
 
-    with socket() as sock:
-        sock.bind(('', 0))  # get any available port
-        port = sock.getsockname()[1]
-
     class ShutdownableEcho(Echo):
 
         def __init__(self):
             super(ShutdownableEcho, self).__init__(max_clients=10)
 
         def shutdown_service(self):
-            self._shutdown()
+            pass
 
     def run_client():
-        time.sleep(1)  # allow for the Manager and Service to start
+        # wait for the Manager to be running
+        helper.ServiceStarter.wait_start(port, 'Cannot connect to manager')
+
         linked_clients = [LinkedClient('ShutdownableEcho', port=port, name='foobar%d' % i) for i in range(10)]
 
         for i, link in enumerate(linked_clients):
@@ -185,11 +181,13 @@ def test_unlink_linkedclient_max10():
             client.disconnect()
             client.disconnect()
 
+    port = helper.ServiceStarter.get_available_port()
+
     client_thread = threading.Thread(target=run_client)
     client_thread.start()
 
     # the `run_services` function will block the unittests forever if a
     # LinkedClient does not shutdown ShutdownableEcho
-    run_services(ShutdownableEcho(), port=port)
+    run_services(ShutdownableEcho(), port=port, logfile=helper.ServiceStarter.logfile)
 
     client_thread.join()
