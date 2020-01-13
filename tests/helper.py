@@ -95,7 +95,7 @@ class ServiceStarter(object):
             start_time = time.time()
             while service._name not in cxn.manager()['services']:
                 time.sleep(0.1)
-                if time.time() - start_time > 10:
+                if time.time() - start_time > 30:
                     self.shutdown(cxn)
                     raise RuntimeError('Cannot start {}'.format(service))
             self._service_threads[service] = thread
@@ -122,27 +122,31 @@ class ServiceStarter(object):
 
     @staticmethod
     def wait_start(port, message):
-        i = 0
+        start_time = time.time()
         while not ServiceStarter.is_port_in_use(port):
-            if i > 100:
+            if time.time() - start_time > 30:
                 raise RuntimeError(message)
-            i += 1
             time.sleep(0.1)
 
     @staticmethod
     def wait_shutdown(port, message):
-        i = 0
+        start_time = time.time()
         while ServiceStarter.is_port_in_use(port):
-            if i > 100:
+            if time.time() - start_time > 30:
                 raise RuntimeError(message)
-            i += 1
             time.sleep(0.1)
 
     @staticmethod
     def is_port_in_use(port):
-        p = subprocess.Popen(['netstat', '-an'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out = p.communicate()[0].decode(errors='ignore')
-        return out.find(':{} '.format(port)) > 0
+        if port is None:
+            return False
+        if sys.platform == 'darwin':
+            cmd = ['lsof', '-nP', '-iTCP:%d' % port]
+        else:
+            cmd = ['netstat', '-an']
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out = p.communicate()[0]
+        return out.find(b':%d ' % port) > 0
 
     @staticmethod
     def get_available_port():
