@@ -11,6 +11,7 @@ from .json import serialize
 from .constants import HOSTNAME
 from .cryptography import get_ssl_context
 from .exceptions import MSLNetworkError
+from .utils import localhost_aliases
 
 log = logging.getLogger(__name__)
 
@@ -301,6 +302,10 @@ class Network(object):
                 err += '\nTry setting disable_tls=True'
             elif 'Errno 10061' in err:
                 err += '\nMake sure that a Network Manager is running at {}:{}'.format(host, port)
+            elif 'nodename nor servname provided' in err:
+                if host in localhost_aliases():
+                    host = '127.0.0.1'
+                err += '\nYou might need to add "{} {}" to /etc/hosts'.format(host, HOSTNAME)
             raise MSLNetworkError(err) from None
 
         # Make sure that the Manager registered this Client/Service by requesting its identity.
