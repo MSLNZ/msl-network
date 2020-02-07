@@ -207,7 +207,7 @@ def exec_command(ssh_client, command, *, timeout=10):
 
     Raises
     ------
-    :class:`~msl.network.exceptions.MSLNetworkError`
+    ~msl.network.exceptions.MSLNetworkError
         If an error occurred. Either a timeout or stderr on the remote computer
         contains text from executing the `command`.
 
