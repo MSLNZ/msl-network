@@ -3,7 +3,6 @@ Databases that are used by the Network :class:`~msl.network.manager.Manager`.
 """
 import os
 import sqlite3
-import logging
 from datetime import datetime
 
 from cryptography.exceptions import InvalidKey
@@ -13,11 +12,10 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from .constants import DATABASE
 from .utils import (
+    logger,
     localhost_aliases,
     _is_manager_regex,
 )
-
-log = logging.getLogger(__name__)
 
 
 class Database(object):
@@ -40,11 +38,11 @@ class Database(object):
 
         # open the connection to the database
         if self._path == ':memory:':
-            log.debug('creating a database in RAM')
+            logger.debug('creating a database in RAM')
         elif not os.path.isfile(self._path):
-            log.debug('creating a new database ' + self._path)
+            logger.debug('creating a new database ' + self._path)
         else:
-            log.debug('opening ' + self._path)
+            logger.debug('opening ' + self._path)
 
         if 'timeout' not in kwargs:
             kwargs['timeout'] = 60.0
@@ -75,7 +73,7 @@ class Database(object):
         if self._connection is not None:
             self._connection.close()
             self._connection = None
-            log.debug('closed ' + self._path)
+            logger.debug('closed ' + self._path)
 
     def execute(self, sql, parameters=None):
         """Wrapper around :meth:`sqlite3.Cursor.execute`.
@@ -88,10 +86,10 @@ class Database(object):
             Only required if the `sql` command is parameterized.
         """
         if parameters is None:
-            log.debug(sql)
+            logger.debug(sql)
             self._cursor.execute(sql)
         else:
-            log.debug(sql + ' {}'.format(parameters))
+            logger.debug(sql + ' {}'.format(parameters))
             self._cursor.execute(sql, parameters)
 
     def tables(self):

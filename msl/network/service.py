@@ -4,7 +4,6 @@ Base class for all Services.
 import os
 import asyncio
 import inspect
-import logging
 import getpass
 import platform
 from time import (
@@ -15,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from .network import Network
 from .utils import (
+    logger,
     localhost_aliases,
     new_selector_event_loop,
 )
@@ -30,8 +30,6 @@ from .constants import (
     NOTIFICATION_UUID,
     SHUTDOWN_SERVICE,
 )
-
-log = logging.getLogger(__name__)
 
 _ignore_attribs = ['port', 'address_manager', 'username', 'start', 'password',
                    'set_debug', 'max_clients', 'ignore_attributes', 'emit_notification']
@@ -243,7 +241,7 @@ class Service(Network, asyncio.Protocol):
            Do not override this method. It is called automatically when the connection
            to the Network :class:`~msl.network.manager.Manager` has been closed.
         """
-        log.info('{!r} connection lost'.format(self._network_name))
+        logger.info('{!r} connection lost'.format(self._network_name))
         for future in self._futures.values():
             future.cancel()
         self._futures.clear()
@@ -252,7 +250,7 @@ class Service(Network, asyncio.Protocol):
         self._address_manager = None
         self._loop.stop()
         if exc:
-            log.error(exc)
+            logger.error(exc)
             raise exc
 
     def connection_made(self, transport):
@@ -264,7 +262,7 @@ class Service(Network, asyncio.Protocol):
         self._transport = transport
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self._name, self._port)
-        log.info('{!r} connection made'.format(self._network_name))
+        logger.info('{!r} connection made'.format(self._network_name))
 
     def data_received(self, data):
         """
@@ -290,19 +288,19 @@ class Service(Network, asyncio.Protocol):
         if self._debug:
             n = len(buffer_bytes)
             if dt > 0:
-                log.debug('{} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
+                logger.debug('{} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
                     self._network_name, n, dt, n*1e-6/dt))
             else:
-                log.debug('{} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
+                logger.debug('{} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
             if len(buffer_bytes) > self._max_print_size:
-                log.debug(buffer_bytes[:self._max_print_size//2] + b' ... ' + buffer_bytes[-self._max_print_size//2:])
+                logger.debug(buffer_bytes[:self._max_print_size//2] + b' ... ' + buffer_bytes[-self._max_print_size//2:])
             else:
-                log.debug(buffer_bytes)
+                logger.debug(buffer_bytes)
 
         try:
             data = deserialize(buffer_bytes)
         except Exception as e:
-            log.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
+            logger.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
             self.send_error(self._transport, e, None)
             return
 
@@ -322,7 +320,7 @@ class Service(Network, asyncio.Protocol):
                     msg = data['message']
                 except KeyError:
                     pass
-            log.error(self._network_name + ' ' + msg)
+            logger.error(self._network_name + ' ' + msg)
             return
 
         attribute = data['attribute']
@@ -339,7 +337,7 @@ class Service(Network, asyncio.Protocol):
         try:
             attrib = getattr(self, attribute)
         except Exception as e:
-            log.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
+            logger.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
             self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
             return
 
@@ -357,7 +355,7 @@ class Service(Network, asyncio.Protocol):
         else:
             self.send_reply(self._transport, attrib, requester=data['requester'], uuid=data['uuid'])
 
-        log.info('{!r} requested {!r} [{} executing]'.format(data['requester'], data['attribute'], len(self._futures)))
+        logger.info('{!r} requested {!r} [{} executing]'.format(data['requester'], data['attribute'], len(self._futures)))
 
     def identity(self):
         """
@@ -385,12 +383,12 @@ class Service(Network, asyncio.Protocol):
                     # Cannot get the signature of the callable object.
                     # This can happen if the Service is also a subclass of
                     # some other object, for example a Qt class.
-                    log.warning(err)
+                    logger.warning(err)
                     continue
                 try:
                     serialize(value)
                 except:
-                    log.warning('The attribute {!r} is not JSON serializable'.format(item))
+                    logger.warning('The attribute {!r} is not JSON serializable'.format(item))
                     continue
                 self._identity['attributes'][item] = value
         self._identity_successful = True
@@ -434,7 +432,7 @@ class Service(Network, asyncio.Protocol):
             reply = attrib(*data['args'], **data['kwargs'])
             self.send_reply(self._transport, reply, requester=data['requester'], uuid=data['uuid'])
         except Exception as e:
-            log.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
+            logger.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
             self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
         self._futures.pop(uid, None)
 

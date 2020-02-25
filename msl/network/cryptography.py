@@ -3,7 +3,6 @@ Functions to create a self-signed certificate for the secure SSL/TLS protocol.
 """
 import os
 import ssl
-import logging
 import inspect
 import datetime
 
@@ -18,6 +17,7 @@ from cryptography.hazmat.primitives.asymmetric import (
     dsa,
 )
 from .utils import (
+    logger,
     ensure_root_path,
     _oid_regex,
 )
@@ -27,8 +27,6 @@ from .constants import (
     HOSTNAME,
     DEFAULT_YEARS_VALID,
 )
-
-log = logging.getLogger(__name__)
 
 
 def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve='SECP384R1'):
@@ -94,7 +92,7 @@ def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve=
             encryption_algorithm=encryption
         ))
 
-    log.debug('create private {} key {}'.format(algorithm_u, path))
+    logger.debug('create private {} key {}'.format(algorithm_u, path))
     return path
 
 
@@ -116,7 +114,7 @@ def load_key(path, *, password=None):
     with open(path, 'rb') as f:
         data = f.read()
     pw = None if password is None else bytes(str(password).encode())
-    log.debug('load private key ' + path)
+    logger.debug('load private key ' + path)
     return serialization.load_pem_private_key(data=data, password=pw, backend=default_backend())
 
 
@@ -207,7 +205,7 @@ def generate_certificate(*, path=None, key_path=None, key_password=None, algorit
     with open(path, 'wb') as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
-    log.debug('create self-signed certificate ' + path)
+    logger.debug('create self-signed certificate ' + path)
     return path
 
 
@@ -233,7 +231,7 @@ def load_certificate(cert):
     if isinstance(cert, str):
         with open(cert, 'rb') as f:
             data = f.read()
-        log.debug('load certificate ' + cert)
+        logger.debug('load certificate ' + cert)
     elif isinstance(cert, bytes):
         data = cert
     else:

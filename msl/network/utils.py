@@ -5,6 +5,7 @@ import re
 import os
 import ast
 import asyncio
+import logging
 import selectors
 
 from .constants import (
@@ -21,6 +22,9 @@ _is_manager_regex = re.compile(r':\d+$')
 _ipv4_regex = re.compile(r'\d+\.\d+\.\d+\.\d+')
 
 _oid_regex = re.compile(r'oid=(.+), name=(.+)\)')
+
+
+logger = logging.getLogger(__package__)
 
 
 def ensure_root_path(path):

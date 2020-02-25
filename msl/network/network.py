@@ -3,7 +3,6 @@ Base class for a :class:`~msl.network.manager.Manager`,
 :class:`~msl.network.service.Service` and :class:`~msl.network.client.Client`.
 """
 import asyncio
-import logging
 import traceback
 from time import perf_counter
 
@@ -11,9 +10,10 @@ from .json import serialize
 from .constants import HOSTNAME
 from .cryptography import get_ssl_context
 from .exceptions import MSLNetworkError
-from .utils import localhost_aliases
-
-log = logging.getLogger(__name__)
+from .utils import (
+    logger,
+    localhost_aliases
+)
 
 
 class Network(object):
@@ -182,11 +182,11 @@ class Network(object):
         n = len(line)
 
         if self._debug:
-            log.debug(self._network_name + ' is sending {} bytes...'.format(n))
+            logger.debug(self._network_name + ' is sending {} bytes...'.format(n))
             if n > self._max_print_size:
-                log.debug(line[:self._max_print_size//2] + b' ... ' + line[-self._max_print_size//2:])
+                logger.debug(line[:self._max_print_size//2] + b' ... ' + line[-self._max_print_size//2:])
             else:
-                log.debug(line)
+                logger.debug(line)
 
         t0 = perf_counter()
         writer.write(line)
@@ -194,10 +194,10 @@ class Network(object):
         if self._debug:
             dt = perf_counter() - t0
             if dt > 0:
-                log.debug('{} sent {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
+                logger.debug('{} sent {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
                     self._network_name, n, dt, n*1e-6/dt))
             else:
-                log.debug('{} sent {} bytes in {:.3f} useconds'.format(self._network_name, n, dt*1e6))
+                logger.debug('{} sent {} bytes in {:.3f} useconds'.format(self._network_name, n, dt*1e6))
 
     def send_data(self, writer, data):
         """Serialize `data` as a JSON_ string then send.
@@ -339,12 +339,12 @@ class Network(object):
         try:
             self._loop.run_forever()
         except KeyboardInterrupt:
-            log.debug('CTRL+C keyboard interrupt received')
+            logger.debug('CTRL+C keyboard interrupt received')
             self._transport.close()
         except SystemExit:
-            log.debug('SystemExit was raised')
+            logger.debug('SystemExit was raised')
             self._transport.close()
         finally:
-            log.info('{!r} disconnected'.format(self._network_name))
+            logger.info('{!r} disconnected'.format(self._network_name))
             self._loop.close()
-            log.info('{!r} closed the event loop'.format(self._network_name))
+            logger.info('{!r} closed the event loop'.format(self._network_name))

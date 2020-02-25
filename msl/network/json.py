@@ -2,14 +2,13 @@
 This module is used as the `JSON <https://www.json.org/>`_ (de)serializer.
 """
 import time
-import logging
 
+from .utils import logger
 from .constants import (
     JSON,
     JSONPackage,
 )
 
-log = logging.getLogger(__name__)
 
 if JSON == JSONPackage.BUILTIN:
     import json
@@ -44,7 +43,7 @@ def serialize(obj):
     """Serialize `obj` to a JSON-formatted :class:`str`."""
     t0 = time.perf_counter()
     data = json.dumps(obj, **kwargs_dumps)
-    log.debug('{}.dumps took {:.3g} seconds'.format(_PKG, time.perf_counter() - t0))
+    logger.debug('{}.dumps took {:.3g} seconds'.format(_PKG, time.perf_counter() - t0))
     return data
 
 
@@ -54,5 +53,5 @@ def deserialize(s):
     if isinstance(s, (bytes, bytearray)):
         s = s.decode('utf-8', 'surrogatepass')
     data = json.loads(s, **kwargs_loads)
-    log.debug('{}.loads took {:.3g} seconds'.format(_PKG, time.perf_counter() - t0))
+    logger.debug('{}.loads took {:.3g} seconds'.format(_PKG, time.perf_counter() - t0))
     return data

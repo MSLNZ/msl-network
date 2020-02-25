@@ -5,7 +5,6 @@ Use the :func:`connect` function to connect to the Network
 import uuid
 import asyncio
 import getpass
-import logging
 import platform
 import threading
 from time import (
@@ -18,6 +17,7 @@ from .json import deserialize
 from .exceptions import MSLNetworkError
 from .service import filter_service_start_kwargs
 from .utils import (
+    logger,
     localhost_aliases,
     new_selector_event_loop,
     _is_manager_regex,
@@ -30,8 +30,6 @@ from .constants import (
     SHUTDOWN_SERVICE,
     SHUTDOWN_MANAGER,
 )
-
-log = logging.getLogger(__name__)
 
 
 def connect(*, name='Client', host='localhost', port=PORT, timeout=10, username=None,
@@ -283,7 +281,7 @@ class Client(Network, asyncio.Protocol):
             than `timeout` seconds.
         """
         if self._debug:
-            log.debug('preparing to link with {!r}'.format(service))
+            logger.debug('preparing to link with {!r}'.format(service))
         identity = self._send_request_for_manager('link', service, timeout=timeout)
         link = Link(self, service, identity)
         self._links.append(link)
@@ -400,7 +398,7 @@ class Client(Network, asyncio.Protocol):
         """
         for request in self._requests.values():
             if self._debug:
-                log.debug('sending request to {}.{}'.format(request['service'], request['attribute']))
+                logger.debug('sending request to {}.{}'.format(request['service'], request['attribute']))
             try:
                 self.send_data(self._transport, request)
             except Exception:
@@ -456,7 +454,7 @@ class Client(Network, asyncio.Protocol):
         if not isinstance(link, Link):
             raise TypeError('Must pass in a Link object')
         if self._debug:
-            log.debug('preparing to unlink {!r}'.format(link))
+            logger.debug('preparing to unlink {!r}'.format(link))
         success = self._send_request_for_manager('unlink', link.service_name, timeout=timeout)
         if success:
             self._links.remove(link)  # ideally this will never raise a ValueError
@@ -486,7 +484,7 @@ class Client(Network, asyncio.Protocol):
            Call :meth:`disconnect` to close the connection.
         """
         if self._debug:
-            log.debug(str(self) + ' connection lost')
+            logger.debug(str(self) + ' connection lost')
         for future in self._futures.values():
             future.cancel()
         self._transport = None
@@ -506,7 +504,7 @@ class Client(Network, asyncio.Protocol):
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self.name, self._port)
         if self._debug:
-            log.debug(str(self) + ' connection made')
+            logger.debug(str(self) + ' connection made')
 
     def data_received(self, reply):
         """
@@ -530,14 +528,14 @@ class Client(Network, asyncio.Protocol):
         if self._debug:
             n = len(buffer_bytes)
             if dt > 0:
-                log.debug('{!r} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
+                logger.debug('{!r} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
                     self._network_name, n, dt, n*1e-6/dt))
             else:
-                log.debug('{!r} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
+                logger.debug('{!r} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
             if len(buffer_bytes) > self._max_print_size:
-                log.debug(buffer_bytes[:self._max_print_size//2] + b' ... ' + buffer_bytes[-self._max_print_size//2:])
+                logger.debug(buffer_bytes[:self._max_print_size//2] + b' ... ' + buffer_bytes[-self._max_print_size//2:])
             else:
-                log.debug(buffer_bytes)
+                logger.debug(buffer_bytes)
 
         data = deserialize(buffer_bytes)
         if data['error']:
@@ -632,7 +630,7 @@ class Client(Network, asyncio.Protocol):
                 return all(fut.done() for fut in self._futures.values())
 
         if self._debug:
-            log.debug('waiting for futures...')
+            logger.debug('waiting for futures...')
 
         t0 = perf_counter()
         while not done():
@@ -649,7 +647,7 @@ class Client(Network, asyncio.Protocol):
                 raise TimeoutError(err)
 
         if self._debug:
-            log.debug('done waiting for futures')
+            logger.debug('done waiting for futures')
 
         # check if a future was cancelled
         # this will occur if the Network Manager returned an error
@@ -664,13 +662,13 @@ class Client(Network, asyncio.Protocol):
         uid = str(uuid.uuid4())
         self._futures[uid] = self._loop.create_future()
         if self._debug:
-            log.debug('created future[{}]'.format(uid))
+            logger.debug('created future[{}]'.format(uid))
         return uid
 
     def _remove_future(self, uid):
         del self._futures[uid]
         if self._debug:
-            log.debug('removed future[{}]; {} pending'.format(uid, len(self._futures)))
+            logger.debug('removed future[{}]; {} pending'.format(uid, len(self._futures)))
         try:
             # In general, we want to delete the request when the future is deleted.
             # However, the admin_request() method does not create a new self._request[uid]
@@ -683,7 +681,7 @@ class Client(Network, asyncio.Protocol):
         self._futures.clear()
         self._requests.clear()
         if self._debug:
-            log.debug('removed all futures')
+            logger.debug('removed all futures')
 
     def _create_request(self, service, attribute, *args, **kwargs):
         if self._transport is None:
@@ -698,13 +696,13 @@ class Client(Network, asyncio.Protocol):
             'error': False,
         }
         if self._debug:
-            log.debug('created request {}.{} [{} pending]'.format(service, attribute, len(self._requests)))
+            logger.debug('created request {}.{} [{} pending]'.format(service, attribute, len(self._requests)))
         return uid
 
     def _send_request_for_manager(self, attribute, *args, **kwargs):
         # the request is for the Manager to handle, not for a Service
         if self._debug:
-            log.debug('sending request to Manager.' + attribute)
+            logger.debug('sending request to Manager.' + attribute)
         timeout = kwargs.pop('timeout', None)
         uid = self._create_request('Manager', attribute, *args, **kwargs)
         self.send_data(self._transport, self._requests[uid])
@@ -762,7 +760,7 @@ class Link(object):
         self._service_name = service
         self._service_identity = identity
         if client._debug:
-            log.debug("linked with '{}[{}]'".format(service, identity['address']))
+            logger.debug("linked with '{}[{}]'".format(service, identity['address']))
 
     @property
     def service_address(self):
