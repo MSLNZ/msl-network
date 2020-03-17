@@ -87,6 +87,7 @@ with ``setup.py`` as
             # will automatically wait for all Futures that it is currently
             # executing to either finish or to be cancelled before the
             # RPiService disconnects from the Network Manager.
+            return None
 
         def add_numbers(self, a, b, c, d):
             return a + b + c + d
