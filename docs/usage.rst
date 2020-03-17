@@ -27,7 +27,7 @@ to do this.
 
         * create a private 2048-bit, RSA_ key
         * create a self-signed certificate using the private key
-        * create a SQLite_ database to store information that is used by the Network
+        * create an SQLite_ database to store information that is used by the Network
           :class:`~msl.network.manager.Manager`
         * start the Network :class:`~msl.network.manager.Manager` on the default port using the TLS_ protocol
         * no authentication is required for :class:`~msl.network.client.Client`\'s and
