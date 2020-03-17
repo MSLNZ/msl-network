@@ -36,7 +36,7 @@ KEY_DIR = os.path.join(HOME_DIR, 'keys')
 DATABASE = os.path.join(HOME_DIR, 'manager.sqlite3')
 """:class:`str`: The default database path."""
 
-IS_WINDOWS = sys.platform in ['win32', 'cygwin']
+IS_WINDOWS = sys.platform == 'win32'
 """:class:`bool`: Whether the operating system is Windows."""
 
 DISCONNECT_REQUEST = '__disconnect__'
