@@ -15,9 +15,11 @@ Version 0.5.0.dev0
     and also has an `ignore_attributes` method
   * a `Link` can unlink from a `Service`
   * the `LinkedClient.client` property
+  * ``1.0.0.127.in-addr.arpa`` as a localhost alias
 
 - Changed
 
+  * use ``__package__`` as the logger name
   * the `FileHandler` and `StreamHandler` that are added to the root logger now use a
     decimal point instead of a comma between the seconds and milliseconds values
   * renamed the `disconnect_service` method for a `Link` and a `Service`
