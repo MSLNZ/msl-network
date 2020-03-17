@@ -24,7 +24,7 @@ be displayed. These values will need to be entered in the front panel of the VI'
 
 .. code-block:: console
 
-   ... [INFO ] msl.network.manager - Network Manager running on <address>:<port> (TLS DISABLED)
+   ... [INFO ] msl.network - Network Manager running on <address>:<port> (TLS DISABLED)
 
 Client
 ------
