@@ -143,13 +143,17 @@ package directory
 
 This will create a file ``dist/mypackage-0.1.0.tar.gz``. Copy this file to the Raspberry Pi.
 
+The following libraries are needed to install the cryptography_ package from source on the Raspberry Pi.
+
+.. code-block:: console
+
+   sudo apt install build-essential libssl-dev libffi-dev python3-dev
+
 .. note::
 
-   The ``libssl-dev`` and ``libffi-dev`` libraries that are specified below are needed to build
-   the cryptography_ package from source on the Raspberry Pi. It is also recommended to install
-   ``mypackage`` in a `virtual environment`_ if you are familiar with them. However, in what
-   follows we show how to install ``mypackage`` without using a `virtual environment`_ for
-   simplicity.
+   It is recommended to install ``mypackage`` in a `virtual environment`_ if you are familiar
+   with them. However, in what follows we show how to install ``mypackage`` without using a
+   `virtual environment`_ for simplicity.
 
    Sometimes running the ``pip3 install mypackage-0.1.0.tar.gz`` command can raise an error.
    Try running the command a few times since it might just be a temporary network issue on the Pi.
@@ -158,7 +162,6 @@ Install ``mypackage-0.1.0.tar.gz`` on the Raspberry Pi using
 
 .. code-block:: console
 
-   sudo apt install libssl-dev libffi-dev
    pip3 install mypackage-0.1.0.tar.gz
 
 In addition, install ``mypackage-0.1.0.tar.gz`` on another computer.
