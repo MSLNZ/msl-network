@@ -374,7 +374,16 @@ class Service(Network, asyncio.Protocol):
             for item in dir(self):
                 if item.startswith('_') or item in self._ignore_attribs:
                     continue
-                attrib = getattr(self, item)
+                try:
+                    attrib = getattr(self, item)
+                except AttributeError as err:
+                    # This can happen if the Service is also a subclass of
+                    # another class, for example, the PiCamera class and the other
+                    # class defines some of its attributes using the builtin
+                    # property function, e.g., property(fget, fset, fdel, doc),
+                    # and defines fget=None
+                    logger.warning('{} {!r}'.format(err, item))
+                    continue
                 try:
                     value = str(inspect.signature(attrib))
                 except TypeError:  # then the attribute is not a callable object

@@ -5,6 +5,9 @@ Release Notes
 Version 0.5.1.dev0
 ==================
 
+- Fixed
+
+  * an ``AttributeError`` could be raised when requesting the identity of a `Service`
 
 Version 0.5.0 (2020.03.18)
 ==========================
