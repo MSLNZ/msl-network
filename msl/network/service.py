@@ -379,13 +379,15 @@ class Service(Network, asyncio.Protocol):
                     continue
                 try:
                     attrib = getattr(self, item)
-                except AttributeError as err:
+                except Exception as err:
                     # This can happen if the Service is also a subclass of
                     # another class, for example, the PiCamera class and the other
                     # class defines some of its attributes using the builtin
                     # property function, e.g., property(fget, fset, fdel, doc),
-                    # and defines fget=None
-                    logger.warning('{} {!r}'.format(err, item))
+                    # and defines fget=None or if the getattr() function
+                    # executes code, like PiCamera.frame does, which raises
+                    # a custom exception if the camera is not running.
+                    logger.warning('{} [attribute={!r}]'.format(err, item))
                     continue
                 try:
                     value = str(inspect.signature(attrib))
