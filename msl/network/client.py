@@ -931,7 +931,7 @@ class LinkedClient(object):
         """
         super(LinkedClient, self).__init__()
         if 'name' not in kwargs:
-            kwargs['name'] = 'LinkedClient'
+            kwargs['name'] = self.__class__.__name__
         if 'timeout' not in kwargs:
             kwargs['timeout'] = 10
         self._kwargs = filter_client_connect_kwargs(**kwargs)
