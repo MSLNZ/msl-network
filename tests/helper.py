@@ -7,18 +7,27 @@ import sys
 import time
 import tempfile
 import logging
+import asyncio
 import subprocess
 from socket import socket
 from threading import Thread
 
 try:
-    from msl.network import cryptography, UsersTable, connect
+    from msl.network import cryptography, UsersTable, connect, constants
 except ImportError:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
-    from msl.network import cryptography, UsersTable, connect
+    from msl.network import cryptography, UsersTable, connect, constants
 
 # suppress all logging message from being displayed
 logging.basicConfig(level=logging.CRITICAL+10)
+
+# For Python 3.8 on Windows the default event loop became ProactorEventLoop.
+# This caused the tests to hang when calling loop.close() for a Client
+# and a Service since the IocpProactor.close() method would get stuck
+# in the "while self._cache:" block. Therefore, use the SelectorEventLoop
+# if running the tests on Windows with Python 3.8+.
+if constants.IS_WINDOWS and sys.version_info[:2] >= (3, 8):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 class ServiceStarter(object):

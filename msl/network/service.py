@@ -16,7 +16,6 @@ from .network import Network
 from .utils import (
     logger,
     localhost_aliases,
-    new_selector_event_loop,
 )
 from .json import (
     deserialize,
@@ -220,10 +219,7 @@ class Service(Network, asyncio.Protocol):
                              'A Manager cannot be started using multiple authentication methods.')
         self._password = password or password_manager
 
-        if IS_WINDOWS:
-            self._loop = new_selector_event_loop()
-        else:
-            self._loop = asyncio.new_event_loop()
+        self._loop = asyncio.new_event_loop()
 
         if not self._create_connection(host, port, certfile, disable_tls, assert_hostname, timeout):
             return

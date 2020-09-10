@@ -19,7 +19,6 @@ from .service import filter_service_start_kwargs
 from .utils import (
     logger,
     localhost_aliases,
-    new_selector_event_loop,
     _is_manager_regex,
 )
 from .constants import (
@@ -29,7 +28,6 @@ from .constants import (
     NOTIFICATION_UUID,
     SHUTDOWN_SERVICE,
     SHUTDOWN_MANAGER,
-    IS_WINDOWS,
 )
 
 
@@ -597,10 +595,7 @@ class Client(Network, asyncio.Protocol):
         self._timeout = timeout
         self._assert_hostname = bool(assert_hostname)
 
-        if IS_WINDOWS:
-            self._loop = new_selector_event_loop()
-        else:
-            self._loop = asyncio.new_event_loop()
+        self._loop = asyncio.new_event_loop()
 
         if not self._create_connection(self._host_manager, port, certfile, disable_tls, assert_hostname, timeout):
             return False

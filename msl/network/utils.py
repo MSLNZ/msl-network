@@ -4,9 +4,7 @@ Common functions used by **MSL-Network**.
 import re
 import os
 import ast
-import asyncio
 import logging
-import selectors
 
 from .constants import (
     HOSTNAME,
@@ -165,24 +163,3 @@ def localhost_aliases():
         '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
         '1.0.0.127.in-addr.arpa',
     )
-
-
-def new_selector_event_loop():
-    """Create a new :class:`~asyncio.SelectorEventLoop`.
-
-    .. versionadded:: 0.5
-
-    Returns
-    -------
-    :class:`~asyncio.SelectorEventLoop`
-        The event loop.
-    """
-    # TODO For Python 3.8 on Windows the default event loop became ProactorEventLoop.
-    #  This causes unpredictable issues when calling loop.close() for a
-    #  Client and a Service since the IocpProactor.close() method can sometimes hang
-    #  in the "while self._cache:" block. Therefore, use the SelectorEventLoop for
-    #  both UNIX and Windows for the event loop of a Client and a Service. The
-    #  hanging issue does not affect the Manager's loop and therefore it uses the
-    #  default event loop for the platform.
-    selector = selectors.SelectSelector()
-    return asyncio.SelectorEventLoop(selector)
