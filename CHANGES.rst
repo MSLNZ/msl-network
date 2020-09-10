@@ -2,12 +2,16 @@
 Release Notes
 =============
 
-Version 0.5.1.dev0
-==================
+Version 0.6.0.dev0 (in development)
+===================================
 
 - Fixed
 
   * an ``AttributeError`` could be raised when requesting the identity of a `Service`
+
+- Removed
+
+  * the `utils.new_selector_event_loop` function
 
 Version 0.5.0 (2020.03.18)
 ==========================
