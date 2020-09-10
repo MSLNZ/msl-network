@@ -143,6 +143,10 @@ pytest_runner = ['pytest-runner'] if testing else []
 needs_sphinx = {'doc', 'docs', 'apidoc', 'apidocs', 'build_sphinx'}.intersection(sys.argv)
 sphinx = ['sphinx', 'sphinx_rtd_theme'] + install_requires if needs_sphinx else []
 
+if sys.version_info[:2] == (3, 5):
+    # fixes issue when running "python setup.py tests" in a new Python 3.5 environment
+    install_requires.append('bcrypt<3.2')
+
 version = get_version()
 
 setup(
