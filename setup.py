@@ -137,15 +137,13 @@ def get_version():
 
 install_requires = ['cryptography', 'paramiko']
 
+tests_require = ['pytest', 'pytest-cov']
+
 testing = {'test', 'tests', 'pytest'}.intersection(sys.argv)
 pytest_runner = ['pytest-runner'] if testing else []
 
 needs_sphinx = {'doc', 'docs', 'apidoc', 'apidocs', 'build_sphinx'}.intersection(sys.argv)
 sphinx = ['sphinx', 'sphinx_rtd_theme'] + install_requires if needs_sphinx else []
-
-if sys.version_info[:2] == (3, 5):
-    # fixes issue when running "python setup.py tests" in a new Python 3.5 environment
-    install_requires.append('bcrypt<3.2')
 
 version = get_version()
 
@@ -175,8 +173,9 @@ setup(
         'Topic :: Scientific/Engineering',
     ],
     setup_requires=sphinx + pytest_runner,
-    tests_require=['pytest-cov', 'pytest'],
+    tests_require=tests_require,
     install_requires=install_requires,
+    extras_require={'tests': tests_require},
     cmdclass={'docs': BuildDocs, 'apidocs': ApiDocs},
     entry_points={
         'console_scripts': [
