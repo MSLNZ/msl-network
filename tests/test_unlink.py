@@ -115,79 +115,75 @@ def test_unlink_linkedclient_max10():
         def shutdown_service(self):
             pass
 
-    def run_client():
-        # wait for the Manager to be running
-        helper.ServiceStarter.wait_start(port, 'Cannot connect to manager')
-
-        linked_clients = [LinkedClient('ShutdownableEcho', port=port, name='foobar%d' % i) for i in range(10)]
-
-        for i, link in enumerate(linked_clients):
-            assert link.service_name == 'ShutdownableEcho'
-            assert link.name == 'foobar%d' % i
-            assert link.echo(1, x=2) == [[1], {'x': 2}]
-
-        # creating another LinkedClient is not allowed
-        with pytest.raises(MSLNetworkError) as err:
-            LinkedClient('ShutdownableEcho', port=port, name='foobar10')
-        assert 'The maximum number of Clients are already linked' in str(err.value)
-
-        linked_clients[0].unlink()
-        assert linked_clients[0]._link is None
-        with pytest.raises(AttributeError) as err:
-            linked_clients[0].echo(1)
-        assert str(err.value).startswith("'NoneType' object has no attribute")
-
-        # another LinkedClient can now be created
-        link2 = LinkedClient('ShutdownableEcho', port=port, name='foobar10')
-        assert link2.service_name == 'ShutdownableEcho'
-        assert link2.name == 'foobar10'
-        assert link2.echo(1, x=2) == [[1], {'x': 2}]
-        assert repr(link2).startswith('<Link[name=foobar10]')
-        link2.unlink()
-        assert link2._link is None
-        assert repr(link2).startswith('<Un-Linked[name=foobar10]')
-        with pytest.raises(AttributeError) as err:
-            link2.echo(1)
-        assert str(err.value).startswith("'NoneType' object has no attribute")
-
-        # un-linking the LinkedClient multiple times is okay
-        for i in range(20):
-            link2.unlink()
-        link2.disconnect()  # a linkedClient can disconnect the Client via self._client
-
-        # shutdown the ShutdownableEcho Service and disconnect the LinkedClient
-        # from the Manager, the second item in the LinkedClient list is still linked
-        # and can therefore still send requests
-        assert linked_clients[1].service_name == 'ShutdownableEcho'
-        assert linked_clients[1].name == 'foobar1'
-        assert linked_clients[1].echo(1, x=2) == [[1], {'x': 2}]
-        linked_clients[1].shutdown_service()
-        linked_clients[1].unlink()
-        linked_clients[1].disconnect()
-
-        # this LinkedClient was already unlinked but calling disconnect should not raise an error
-        linked_clients[0].disconnect()
-
-        # once the ShutdownableEcho shuts down the Manager also automatically shuts down
-        # since the ShutdownableEcho was started using the run_services() function
-        for client in linked_clients[2:]:
-            # can either raise MSLNetworkError (if the Manager is still running)
-            # or ConnectionError (if the Manager has also shut down)
-            with pytest.raises((MSLNetworkError, ConnectionError)):
-                client.unlink()
-            client.disconnect()  # can still disconnect
-            client.disconnect()  # even multiple times
-            client.disconnect()
-            client.disconnect()
-            client.disconnect()
-
     port = helper.ServiceStarter.get_available_port()
 
-    client_thread = threading.Thread(target=run_client)
-    client_thread.start()
+    run_thread = threading.Thread(
+        target=run_services,
+        args=(ShutdownableEcho(),),
+        kwargs={'port': port, 'logfile': helper.ServiceStarter.logfile}
+    )
+    run_thread.start()
+
+    # wait for the Manager to be running
+    helper.ServiceStarter.wait_start(port, 'Cannot connect to manager')
+
+    linked_clients = [LinkedClient('ShutdownableEcho', port=port, name='foobar%d' % i) for i in range(10)]
+
+    for i, link in enumerate(linked_clients):
+        assert link.service_name == 'ShutdownableEcho'
+        assert link.name == 'foobar%d' % i
+        assert link.echo(1, x=2) == [[1], {'x': 2}]
+
+    # creating another LinkedClient is not allowed
+    with pytest.raises(MSLNetworkError) as err:
+        LinkedClient('ShutdownableEcho', port=port, name='foobar10')
+    assert 'The maximum number of Clients are already linked' in str(err.value)
+
+    linked_clients[0].unlink()
+    assert linked_clients[0]._link is None
+    with pytest.raises(AttributeError) as err:
+        linked_clients[0].echo(1)
+    assert str(err.value).startswith("'NoneType' object has no attribute")
+
+    # another LinkedClient can now be created
+    link2 = LinkedClient('ShutdownableEcho', port=port, name='foobar10')
+    assert link2.service_name == 'ShutdownableEcho'
+    assert link2.name == 'foobar10'
+    assert link2.echo(1, x=2) == [[1], {'x': 2}]
+    assert repr(link2).startswith('<Link[name=foobar10]')
+    link2.unlink()
+    assert link2._link is None
+    assert repr(link2).startswith('<Un-Linked[name=foobar10]')
+    with pytest.raises(AttributeError) as err:
+        link2.echo(1)
+    assert str(err.value).startswith("'NoneType' object has no attribute")
+
+    # un-linking the LinkedClient multiple times is okay
+    for i in range(20):
+        link2.unlink()
+    link2.disconnect()  # a linkedClient can disconnect the Client via self._client
+
+    # shutdown the ShutdownableEcho Service and disconnect the LinkedClient
+    # from the Manager, the second item in the LinkedClient list is still linked
+    # and can therefore still send requests
+    assert linked_clients[1].service_name == 'ShutdownableEcho'
+    assert linked_clients[1].name == 'foobar1'
+    assert linked_clients[1].echo(1, x=2) == [[1], {'x': 2}]
+    linked_clients[1].shutdown_service()
+    linked_clients[1].disconnect()
+
+    # this LinkedClient was already unlinked but calling disconnect should not raise an error
+    linked_clients[0].disconnect()
+
+    # once the ShutdownableEcho shuts down the Manager also automatically shuts down
+    # since the ShutdownableEcho was started using the run_services() function
+    for client in linked_clients[2:]:
+        client.disconnect()  # can still disconnect
+        client.disconnect()  # even multiple times
+        client.disconnect()
+        client.disconnect()
+        client.disconnect()
 
     # the `run_services` function will block the unittests forever if a
     # LinkedClient does not shutdown ShutdownableEcho
-    run_services(ShutdownableEcho(), port=port, logfile=helper.ServiceStarter.logfile)
-
-    client_thread.join()
+    run_thread.join()
