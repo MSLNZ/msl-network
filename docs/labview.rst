@@ -42,11 +42,11 @@ parameters the *result* array will be populated when you run the VI.
 
 .. image:: _static/labview_client_fp.png
    :align: center
-   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/master/docs/_static/labview_client_fp.png
+   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/main/docs/_static/labview_client_fp.png
 
 .. image:: _static/labview_client_bd.png
    :align: center
-   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/master/docs/_static/labview_client_bd.png
+   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/main/docs/_static/labview_client_bd.png
 
 Service
 -------
@@ -73,13 +73,13 @@ of the VI are as follows:
 .. image:: _static/labview_service_template_fp.png
    :scale: 90%
    :align: center
-   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/master/docs/_static/labview_service_template_fp.png
+   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/main/docs/_static/labview_service_template_fp.png
 
 The case sequence on the block diagram needs to be updated for each function that your Service provides
 
 .. image:: _static/labview_service_template_bd.png
    :align: center
-   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/master/docs/_static/labview_service_template_bd.png
+   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/main/docs/_static/labview_service_template_bd.png
 
 Adder Service
 +++++++++++++
@@ -89,14 +89,14 @@ has a function called *add_numbers* that takes two numbers as inputs, *x* and *y
 .. image:: _static/labview_service_fp.png
    :scale: 90%
    :align: center
-   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/master/docs/_static/labview_service_fp.png
+   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/main/docs/_static/labview_service_fp.png
 
 Note that the name of the *add_numbers* function is specified on the front panel (which lets Clients know that
 this function exists) and in the case structure on the block diagram (which processes a Client's request).
 
 .. image:: _static/labview_service_bd.png
    :align: center
-   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/master/docs/_static/labview_service_bd.png
+   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/main/docs/_static/labview_service_bd.png
 
 Run ``Adder_service.vi`` to start the *Adder* Service and then on another computer you can send a request
 to the *Adder* Service
@@ -125,7 +125,7 @@ Disconnect from the Network :class:`~msl.network.manager.Manager` when you are f
 
    >>> cxn.disconnect()
 
-.. _repository: https://github.com/MSLNZ/msl-network/tree/master/external/labview
+.. _repository: https://github.com/MSLNZ/msl-network/tree/main/external/labview
 .. _i3 JSON Toolkit: https://forums.ni.com/t5/JSON-Toolkit-for-LabVIEW/gp-p/8520
 .. _JSON: https://www.json.org/
 .. _TLS: https://en.wikipedia.org/wiki/Transport_Layer_Security

@@ -17,7 +17,7 @@ different from *parallel programming* where multiple tasks can be executed at th
 .. image:: _static/concurrency_vs_parallelism.png
    :scale: 60%
    :align: center
-   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/master/docs/_static/concurrency_vs_parallelism.png
+   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/main/docs/_static/concurrency_vs_parallelism.png
 
 The Network :class:`~msl.network.manager.Manager` uses *concurrent programming*. It runs in a single event loop
 but it can handle multiple :class:`~msl.network.client.Client`\s and :class:`~msl.network.service.Service`\s
@@ -65,7 +65,7 @@ time to receive all replies is equal to the time it takes to execute the longest
 .. image:: _static/sync_vs_async.png
    :scale: 60%
    :align: center
-   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/master/docs/_static/sync_vs_async.png
+   :target: https://raw.githubusercontent.com/MSLNZ/msl-network/main/docs/_static/sync_vs_async.png
 
 .. _synchronous:
 

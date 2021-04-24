@@ -47,11 +47,11 @@ The documentation for **MSL-Network** can be found `here <https://msl-network.re
 .. |pypi| image:: https://badge.fury.io/py/msl-network.svg
    :target: https://badge.fury.io/py/msl-network
 
-.. |travis| image:: https://img.shields.io/travis/MSLNZ/msl-network/master.svg?label=Travis-CI
+.. |travis| image:: https://img.shields.io/travis/MSLNZ/msl-network/main.svg?label=Travis-CI
    :target: https://travis-ci.org/MSLNZ/msl-network
 
-.. |appveyor| image:: https://img.shields.io/appveyor/ci/jborbely/msl-network/master.svg?label=AppVeyor
-   :target: https://ci.appveyor.com/project/jborbely/msl-network/branch/master
+.. |appveyor| image:: https://img.shields.io/appveyor/ci/jborbely/msl-network/main.svg?label=AppVeyor
+   :target: https://ci.appveyor.com/project/jborbely/msl-network/branch/main
 
 .. _Manager: https://msl-network.readthedocs.io/en/latest/_api/msl.network.manager.html
 .. _Client: https://msl-network.readthedocs.io/en/latest/_api/msl.network.client.html#msl.network.client.Client
