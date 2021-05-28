@@ -488,6 +488,6 @@ def get_ssl_context(*, host=None, port=None, certfile=None):
                 f.write(cert_data)
 
     elif not os.path.isfile(certfile):
-        raise IOError('Cannot find certificate ' + certfile)
+        raise OSError('Cannot find certificate ' + certfile)
 
     return certfile, ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=certfile)
