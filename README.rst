@@ -1,7 +1,7 @@
 MSL-Network
 ===========
 
-|docs| |pypi| |travis| |appveyor|
+|docs| |pypi| |github tests|
 
 **MSL-Network** uses concurrency and asynchronous programming to transfer data across a network and
 it is composed of three objects -- a Network Manager_, Client_\s and Service_\s.
@@ -47,11 +47,8 @@ The documentation for **MSL-Network** can be found `here <https://msl-network.re
 .. |pypi| image:: https://badge.fury.io/py/msl-network.svg
    :target: https://badge.fury.io/py/msl-network
 
-.. |travis| image:: https://img.shields.io/travis/MSLNZ/msl-network/main.svg?label=Travis-CI
-   :target: https://travis-ci.org/MSLNZ/msl-network
-
-.. |appveyor| image:: https://img.shields.io/appveyor/ci/jborbely/msl-network/main.svg?label=AppVeyor
-   :target: https://ci.appveyor.com/project/jborbely/msl-network/branch/main
+.. |github tests| image:: https://github.com/MSLNZ/msl-network/actions/workflows/run-tests.yml/badge.svg
+   :target: https://github.com/MSLNZ/msl-network/actions/workflows/run-tests.yml
 
 .. _Manager: https://msl-network.readthedocs.io/en/latest/_api/msl.network.manager.html
 .. _Client: https://msl-network.readthedocs.io/en/latest/_api/msl.network.client.html#msl.network.client.Client
