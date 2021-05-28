@@ -5,6 +5,11 @@ Release Notes
 Version 0.6.0.dev0 (in development)
 ===================================
 
+- Added
+
+  * support for Python 3.9
+  * the ``delete`` command-line argument
+
 - Fixed
 
   * an ``AttributeError`` could be raised when requesting the identity of a `Service`
