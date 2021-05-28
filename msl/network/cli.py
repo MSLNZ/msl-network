@@ -32,6 +32,7 @@ def configure_parser():
     from .cli_certdump import add_parser_certdump
     from .cli_hostname import add_parser_hostname
     from .cli_user import add_parser_user
+    from .cli_delete import add_parser_delete
 
     PARSER = ArgumentParser(description=DESCRIPTION)
 
@@ -52,6 +53,7 @@ def configure_parser():
 
     add_parser_certdump(command_parser)
     add_parser_certgen(command_parser)
+    add_parser_delete(command_parser)
     add_parser_hostname(command_parser)
     add_parser_keygen(command_parser)
     add_parser_start(command_parser)

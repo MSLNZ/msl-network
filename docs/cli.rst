@@ -11,10 +11,16 @@ from a terminal.
 
    certdump <_api/msl.network.cli_certdump>
    certgen <_api/msl.network.cli_certgen>
+   delete <_api/msl.network.cli_delete>
    hostname <_api/msl.network.cli_hostname>
    keygen <_api/msl.network.cli_keygen>
    start <_api/msl.network.cli_start>
    user <_api/msl.network.cli_user>
 
-Run, for example, ``msl-network start --help`` from a terminal to print
-the help for the ``start`` command.
+For example, run
+
+.. code-block:: console
+
+   msl-network start --help
+
+from a terminal to print the help for the ``start`` command.
