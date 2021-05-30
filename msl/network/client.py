@@ -238,13 +238,24 @@ class Client(Network, asyncio.Protocol):
             return result
         return reply['result']
 
+    def clear_futures_and_requests(self):
+        """Clear all :class:`~asyncio.Future`\\'s and all requests
+        that have been sent to the :class:`~msl.network.manager.Manager`.
+
+        .. versionadded:: 0.6.0
+        """
+        self._futures.clear()
+        self._requests.clear()
+        if self._debug:
+            logger.debug('cleared all futures and requests')
+
     def disconnect(self):
         """Disconnect from the Network :class:`~msl.network.manager.Manager`."""
         if self._transport is not None:
             uid = self._create_request(self._network_name, DISCONNECT_REQUEST)
             self.send_data(self._transport, self._requests[uid])
             self._wait(uid=uid, timeout=self._timeout)
-            self._clear_all_futures()
+            self.clear_futures_and_requests()
 
     def identity(self):
         """:class:`dict`: Returns the :obj:`~msl.network.network.Network.identity` of the :class:`Client`."""
@@ -373,7 +384,7 @@ class Client(Network, asyncio.Protocol):
             # the Client is connected to the Manager using Python's interactive console
             msg = str(self._latest_error)
             self._latest_error = ''
-            self._clear_all_futures()
+            self.clear_futures_and_requests()
             raise MSLNetworkError(msg)
 
     def send_pending_requests(self, *, wait=True, timeout=None):
@@ -655,7 +666,7 @@ class Client(Network, asyncio.Protocol):
                 self.raise_latest_error()
 
         if uid is None:
-            self._clear_all_futures()
+            self.clear_futures_and_requests()
 
     def _create_future(self):
         uid = str(uuid.uuid4())
@@ -675,12 +686,6 @@ class Client(Network, asyncio.Protocol):
             del self._requests[uid]
         except KeyError:
             pass
-
-    def _clear_all_futures(self):
-        self._futures.clear()
-        self._requests.clear()
-        if self._debug:
-            logger.debug('removed all futures')
 
     def _create_request(self, service, attribute, *args, **kwargs):
         if self._transport is None:
@@ -1003,6 +1008,10 @@ class LinkedClient(object):
     def admin_request(self, attrib, *args, **kwargs):
         """See :obj:`.Client.admin_request` for more details."""
         return self._client.admin_request(attrib, *args, **kwargs)
+
+    def clear_futures_and_requests(self):
+        """See :obj:`.Client.clear_futures_and_requests` for more details."""
+        return self._client.clear_futures_and_requests()
 
     def disconnect(self):
         """See :obj:`.Client.disconnect` for more details."""
