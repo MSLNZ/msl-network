@@ -8,7 +8,8 @@ Version 0.6.0.dev0 (in development)
 - Added
 
   * support for Python 3.9
-  * the ``delete`` command-line argument
+  * the :meth:`~msl.network.client.Client.clear_futures_and_requests` method
+  * the ``delete`` command-line argument to delete files that are created by MSL-Network
 
 - Fixed
 
