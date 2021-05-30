@@ -930,10 +930,8 @@ class LinkedClient(object):
             Keyword arguments that are passed to :func:`.connect`.
         """
         super(LinkedClient, self).__init__()
-        if 'name' not in kwargs:
-            kwargs['name'] = self.__class__.__name__
-        if 'timeout' not in kwargs:
-            kwargs['timeout'] = 10
+        kwargs.setdefault('name', self.__class__.__name__)
+        kwargs.setdefault('timeout', 10)
         self._kwargs = filter_client_connect_kwargs(**kwargs)
 
         # When starting a Manager and a Service on a remote computer there can

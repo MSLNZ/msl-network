@@ -44,8 +44,7 @@ class Database(object):
         else:
             logger.debug('opening ' + self._path)
 
-        if 'timeout' not in kwargs:
-            kwargs['timeout'] = 60.0
+        kwargs.setdefault('timeout', 60.0)
 
         self._connection = sqlite3.connect(self._path, **kwargs)
         self._cursor = self._connection.cursor()
