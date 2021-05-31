@@ -296,3 +296,22 @@ def test_database_certs(capsys):
 
     # clean up
     shutil.rmtree(ROOT_DIR)
+
+
+def test_no_args(capsys):
+    args = get_args()
+
+    assert not args.all
+    assert not args.certs
+    assert not args.database
+    assert not args.keys
+    assert not args.logs
+    assert args.root == ROOT_DIR
+    assert not args.quiet
+    assert args.yes
+
+    # execute command
+    args.func(args)
+
+    out, _ = capsys.readouterr()
+    assert 'You must specify what you want to delete' in out
