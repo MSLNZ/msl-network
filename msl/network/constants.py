@@ -60,9 +60,14 @@ class JSONPackage(enum.Enum):
     .. _RapidJSON: https://pypi.python.org/pypi/python-rapidjson
     .. _simplejson: https://pypi.python.org/pypi/simplejson
     .. _Yet-Another-Json-Library: https://pypi.python.org/pypi/yajl
+
+    .. versionchanged:: 0.6
+       Added ``UJSON`` as an alias for UltraJSON_.
+
     """
     BUILTIN = 'BUILTIN'
     ULTRA = 'ULTRA'  #: UltraJSON_
+    UJSON = 'ULTRA'  #: UltraJSON_
     RAPID = 'RAPID'  #: RapidJSON_
     SIMPLE = 'SIMPLE'  #: simplejson_
     YAJL = 'YAJL'  #: Yet-Another-Json-Library_
