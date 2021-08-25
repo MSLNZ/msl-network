@@ -19,7 +19,12 @@ elif JSON == JSONPackage.ULTRA:
     import ujson as json
     _PKG = 'ujson'
     kwargs_loads = {}
-    kwargs_dumps = {'ensure_ascii': False}
+    kwargs_dumps = {
+        'encode_html_chars': False,
+        'ensure_ascii': False,
+        'escape_forward_slashes': False,
+        'indent': 0,
+    }
 elif JSON == JSONPackage.SIMPLE:
     import simplejson as json
     _PKG = 'simplejson'
