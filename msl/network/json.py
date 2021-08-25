@@ -18,7 +18,7 @@ if JSON == JSONPackage.BUILTIN:
 elif JSON == JSONPackage.ULTRA:
     import ujson as json
     _PKG = 'ujson'
-    kwargs_loads = {'precise_float': False}
+    kwargs_loads = {}
     kwargs_dumps = {'ensure_ascii': False}
 elif JSON == JSONPackage.SIMPLE:
     import simplejson as json
