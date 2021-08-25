@@ -7,7 +7,10 @@ import traceback
 from time import perf_counter
 
 from .json import serialize
-from .constants import HOSTNAME
+from .constants import (
+    HOSTNAME,
+    TERMINATION,
+)
 from .cryptography import get_ssl_context
 from .exceptions import MSLNetworkError
 from .utils import (
@@ -18,7 +21,7 @@ from .utils import (
 
 class Network(object):
 
-    termination = b'\r\n'
+    termination = TERMINATION
     """:class:`bytes`: The sequence of bytes that signify the end of the data being sent."""
 
     encoding = 'utf-8'

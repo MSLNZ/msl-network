@@ -82,3 +82,9 @@ To change which JSON_ package to use you can specify a ``MSL_NETWORK_JSON``
 environment variable. Possible values are in :class:`JSONPackage`. For example,
 setting ``MSL_NETWORK_JSON=ULTRA`` would use UltraJSON_ to (de)serialize JSON_ data.
 """
+
+TERMINATION = b'\r\n'
+""":class:`bytes`: The sequence of bytes that signify the end of the data being sent.
+
+.. versionadded:: 0.6
+"""
