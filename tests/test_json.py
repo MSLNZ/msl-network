@@ -38,10 +38,12 @@ def setup():
     if env:
         json.use(env)
         assert json.backend.enum == json.Package[env.upper()]
+        assert json.backend.enum == initial_backend
 
 
 def teardown():
     json.use(initial_backend)
+    assert json.backend.enum == initial_backend
 
 
 def test_use_raises():
