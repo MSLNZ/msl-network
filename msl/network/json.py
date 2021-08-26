@@ -54,7 +54,7 @@ def use(value):
     Parameters
     ----------
     value : :class:`.Package` or :class:`str`
-        An enum value or member name.
+        An enum value or member name (case-insensitive).
 
     Examples
     --------
