@@ -29,16 +29,19 @@ class Package(Enum):
 
     .. versionchanged:: 0.6
        Moved from the :mod:`msl.network.constants` module and renamed.
-       Added ``UJSON`` as an alias for UltraJSON_.
+       Added ``JSON``, ``UJSON``, ``RAPIDJSON`` and ``SIMPLEJSON`` aliases.
        Added ``OR`` (and alias ``ORJSON``) for orjson_.
        Removed ``YAJL``.
 
     """
-    BUILTIN = 'BUILTIN'
+    BUILTIN = 'BUILTIN'  #: :mod:`json`
+    JSON = 'BUILTIN'  #: :mod:`json`
     ULTRA = 'ULTRA'  #: UltraJSON_
     UJSON = 'ULTRA'  #: UltraJSON_
     RAPID = 'RAPID'  #: RapidJSON_
+    RAPIDJSON = 'RAPID'  #: RapidJSON_
     SIMPLE = 'SIMPLE'  #: simplejson_
+    SIMPLEJSON = 'SIMPLE'  #: simplejson_
     OR = 'OR'  #: orjson_
     ORJSON = 'OR'  #: orjson_
 
