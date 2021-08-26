@@ -56,4 +56,6 @@ jobs:
       - name: Run tests
         env:
           MSL_NETWORK_JSON: ${{ matrix.json }}
-        run: python -m pytest
+        run: |
+          python -c "from msl.network import json; print(f'JSON backend: {json.backend.name}')"
+          python -m pytest
