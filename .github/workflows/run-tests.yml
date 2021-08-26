@@ -17,10 +17,15 @@ jobs:
         python-version: [3.5, 3.6, 3.7, 3.8, 3.9]
         os: [windows, ubuntu, macos]
         architecture: [x64]
+        json: [BUILTIN]
         include:
           - python-version: 3.x
             os: windows
             architecture: x86
+          - python-version: 3.x
+            os: windows
+            architecture: x64
+            json: [UJSON, ORJSON, SIMPLEJSON, RAPIDJSON]
 
     steps:
       - name: Checkout repository
@@ -36,4 +41,6 @@ jobs:
           python -m pip install --upgrade setuptools wheel
           python -m pip install --upgrade --editable .[tests]
       - name: Run tests
+        env:
+          MSL_NETWORK_JSON: ${{ matrix.json }}
         run: python -m pytest
