@@ -8,7 +8,10 @@ from enum import Enum
 from time import perf_counter
 
 from .utils import logger
-from .constants import TERMINATION
+from .constants import (
+    TERMINATION,
+    ENCODING,
+)
 
 
 class Package(Enum):
@@ -82,7 +85,7 @@ def serialize(obj):
     out = backend.dumps(obj, **backend.kwargs_dumps)
     logger.debug('{}.dumps took {:.3g} seconds'.format(backend.name, perf_counter() - t0))
     if isinstance(out, bytes):
-        return backend.decode(out)
+        return out.decode(ENCODING)
     return out
 
 
@@ -106,7 +109,7 @@ def deserialize(s):
         network packet.
     """
     if isinstance(s, (bytes, bytearray)):
-        s = backend.decode(s)
+        s = s.decode(ENCODING)
 
     t0 = perf_counter()
 
@@ -133,7 +136,7 @@ class _Backend(object):
         self.kwargs_loads = {}
         self.kwargs_dumps = {}
         self.use(value)
-        self.term = self.decode(TERMINATION)
+        self.term = TERMINATION.decode(ENCODING)
 
     def use(self, value):
         if isinstance(value, str):
@@ -185,10 +188,6 @@ class _Backend(object):
             self.kwargs_dumps = {}
         else:
             assert False, 'Unhandled JSON backend {!r}'.format(value)
-
-    @staticmethod
-    def decode(b):
-        return b.decode('utf-8', 'surrogatepass')
 
 
 # initialize the default backend

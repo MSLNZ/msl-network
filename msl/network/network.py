@@ -10,6 +10,7 @@ from .json import serialize
 from .constants import (
     HOSTNAME,
     TERMINATION,
+    ENCODING,
 )
 from .cryptography import get_ssl_context
 from .exceptions import MSLNetworkError
@@ -24,7 +25,7 @@ class Network(object):
     termination = TERMINATION
     """:class:`bytes`: The sequence of bytes that signify the end of the data being sent."""
 
-    encoding = 'utf-8'
+    encoding = ENCODING
     """:class:`str`: The encoding to use to convert :class:`str` to :class:`bytes`."""
 
     def __init__(self):
@@ -215,7 +216,7 @@ class Network(object):
             Any object that can be serialized into a JSON_ string.
         """
         try:
-            self.send_line(writer, serialize(data).encode(Network.encoding) + Network.termination)
+            self.send_line(writer, serialize(data).encode(ENCODING) + TERMINATION)
         except Exception as e:
             try:
                 self.send_error(writer, e, data['requester'])

@@ -55,3 +55,10 @@ TERMINATION = b'\r\n'
 
 .. versionadded:: 0.6
 """
+
+ENCODING = 'utf-8'
+""":class:`str`: The encoding to use to convert :class:`str` to :class:`bytes`.
+
+.. versionadded:: 0.6
+"""
+
