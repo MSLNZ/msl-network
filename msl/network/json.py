@@ -61,9 +61,18 @@ def use(value):
 
     Examples
     --------
+    .. invisible-code-block: pycon
+
+       >>> original = json.backend.enum
+
     >>> from msl.network import json
     >>> json.use(json.Package.UJSON)
     >>> json.use('ujson')
+
+    .. invisible-code-block: pycon
+
+       >>> json.use(original)
+
     """
     backend.use(value)
 
