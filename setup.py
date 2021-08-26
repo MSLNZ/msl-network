@@ -150,11 +150,13 @@ install_requires = ['cryptography', 'paramiko']
 tests_require = [
     'pytest',
     'pytest-cov',
-    'orjson',
     'python-rapidjson',
     'simplejson',
     'ujson',
 ]
+if sys.maxsize > 2**32:
+    # 32-bit wheels for orjson are not available on PyPI
+    tests_require.append('orjson')
 
 docs_require = ['sphinx', 'sphinx_rtd_theme']
 
