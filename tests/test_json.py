@@ -125,7 +125,7 @@ def test_use_orjson(backend):
     ['builtin', 'ujson', 'rapid', 'simple', 'orjson']
 )
 def test_serialize_deserialize(backend):
-    if orjson is None:
+    if backend == 'orjson' and orjson is None:
         with pytest.raises(ImportError):
             json.use(backend)
         return
