@@ -63,6 +63,7 @@ def use(value):
     --------
     .. invisible-code-block: pycon
 
+       >>> from msl.network import json
        >>> original = json.backend.enum
 
     >>> from msl.network import json
