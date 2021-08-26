@@ -125,7 +125,7 @@ def test_use_orjson(backend):
     ['builtin', 'ujson', 'rapid', 'simple', 'orjson']
 )
 def test_serialize_deserialize(backend):
-    if orjson is None:
+    if backend == 'orjson' and orjson is None:
         with pytest.raises(ImportError):
             json.use(backend)
         return
@@ -172,12 +172,11 @@ def test_serialize_deserialize(backend):
     ['builtin', 'ujson', 'rapid', 'simple', 'orjson']
 )
 def test_deserialize_types(backend):
-    if orjson is None:
+    if backend == 'orjson' and orjson is None:
         with pytest.raises(ImportError):
             json.use(backend)
-        return
-
-    json.use(backend)
-    assert json.deserialize('{"x":1}')[0] == {'x': 1}
-    assert json.deserialize(b'{"x":1}')[0] == {'x': 1}
-    assert json.deserialize(bytearray(b'{"x":1}'))[0] == {'x': 1}
+    else:
+        json.use(backend)
+        assert json.deserialize('{"x":1}')[0] == {'x': 1}
+        assert json.deserialize(b'{"x":1}')[0] == {'x': 1}
+        assert json.deserialize(bytearray(b'{"x":1}'))[0] == {'x': 1}
