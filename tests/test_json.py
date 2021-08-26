@@ -5,6 +5,10 @@ from msl.network import json
 from msl.network.constants import TERMINATION
 
 import pytest
+try:
+    import orjson
+except ImportError:  # 32-bit wheels for orjson are not available on PyPI
+    orjson = None
 
 reply = {
     'result': [None, True, 0, 1.2, 'µ', 'text\n{"x":1}\r\ntext',
@@ -22,54 +26,92 @@ notification = {
     'error': False,
 }
 
+initial_backend = json.backend.name
+
 
 def teardown():
-    json.use(json.Package.BUILTIN)
+    json.use(initial_backend)
 
 
-def test_set():
-    assert json.backend.loads
-    assert json.backend.dumps
-    assert json.backend.name
-
+def test_use_raises():
     with pytest.raises(KeyError):
         json.use('invalid')
 
-    for item in ('builtin', 'BuiLTIn', json.Package.BUILTIN):
-        json.use(item)
-        assert json.backend.name == 'json'
-        assert json.backend.loads.__module__ == 'json'
-        assert json.backend.dumps.__module__ == 'json'
-
-    for item in ('ujson', 'UJsON', 'ultra', 'ULTRA', json.Package.ULTRA, json.Package.UJSON):
-        json.use(item)
-        assert json.backend.name == 'ujson'
-        assert json.backend.loads.__module__ == 'ujson'
-        assert json.backend.dumps.__module__ == 'ujson'
-
-    for item in ('simple', 'SImPLE', json.Package.SIMPLE):
-        json.use(item)
-        assert json.backend.name == 'simplejson'
-        assert json.backend.loads.__module__ == 'simplejson'
-        assert json.backend.dumps.__module__ == 'simplejson'
-
-    for item in ('rapid', 'RaPiD', json.Package.RAPID):
-        json.use(item)
-        assert json.backend.name == 'rapidjson'
-        assert json.backend.loads.__module__ == 'rapidjson'
-        assert json.backend.dumps.__module__ == 'rapidjson'
-
-    for item in ('or', 'orjson', 'Or', 'orJSON', json.Package.OR, json.Package.ORJSON):
-        json.use(item)
-        assert json.backend.name == 'orjson'
-        if sys.version_info[:2] > (3, 5):
-            # __module__ returns None for Python 3.5
-            assert json.backend.loads.__module__ == 'orjson'
-            assert json.backend.dumps.__module__ == 'orjson'
+    if orjson is None:
+        with pytest.raises(KeyError):
+            json.use(json.Package.ORJSON)
 
 
-@pytest.mark.parametrize('backend', ('builtin', 'ujson', 'rapid', 'simple', 'orjson'))
+@pytest.mark.parametrize(
+    'backend',
+    ['json', 'JsoN', 'builtin', 'BuiLTIn', json.Package.BUILTIN, json.Package.JSON]
+)
+def test_use_json(backend):
+    json.use(backend)
+    assert json.backend.name == 'json'
+    assert json.backend.loads.__module__ == 'json'
+    assert json.backend.dumps.__module__ == 'json'
+
+
+@pytest.mark.parametrize(
+    'backend',
+    ['ujson', 'UJsON', 'ulTra', 'ULTRA', json.Package.ULTRA, json.Package.UJSON]
+)
+def test_use_ujson(backend):
+    json.use(backend)
+    assert json.backend.name == 'ujson'
+    assert json.backend.loads.__module__ == 'ujson'
+    assert json.backend.dumps.__module__ == 'ujson'
+
+
+@pytest.mark.parametrize(
+    'backend',
+    ['simple', 'SImPLE', 'simplejson', 'simpleJSON',
+     json.Package.SIMPLE, json.Package.SIMPLEJSON]
+)
+def test_use_simplejson(backend):
+    json.use(backend)
+    assert json.backend.name == 'simplejson'
+    assert json.backend.loads.__module__ == 'simplejson'
+    assert json.backend.dumps.__module__ == 'simplejson'
+
+
+@pytest.mark.parametrize(
+    'backend',
+    ['rapid', 'RaPiD', 'rapidjson', 'rapidJSON',
+     json.Package.RAPID, json.Package.RAPIDJSON]
+)
+def test_use_rapidjson(backend):
+    json.use(backend)
+    assert json.backend.name == 'rapidjson'
+    assert json.backend.loads.__module__ == 'rapidjson'
+    assert json.backend.dumps.__module__ == 'rapidjson'
+
+
+@pytest.mark.skipif(orjson is None, reason='orjson is not installed')
+@pytest.mark.parametrize(
+    'backend',
+    ['or', 'orjson', 'Or', 'orJSON', json.Package.OR, json.Package.ORJSON]
+)
+def test_use_orjson(backend):
+    json.use(backend)
+    assert json.backend.name == 'orjson'
+    if sys.version_info[:2] > (3, 5):
+        # __module__ returns None for Python 3.5
+        assert json.backend.loads.__module__ == 'orjson'
+        assert json.backend.dumps.__module__ == 'orjson'
+
+
+@pytest.mark.parametrize(
+    'backend',
+    ['builtin', 'ujson', 'rapid', 'simple', 'orjson']
+)
 def test_serialize_deserialize(backend):
+    if orjson is None:
+        with pytest.raises(ImportError):
+            json.use(backend)
+        return
+
     json.use(backend)
 
     t = TERMINATION.decode()
@@ -107,8 +149,16 @@ def test_serialize_deserialize(backend):
         json.deserialize(s + t + bad + t)
 
 
-@pytest.mark.parametrize('backend', ('builtin', 'ujson', 'rapid', 'simple', 'orjson'))
+@pytest.mark.parametrize(
+    'backend',
+    ['builtin', 'ujson', 'rapid', 'simple', 'orjson']
+)
 def test_deserialize_types(backend):
+    if orjson is None:
+        with pytest.raises(ImportError):
+            json.use(backend)
+        return
+
     json.use(backend)
     assert json.deserialize('{"x":1}')[0] == {'x': 1}
     assert json.deserialize(b'{"x":1}')[0] == {'x': 1}
