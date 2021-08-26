@@ -1,6 +1,8 @@
 """
 Command line interface for the ``delete`` command.
 
+.. versionadded:: 0.6
+
 To see the help documentation, run the following command in a terminal::
 
    msl-network delete --help
