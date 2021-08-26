@@ -273,9 +273,8 @@ def test_echo_json_not_serializable_synchronous():
     assert k['x'] == 1
 
     # send a complex number
-    with raises(TypeError) as exc:
+    with raises(TypeError, match=r'not JSON serializable'):
         e.echo(1+2j)
-    assert str(exc.value).endswith('not JSON serializable')
 
     # make sure that the cxn._futures dict is empty so that we can send a valid request
     a, k = e.echo(1)
@@ -300,9 +299,8 @@ def test_echo_json_not_serializable_asynchronous():
 
     # send a complex number
     future = e.echo(1+2j, asynchronous=True)
-    with raises(TypeError) as exc:
+    with raises(TypeError, match=r'not JSON serializable'):
         cxn.send_pending_requests()
-    assert str(exc.value).endswith('not JSON serializable')
 
     # make sure that the cxn._futures dict is empty so that we can send a valid request
     future = e.echo(1, asynchronous=True)
@@ -342,12 +340,10 @@ def test_max_clients():
     math1 = client1.link('BasicMath')
     assert math1.add(5, -3) == 2
     client2 = client1.spawn('Client2')
-    with raises(MSLNetworkError) as err:
+    with raises(MSLNetworkError, match=r'PermissionError: The maximum number of Clients'):
         client2.link('Echo')
-    assert str(err.value).strip().startswith('PermissionError: The maximum number of Clients')
-    with raises(MSLNetworkError) as err:
+    with raises(MSLNetworkError, match=r'PermissionError: The maximum number of Clients'):
         client2.link('BasicMath')
-    assert str(err.value).strip().startswith('PermissionError: The maximum number of Clients')
     client1.disconnect()  # Echo and BasicMath are no longer linked with client1
     echo2 = client2.link('Echo')
     assert echo2.echo(9.9)[0][0] == 9.9
@@ -364,9 +360,8 @@ def test_max_clients():
         links.append(spawns[-1].link('Echo'))
         assert links[-1].echo(i)[0][0] == i
     client6 = cxn.spawn('Client6')
-    with raises(MSLNetworkError) as err:
+    with raises(MSLNetworkError, match=r'PermissionError: The maximum number of Clients'):
         client6.link('Echo')
-    assert str(err.value).strip().startswith('PermissionError: The maximum number of Clients')
     assert len(cxn.manager()['clients']) == len(spawns) + 2
     for spawn in spawns:
         spawn.disconnect()

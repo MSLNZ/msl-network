@@ -11,9 +11,8 @@ from msl.network import connect, cryptography, MSLNetworkError
 def test_wrong_port():
     manager = helper.ServiceStarter()
 
-    with pytest.raises(MSLNetworkError) as e:
+    with pytest.raises(MSLNetworkError, match=r'[refused|failed]'):
         connect(port=manager.get_available_port())
-    assert e.match('[refused|failed]')
 
     manager.shutdown()
 
@@ -26,9 +25,8 @@ def test_wrong_certificate():
     cryptography.generate_certificate(path=path)
     kwargs = manager.kwargs.copy()
     kwargs['certfile'] = path
-    with pytest.raises(MSLNetworkError) as e:
+    with pytest.raises(MSLNetworkError, match=r'CERTIFICATE_VERIFY_FAILED'):
         connect(**kwargs, timeout=5)
-    assert e.match('CERTIFICATE_VERIFY_FAILED')
     os.remove(path)
 
     manager.shutdown()
@@ -40,9 +38,8 @@ def test_tls_enabled():
     # connecting with TLS disabled fails
     kwargs = manager.kwargs.copy()
     kwargs['disable_tls'] = True
-    with pytest.raises(TimeoutError) as e:
+    with pytest.raises(TimeoutError, match=r'You have TLS disabled'):
         connect(**kwargs, timeout=5)
-    assert e.match('You have TLS disabled')
 
     manager.shutdown()
 
@@ -53,9 +50,8 @@ def test_tls_disabled():
     # connecting with TLS enabled fails
     kwargs = manager.kwargs.copy()
     kwargs['disable_tls'] = False
-    with pytest.raises(MSLNetworkError) as e:
+    with pytest.raises(MSLNetworkError, match=r'disable_tls=True'):
         connect(**kwargs, timeout=5)
-    assert e.match('disable_tls=True')
 
     manager.shutdown()
 
@@ -66,9 +62,8 @@ def test_invalid_manager_password():
     # connecting with the wrong Manager password fails
     kwargs = manager.kwargs.copy()
     kwargs['password_manager'] = 'xxxxxxxxxxxxxxxx'
-    with pytest.raises(MSLNetworkError) as e:
+    with pytest.raises(MSLNetworkError, match=r'Wrong Manager password'):
         connect(**kwargs, timeout=5)
-    assert e.match('Wrong Manager password')
 
     manager.shutdown()
 
@@ -85,15 +80,13 @@ def test_invalid_login():
     # connecting with an invalid username fails
     kwargs = manager.kwargs.copy()
     kwargs['username'] = 'xxxxxxxxxxxxx'
-    with pytest.raises(MSLNetworkError) as e:
+    with pytest.raises(MSLNetworkError, match=r'Unregistered username'):
         connect(**kwargs, timeout=5)
-    assert e.match('Unregistered username')
 
     # connecting with a valid username but the wrong password fails
     kwargs = manager.kwargs.copy()
     kwargs['password'] = 'xxxxxxxxxxxxx'
-    with pytest.raises(MSLNetworkError) as e:
+    with pytest.raises(MSLNetworkError, match=r'Wrong login password'):
         connect(**kwargs, timeout=5)
-    assert e.match('Wrong login password')
 
     manager.shutdown()

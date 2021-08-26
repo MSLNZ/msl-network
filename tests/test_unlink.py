@@ -29,16 +29,14 @@ def test_unlink_client_max1():
     assert link1b.echo(1, x=2) == [[1], {'x': 2}]
 
     # another Client cannot link
-    with pytest.raises(MSLNetworkError) as err:
+    with pytest.raises(MSLNetworkError, match=r'The maximum number of Clients are already linked'):
         cxn2.link('Echo')
-    assert 'The maximum number of Clients are already linked' in str(err.value)
 
     link1.unlink()
     assert repr(link1).startswith("<Un-Linked from Echo[")
     assert link1._client is None
-    with pytest.raises(AttributeError) as err:
+    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
         link1.echo(1)
-    assert str(err.value).startswith("'NoneType' object has no attribute")
 
     # another Client can now link
     link2 = cxn2.link('Echo')
@@ -47,9 +45,8 @@ def test_unlink_client_max1():
 
     link2.unlink()
     assert link2._client is None
-    with pytest.raises(AttributeError) as err:
+    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
         link2.echo(1)
-    assert str(err.value).startswith("'NoneType' object has no attribute")
 
     # un-linking multiple times is okay
     for i in range(20):
@@ -76,15 +73,13 @@ def test_unlink_client_max10():
     cxn = connect(**services.kwargs)
 
     # another Client cannot link
-    with pytest.raises(MSLNetworkError) as err:
+    with pytest.raises(MSLNetworkError, match=r'The maximum number of Clients are already linked'):
         cxn.link('Echo')
-    assert 'The maximum number of Clients are already linked' in str(err.value)
 
     links[0].unlink()
     assert links[0]._client is None
-    with pytest.raises(AttributeError) as err:
+    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
         links[0].echo(1)
-    assert str(err.value).startswith("'NoneType' object has no attribute")
 
     # another Client can now link
     link2 = cxn.link('Echo')
@@ -93,9 +88,8 @@ def test_unlink_client_max10():
 
     link2.unlink()
     assert link2._client is None
-    with pytest.raises(AttributeError) as err:
+    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
         link2.echo(1)
-    assert str(err.value).startswith("'NoneType' object has no attribute")
 
     services.shutdown(cxn)
 
@@ -135,15 +129,13 @@ def test_unlink_linkedclient_max10():
         assert link.echo(1, x=2) == [[1], {'x': 2}]
 
     # creating another LinkedClient is not allowed
-    with pytest.raises(MSLNetworkError) as err:
+    with pytest.raises(MSLNetworkError, match=r'The maximum number of Clients are already linked'):
         LinkedClient('ShutdownableEcho', port=port, name='foobar10')
-    assert 'The maximum number of Clients are already linked' in str(err.value)
 
     linked_clients[0].unlink()
     assert linked_clients[0]._link is None
-    with pytest.raises(AttributeError) as err:
+    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
         linked_clients[0].echo(1)
-    assert str(err.value).startswith("'NoneType' object has no attribute")
 
     # another LinkedClient can now be created
     link2 = LinkedClient('ShutdownableEcho', port=port, name='foobar10')
@@ -154,9 +146,8 @@ def test_unlink_linkedclient_max10():
     link2.unlink()
     assert link2._link is None
     assert repr(link2).startswith('<Un-Linked[name=foobar10]')
-    with pytest.raises(AttributeError) as err:
+    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
         link2.echo(1)
-    assert str(err.value).startswith("'NoneType' object has no attribute")
 
     # un-linking the LinkedClient multiple times is okay
     for i in range(20):
