@@ -21,10 +21,6 @@ jobs:
         include:
           - python-version: 3.x
             os: windows
-            architecture: x86
-            json: BUILTIN
-          - python-version: 3.x
-            os: windows
             architecture: x64
             json: UJSON
           - python-version: 3.x
@@ -39,6 +35,10 @@ jobs:
             os: windows
             architecture: x64
             json: RAPIDJSON
+          - python-version: 3.x
+            os: windows
+            architecture: x86
+            json: BUILTIN
 
     steps:
       - name: Checkout repository
