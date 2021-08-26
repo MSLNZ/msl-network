@@ -1,62 +1,192 @@
 """
-This module is used as the `JSON <https://www.json.org/>`_ (de)serializer.
+This module is used as the JSON_ (de)serializer.
+
+.. _JSON: https://www.json.org/
 """
-import time
+import os
+from enum import Enum
+from time import perf_counter
 
 from .utils import logger
-from .constants import (
-    JSON,
-    JSONPackage,
-)
+from .constants import TERMINATION
 
 
-if JSON == JSONPackage.BUILTIN:
-    import json
-    _PKG = 'json'
-    kwargs_loads = {}
-    kwargs_dumps = {'ensure_ascii': False}
-elif JSON == JSONPackage.ULTRA:
-    import ujson as json
-    _PKG = 'ujson'
-    kwargs_loads = {}
-    kwargs_dumps = {
-        'encode_html_chars': False,
-        'ensure_ascii': False,
-        'escape_forward_slashes': False,
-        'indent': 0,
-    }
-elif JSON == JSONPackage.SIMPLE:
-    import simplejson as json
-    _PKG = 'simplejson'
-    kwargs_loads = {}
-    kwargs_dumps = {'ensure_ascii': False}
-elif JSON == JSONPackage.RAPID:
-    import rapidjson as json
-    _PKG = 'rapidjson'
-    kwargs_loads = {'number_mode': json.NM_NATIVE}
-    kwargs_dumps = {'ensure_ascii': False, 'number_mode': json.NM_NATIVE}
-elif JSON == JSONPackage.YAJL:
-    import yajl as json
-    _PKG = 'yajl'
-    kwargs_loads = {}
-    kwargs_dumps = {}
-else:
-    raise ValueError('{} is not a supported JSON Package'.format(JSON))
+class Package(Enum):
+    """Supported Python packages for (de)serializing JSON_ objects.
+
+    By default, the builtin :mod:`json` module is used.
+
+    To change which JSON_ package to use you can call :func:`.use` to set
+    the backend during runtime or you can specify an ``MSL_NETWORK_JSON``
+    environment variable as the default backend. For example, creating an
+    environment variable named ``MSL_NETWORK_JSON`` and setting its value
+    to be ``ULTRA`` would use UltraJSON_ to (de)serialize JSON_ objects.
+
+    .. _UltraJSON: https://pypi.python.org/pypi/ujson
+    .. _RapidJSON: https://pypi.python.org/pypi/python-rapidjson
+    .. _simplejson: https://pypi.python.org/pypi/simplejson
+    .. _orjson: https://pypi.org/project/orjson/
+
+    .. versionchanged:: 0.6
+       Moved from the :mod:`msl.network.constants` module and renamed.
+       Added ``UJSON`` as an alias for UltraJSON_.
+       Added ``OR`` (and alias ``ORJSON``) for orjson_.
+       Removed ``YAJL``.
+
+    """
+    BUILTIN = 'BUILTIN'
+    ULTRA = 'ULTRA'  #: UltraJSON_
+    UJSON = 'ULTRA'  #: UltraJSON_
+    RAPID = 'RAPID'  #: RapidJSON_
+    SIMPLE = 'SIMPLE'  #: simplejson_
+    OR = 'OR'  #: orjson_
+    ORJSON = 'OR'  #: orjson_
+
+
+def use(value):
+    """Set which JSON backend to use.
+
+    .. versionadded:: 0.6
+
+    Parameters
+    ----------
+    value : :class:`.Package` or :class:`str`
+        An enum value or member name.
+
+    Examples
+    --------
+    >>> from msl.network import json
+    >>> json.use(json.Package.UJSON)
+    >>> json.use('ujson')
+    """
+    backend.use(value)
 
 
 def serialize(obj):
-    """Serialize `obj` to a JSON-formatted :class:`str`."""
-    t0 = time.perf_counter()
-    data = json.dumps(obj, **kwargs_dumps)
-    logger.debug('{}.dumps took {:.3g} seconds'.format(_PKG, time.perf_counter() - t0))
-    return data
+    """Serialize an object as a JSON-formatted string.
+
+    Parameters
+    ----------
+    obj
+        A JSON-serializable object.
+
+    Returns
+    -------
+    :class:`str`
+        A JSON-formatted string.
+    """
+    t0 = perf_counter()
+    out = backend.dumps(obj, **backend.kwargs_dumps)
+    logger.debug('{}.dumps took {:.3g} seconds'.format(backend.name, perf_counter() - t0))
+    if isinstance(out, bytes):
+        return backend.decode(out)
+    return out
 
 
 def deserialize(s):
-    """Deserialize `s` to a Python object."""
-    t0 = time.perf_counter()
+    """Deserialize a JSON-formatted string to Python objects.
+
+    .. versionchanged:: 0.6
+       Return a :class:`list` of calls to ``loads`` instead of a
+       single call to ``loads``.
+
+    Parameters
+    ----------
+    s : :class:`str`, :class:`bytes` or :class:`bytearray`
+        A JSON-formatted string.
+
+    Returns
+    -------
+    :class:`list`
+        A list of deserialized Python objects. A :class:`list` is returned
+        to handle multiple requests/replies contained within the same
+        network packet.
+    """
     if isinstance(s, (bytes, bytearray)):
-        s = s.decode('utf-8', 'surrogatepass')
-    data = json.loads(s, **kwargs_loads)
-    logger.debug('{}.loads took {:.3g} seconds'.format(_PKG, time.perf_counter() - t0))
-    return data
+        s = backend.decode(s)
+
+    t0 = perf_counter()
+
+    try:
+        # most of the time a single request/reply is received, so assume
+        # this will work before splitting by the termination character
+        obj = [backend.loads(s, **backend.kwargs_loads)]
+    except ValueError:
+        obj = [backend.loads(item, **backend.kwargs_loads)
+               for item in s.split(backend.term) if item]
+
+    logger.debug('{}.loads took {:.3g} seconds'.format(
+        backend.name, perf_counter() - t0))
+
+    return obj
+
+
+class _Backend(object):
+
+    def __init__(self, value):
+        self.loads = None
+        self.dumps = None
+        self.name = ''
+        self.kwargs_loads = {}
+        self.kwargs_dumps = {}
+        self.use(value)
+        self.term = self.decode(TERMINATION)
+
+    def use(self, value):
+        if isinstance(value, str):
+            value = Package[value.upper()]
+        if value == Package.BUILTIN:
+            import json
+            self.loads = json.loads
+            self.dumps = json.dumps
+            self.name = 'json'
+            self.kwargs_loads = {}
+            self.kwargs_dumps = {'ensure_ascii': False}
+        elif value == Package.ULTRA:
+            import ujson
+            self.loads = ujson.loads
+            self.dumps = ujson.dumps
+            self.name = 'ujson'
+            self.kwargs_loads = {}
+            self.kwargs_dumps = {
+                'ensure_ascii': False,
+                'encode_html_chars': False,
+                'escape_forward_slashes': False,
+                'indent': 0,
+            }
+        elif value == Package.SIMPLE:
+            import simplejson
+            self.loads = simplejson.loads
+            self.dumps = simplejson.dumps
+            self.name = 'simplejson'
+            self.kwargs_loads = {}
+            self.kwargs_dumps = {'ensure_ascii': False}
+        elif value == Package.RAPID:
+            import rapidjson
+            self.loads = rapidjson.loads
+            self.dumps = rapidjson.dumps
+            self.name = 'rapidjson'
+            self.kwargs_loads = {
+                'number_mode': rapidjson.NM_NATIVE
+            }
+            self.kwargs_dumps = {
+                'ensure_ascii': False,
+                'number_mode': rapidjson.NM_NATIVE
+            }
+        elif value == Package.ORJSON:
+            import orjson
+            self.loads = orjson.loads
+            self.dumps = orjson.dumps
+            self.name = 'orjson'
+            self.kwargs_loads = {}
+            self.kwargs_dumps = {}
+        else:
+            assert False, 'Unhandled JSON backend {!r}'.format(value)
+
+    @staticmethod
+    def decode(b):
+        return b.decode('utf-8', 'surrogatepass')
+
+
+# initialize the default backend
+backend = _Backend(os.getenv('MSL_NETWORK_JSON', default='BUILTIN'))

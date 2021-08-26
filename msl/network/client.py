@@ -547,27 +547,27 @@ class Client(Network, asyncio.Protocol):
             else:
                 logger.debug(buffer_bytes)
 
-        data = deserialize(buffer_bytes)
-        if data['error']:
-            self._latest_error = '\n'.join(['\n'] + data['traceback'] + [data['message']])
-            for future in self._futures.values():
-                future.cancel()
-        elif not self._identity_successful:
-            self.send_reply(self._transport, getattr(self, data['attribute'])(*data['args'], **data['kwargs']))
-            self._identity_successful = data['attribute'] == 'identity'
-        elif data['uuid']:
-            if data['uuid'] == NOTIFICATION_UUID:
-                for link in self._links:
-                    if link.service_name == data['service']:
-                        args, kwargs = data['result']
-                        link.notification_handler(*args, **kwargs)
+        for data in deserialize(buffer_bytes):
+            if data['error']:
+                self._latest_error = '\n'.join(['\n'] + data['traceback'] + [data['message']])
+                for future in self._futures.values():
+                    future.cancel()
+            elif not self._identity_successful:
+                self.send_reply(self._transport, getattr(self, data['attribute'])(*data['args'], **data['kwargs']))
+                self._identity_successful = data['attribute'] == 'identity'
+            elif data['uuid']:
+                if data['uuid'] == NOTIFICATION_UUID:
+                    for link in self._links:
+                        if link.service_name == data['service']:
+                            args, kwargs = data['result']
+                            link.notification_handler(*args, **kwargs)
+                else:
+                    self._futures[data['uuid']].set_result(data['result'])
             else:
-                self._futures[data['uuid']].set_result(data['result'])
-        else:
-            # performing an admin_request
-            assert len(self._futures) == 1, 'uuid not defined and {} futures are available'.format(len(self._futures))
-            uid = list(self._futures.keys())[0]
-            self._futures[uid].set_result(data)
+                # performing an admin_request
+                assert len(self._futures) == 1, 'uuid not defined and {} futures are available'.format(len(self._futures))
+                uid = list(self._futures.keys())[0]
+                self._futures[uid].set_result(data)
 
     def password(self, name):
         """

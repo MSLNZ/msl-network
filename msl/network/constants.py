@@ -1,9 +1,8 @@
 """
-Constants used by the **MSL-Network** package.
+Constants that are used by the MSL-Network package.
 """
 import os
 import sys
-import enum
 import socket
 
 PORT = 1875
@@ -50,38 +49,6 @@ NOTIFICATION_UUID = 'notification'
 SHUTDOWN_SERVICE = 'shutdown_service'
 
 SHUTDOWN_MANAGER = 'shutdown_manager'
-
-
-class JSONPackage(enum.Enum):
-    """
-    Python packages for (de)serializing `JSON <https://www.json.org/>`_ data.
-
-    .. _UltraJSON: https://pypi.python.org/pypi/ujson
-    .. _RapidJSON: https://pypi.python.org/pypi/python-rapidjson
-    .. _simplejson: https://pypi.python.org/pypi/simplejson
-    .. _Yet-Another-Json-Library: https://pypi.python.org/pypi/yajl
-
-    .. versionchanged:: 0.6
-       Added ``UJSON`` as an alias for UltraJSON_.
-
-    """
-    BUILTIN = 'BUILTIN'
-    ULTRA = 'ULTRA'  #: UltraJSON_
-    UJSON = 'ULTRA'  #: UltraJSON_
-    RAPID = 'RAPID'  #: RapidJSON_
-    SIMPLE = 'SIMPLE'  #: simplejson_
-    YAJL = 'YAJL'  #: Yet-Another-Json-Library_
-
-
-JSON = JSONPackage[os.environ.get('MSL_NETWORK_JSON', 'BUILTIN').upper()]
-""":class:`str`: The Python package to use for (de)serializing JSON_ data.
-
-By default, the builtin :mod:`json` module is used. 
-
-To change which JSON_ package to use you can specify a ``MSL_NETWORK_JSON`` 
-environment variable. Possible values are in :class:`JSONPackage`. For example,
-setting ``MSL_NETWORK_JSON=ULTRA`` would use UltraJSON_ to (de)serialize JSON_ data.
-"""
 
 TERMINATION = b'\r\n'
 """:class:`bytes`: The sequence of bytes that signify the end of the data being sent.

@@ -10,14 +10,29 @@ Version 0.6.0.dev0 (in development)
   * support for Python 3.9
   * the :meth:`~msl.network.client.Client.clear_futures_and_requests` method
   * the ``delete`` command-line argument to delete files that are created by MSL-Network
+  * `orjson <https://pypi.org/project/orjson/>`_ as a JSON backend option
+  * ``UJSON`` as a alias for selecting the `UltraJSON <https://pypi.python.org/pypi/ujson>`_
+    backend
+
+- Changed
+
+  * can now change which JSON backend to use during runtime by calling the
+    :func:`msl.network.json.use` function
+  * moved the ``msl.network.constants.JSONPackage`` class to
+    :class:`msl.network.json.Package`
+  * :func:`msl.network.json.deserialize` can now handle multiple requests/replies
+    contained within the same network packet
 
 - Fixed
 
-  * an ``AttributeError`` could be raised when requesting the identity of a `Service`
+  * an ``AttributeError`` could be raised when requesting the identity of a
+    :class:`msl.network.service.Service`
 
 - Removed
 
-  * the `utils.new_selector_event_loop` function
+  * the ``utils.new_selector_event_loop`` function
+  * the ``msl.network.constants.JSON`` attribute
+  * `YAJL <https://pypi.org/project/yajl/>`_ as a JSON backend option
 
 Version 0.5.0 (2020.03.18)
 ==========================

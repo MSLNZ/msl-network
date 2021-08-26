@@ -147,7 +147,14 @@ def get_version():
 
 install_requires = ['cryptography', 'paramiko']
 
-tests_require = ['pytest', 'pytest-cov']
+tests_require = [
+    'pytest',
+    'pytest-cov',
+    'orjson',
+    'python-rapidjson',
+    'simplejson',
+    'ujson',
+]
 
 docs_require = ['sphinx', 'sphinx_rtd_theme']
 
