@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
+import os
 import sys
 
 from msl.network import json
-from msl.network.constants import TERMINATION
+from msl.network.constants import (
+    TERMINATION,
+    ENCODING,
+)
 
 import pytest
 try:
@@ -26,7 +30,14 @@ notification = {
     'error': False,
 }
 
-initial_backend = json.backend.name
+initial_backend = json.backend.enum
+
+
+def setup():
+    env = os.getenv('MSL_NETWORK_JSON')
+    if env:
+        json.use(env)
+        assert json.backend.enum == json.Package[env.upper()]
 
 
 def teardown():
@@ -51,6 +62,7 @@ def test_use_json(backend):
     assert json.backend.name == 'json'
     assert json.backend.loads.__module__ == 'json'
     assert json.backend.dumps.__module__ == 'json'
+    assert json.backend.enum == json.Package.BUILTIN
 
 
 @pytest.mark.parametrize(
@@ -62,6 +74,7 @@ def test_use_ujson(backend):
     assert json.backend.name == 'ujson'
     assert json.backend.loads.__module__ == 'ujson'
     assert json.backend.dumps.__module__ == 'ujson'
+    assert json.backend.enum == json.Package.UJSON
 
 
 @pytest.mark.parametrize(
@@ -74,6 +87,7 @@ def test_use_simplejson(backend):
     assert json.backend.name == 'simplejson'
     assert json.backend.loads.__module__ == 'simplejson'
     assert json.backend.dumps.__module__ == 'simplejson'
+    assert json.backend.enum == json.Package.SIMPLEJSON
 
 
 @pytest.mark.parametrize(
@@ -86,6 +100,7 @@ def test_use_rapidjson(backend):
     assert json.backend.name == 'rapidjson'
     assert json.backend.loads.__module__ == 'rapidjson'
     assert json.backend.dumps.__module__ == 'rapidjson'
+    assert json.backend.enum == json.Package.RAPIDJSON
 
 
 @pytest.mark.skipif(orjson is None, reason='orjson is not installed')
@@ -96,6 +111,7 @@ def test_use_rapidjson(backend):
 def test_use_orjson(backend):
     json.use(backend)
     assert json.backend.name == 'orjson'
+    assert json.backend.enum == json.Package.ORJSON
     if sys.version_info[:2] > (3, 5):
         # __module__ returns None for Python 3.5
         assert json.backend.loads.__module__ == 'orjson'
@@ -114,7 +130,7 @@ def test_serialize_deserialize(backend):
 
     json.use(backend)
 
-    t = TERMINATION.decode()
+    t = TERMINATION.decode(ENCODING)
     r = json.serialize(reply)
     n = json.serialize(notification)
 

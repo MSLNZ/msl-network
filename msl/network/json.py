@@ -132,6 +132,7 @@ class _Backend(object):
     def __init__(self, value):
         self.loads = None
         self.dumps = None
+        self.enum = None
         self.name = ''
         self.kwargs_loads = {}
         self.kwargs_dumps = {}
@@ -145,13 +146,15 @@ class _Backend(object):
             import json
             self.loads = json.loads
             self.dumps = json.dumps
+            self.enum = Package.BUILTIN
             self.name = 'json'
             self.kwargs_loads = {}
             self.kwargs_dumps = {'ensure_ascii': False}
-        elif value == Package.ULTRA:
+        elif value == Package.UJSON:
             import ujson
             self.loads = ujson.loads
             self.dumps = ujson.dumps
+            self.enum = Package.UJSON
             self.name = 'ujson'
             self.kwargs_loads = {}
             self.kwargs_dumps = {
@@ -160,17 +163,19 @@ class _Backend(object):
                 'escape_forward_slashes': False,
                 'indent': 0,
             }
-        elif value == Package.SIMPLE:
+        elif value == Package.SIMPLEJSON:
             import simplejson
             self.loads = simplejson.loads
             self.dumps = simplejson.dumps
+            self.enum = Package.SIMPLEJSON
             self.name = 'simplejson'
             self.kwargs_loads = {}
             self.kwargs_dumps = {'ensure_ascii': False}
-        elif value == Package.RAPID:
+        elif value == Package.RAPIDJSON:
             import rapidjson
             self.loads = rapidjson.loads
             self.dumps = rapidjson.dumps
+            self.enum = Package.RAPIDJSON
             self.name = 'rapidjson'
             self.kwargs_loads = {
                 'number_mode': rapidjson.NM_NATIVE
@@ -183,6 +188,7 @@ class _Backend(object):
             import orjson
             self.loads = orjson.loads
             self.dumps = orjson.dumps
+            self.enum = Package.ORJSON
             self.name = 'orjson'
             self.kwargs_loads = {}
             self.kwargs_dumps = {}
