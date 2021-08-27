@@ -51,7 +51,7 @@ def test_use_raises():
         json.use('invalid')
 
     if orjson is None:
-        with pytest.raises(KeyError):
+        with pytest.raises(ImportError):
             json.use(json.Package.ORJSON)
 
 
