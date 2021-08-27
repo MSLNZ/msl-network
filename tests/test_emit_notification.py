@@ -45,13 +45,13 @@ def test_client_linkedclient_handlers():
     link_hb.set_heart_rate(10)
     link_hb.reset()
 
-    # the link will start to receive notifications 2 seconds earlier
+    # the link will start to receive notifications 5 seconds earlier
     link_hb.notification_handler = handler1
-    time.sleep(2)
+    time.sleep(5)
 
     lc_hb.reset()
     lc_hb.notification_handler = handler2
-    time.sleep(2)
+    time.sleep(5)
 
     assert len(values1)
     assert len(values2)
