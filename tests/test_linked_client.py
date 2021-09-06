@@ -1,4 +1,4 @@
-import helper
+import conftest
 
 import pytest
 
@@ -8,10 +8,10 @@ from msl.examples.network import Echo
 
 def test_linked_echo():
 
-    service = helper.ServiceStarter(Echo)
+    manager = conftest.Manager(Echo)
 
-    service.kwargs['name'] = 'foobar'
-    link = LinkedClient('Echo', **service.kwargs)
+    manager.kwargs['name'] = 'foobar'
+    link = LinkedClient('Echo', **manager.kwargs)
 
     args, kwargs = link.echo(1, 2, 3)
     assert len(args) == 3
@@ -42,4 +42,4 @@ def test_linked_echo():
     with pytest.raises(MSLNetworkError):
         link.does_not_exist()
 
-    service.shutdown(link.client)
+    manager.shutdown(connection=link.client)

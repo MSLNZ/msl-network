@@ -1,22 +1,28 @@
-"""
-This is module contains a helper class to allow one to
-easily start multiple Services that are used for testing purposes.
-"""
 import os
 import sys
 import time
-import tempfile
+import shutil
 import logging
 import asyncio
+import tempfile
 import subprocess
 from socket import socket
 from threading import Thread
 
-try:
-    from msl.network import cryptography, UsersTable, connect, constants
-except ImportError:
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
-    from msl.network import cryptography, UsersTable, connect, constants
+# create MSL_NETWORK_HOME before importing msl.network
+root_dir = os.path.join(tempfile.gettempdir(), '.msl')
+if os.path.isdir(root_dir):
+    shutil.rmtree(root_dir)
+home = os.path.join(root_dir, 'network')
+os.makedirs(home)
+os.environ['MSL_NETWORK_HOME'] = home
+
+from msl.network import (
+    connect,
+    constants,
+    cryptography,
+    UsersTable,
+)
 
 # suppress all logging message from being displayed
 logging.basicConfig(level=logging.CRITICAL+10)
@@ -30,15 +36,15 @@ if constants.IS_WINDOWS and sys.version_info[:2] >= (3, 8):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-class ServiceStarter(object):
+class Manager(object):
 
-    keyfile = tempfile.gettempdir() + '/msl-network-testing.key'
-    certfile = tempfile.gettempdir() + '/msl-network-testing.crt'
-    database = tempfile.gettempdir() + '/msl-network-testing.db'
-    logfile = tempfile.gettempdir() + '/msl-network-testing.log'
+    key_file = cryptography.get_default_key_path()
+    cert_file = cryptography.get_default_cert_path()
+    database = os.path.join(home, 'testing.db')
+    log_file = os.path.join(home, 'testing.log')
 
     def __init__(self, *service_classes, disable_tls=False, password_manager=None,
-                 auth_login=True, auth_hostname=False, **kwargs):
+                 auth_login=True, auth_hostname=False, cert_common_name=None, **kwargs):
         """Starts the Network Manager and all specified Services to use for testing.
 
         Parameters
@@ -58,8 +64,10 @@ class ServiceStarter(object):
         self.remove_files()
 
         key_pw = 'dummy pw!'  # use a password for the key.. just for fun
-        cryptography.generate_key(path=self.keyfile, password=key_pw, algorithm='ecc')
-        cryptography.generate_certificate(path=self.certfile, key_path=self.keyfile, key_password=key_pw)
+        cryptography.generate_key(path=self.key_file, password=key_pw, algorithm='ecc')
+        cryptography.generate_certificate(
+            path=self.cert_file, key_path=self.key_file, key_password=key_pw, name=cert_common_name
+        )
 
         # need a UsersTable with an administrator to be able to shutdown the Manager
         ut = UsersTable(database=self.database)
@@ -72,15 +80,15 @@ class ServiceStarter(object):
             'username': self.admin_username,
             'password': self.admin_password,
             'port': self.port,
-            'certfile': self.certfile,
+            'cert_file': self.cert_file,
             'disable_tls': disable_tls,
             'password_manager': password_manager,
         }
 
         # start the Network Manager in a subprocess
         command = [sys.executable, '-c', 'from msl.network import cli; cli.main()', 'start',
-                   '-p', str(self.port), '-c', self.certfile, '-k', self.keyfile, '-D', key_pw,
-                   '-d', self.database, '-l', self.logfile]
+                   '-p', str(self.port), '-c', self.cert_file, '-k', self.key_file, '-D', key_pw,
+                   '-d', self.database, '-l', self.log_file]
         if disable_tls:
             command.append('--disable-tls')
         if password_manager:
@@ -94,21 +102,24 @@ class ServiceStarter(object):
         self._manager_proc = subprocess.Popen(command)
         self.wait_start(self.port, 'Cannot start Manager')
 
-        # start all Service's
-        cxn = connect(**self.kwargs)  # checks that the Service is running
+        # start all Services
         self._service_threads = {}
-        for cls in service_classes:
-            service = cls(**kwargs)
-            thread = Thread(target=service.start, kwargs=self.kwargs, daemon=True)
-            thread.start()
-            start_time = time.time()
-            while service._name not in cxn.manager()['services']:
-                time.sleep(0.1)
-                if time.time() - start_time > 30:
-                    self.shutdown(cxn)
-                    raise RuntimeError('Cannot start {}'.format(service))
-            self._service_threads[service] = thread
-        cxn.disconnect()
+        if service_classes:
+            cxn = connect(**self.kwargs)
+            for cls in service_classes:
+                name = cls.__name__
+                service = cls(**kwargs)
+                thread = Thread(target=service.start, kwargs=self.kwargs, daemon=True)
+                thread.start()
+                t0 = time.time()
+                while name not in cxn.manager()['services']:
+                    time.sleep(0.1)
+                    if time.time() - t0 > 30:
+                        in_use = self.is_port_in_use(service.port)
+                        self.shutdown(cxn)
+                        raise RuntimeError('Cannot start {} service. Is port in use? {}'.format(name, in_use))
+                self._service_threads[service] = thread
+            cxn.disconnect()
 
     def shutdown(self, connection=None):
         # shutdown the Manager and delete the dummy files that were created
@@ -132,7 +143,7 @@ class ServiceStarter(object):
     @staticmethod
     def wait_start(port, message):
         start_time = time.time()
-        while not ServiceStarter.is_port_in_use(port):
+        while not Manager.is_port_in_use(port):
             if time.time() - start_time > 30:
                 raise RuntimeError(message)
             time.sleep(0.1)
@@ -140,7 +151,7 @@ class ServiceStarter(object):
     @staticmethod
     def wait_shutdown(port, message):
         start_time = time.time()
-        while ServiceStarter.is_port_in_use(port):
+        while Manager.is_port_in_use(port):
             if time.time() - start_time > 30:
                 raise RuntimeError(message)
             time.sleep(0.1)
@@ -153,8 +164,7 @@ class ServiceStarter(object):
             cmd = ['lsof', '-nP', '-iTCP:%d' % port]
         else:
             cmd = ['netstat', '-an']
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out = p.communicate()[0]
+        out = subprocess.check_output(cmd)
         return out.find(b':%d ' % port) > 0
 
     @staticmethod
@@ -165,14 +175,10 @@ class ServiceStarter(object):
 
     @staticmethod
     def remove_files():
-        files = (ServiceStarter.keyfile, ServiceStarter.certfile, ServiceStarter.database, ServiceStarter.logfile)
+        files = (Manager.key_file, Manager.cert_file,
+                 Manager.database, Manager.log_file)
         for file in files:
-            if os.path.isfile(file):
-                # the logging file might not have closed yet
-                if file == ServiceStarter.logfile:
-                    try:
-                        os.remove(file)
-                    except PermissionError:
-                        pass
-                else:
-                    os.remove(file)
+            try:
+                os.remove(file)
+            except OSError:
+                pass

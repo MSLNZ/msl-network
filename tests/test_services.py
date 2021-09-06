@@ -4,7 +4,7 @@ import asyncio
 
 from pytest import approx, raises
 
-import helper  # located in the tests folder
+import conftest
 
 from msl.network import connect
 from msl.network.exceptions import MSLNetworkError
@@ -12,9 +12,9 @@ from msl.examples.network import BasicMath, MyArray, Echo
 
 
 def test_echo():
-    services = helper.ServiceStarter(Echo)
+    manager = conftest.Manager(Echo)
 
-    cxn = connect(**services.kwargs)
+    cxn = connect(**manager.kwargs)
 
     echo = cxn.link('Echo')
 
@@ -40,13 +40,13 @@ def test_echo():
     assert kwargs['y'] == 5
     assert kwargs['z'] == 6
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_asynchronous_synchronous_simultaneous():
-    services = helper.ServiceStarter(BasicMath)
+    manager = conftest.Manager(BasicMath)
 
-    cxn = connect(**services.kwargs)
+    cxn = connect(**manager.kwargs)
 
     bm = cxn.link('BasicMath')
 
@@ -63,13 +63,13 @@ def test_asynchronous_synchronous_simultaneous():
     # now we can send a synchronous request
     assert bm.subtract(1, 1) == 0
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_basic_math_synchronous():
-    services = helper.ServiceStarter(BasicMath)
+    manager = conftest.Manager(BasicMath)
 
-    cxn = connect(**services.kwargs)
+    cxn = connect(**manager.kwargs)
 
     bm = cxn.link('BasicMath')
 
@@ -92,13 +92,13 @@ def test_basic_math_synchronous():
 
     assert time.perf_counter() - t0 > minimum_dt
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_basic_math_asynchronous():
-    services = helper.ServiceStarter(BasicMath)
+    manager = conftest.Manager(BasicMath)
 
-    cxn = connect(**services.kwargs)
+    cxn = connect(**manager.kwargs)
     bm = cxn.link('BasicMath')
 
     # since we are executing the commands asynchronously we expect all
@@ -129,13 +129,13 @@ def test_basic_math_asynchronous():
     assert err.result()
     assert power.result() == approx(123.45 ** 3)
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_array_synchronous():
-    services = helper.ServiceStarter(MyArray)
+    manager = conftest.Manager(MyArray)
 
-    cxn = connect(**services.kwargs)
+    cxn = connect(**manager.kwargs)
 
     array = cxn.link('MyArray')
     out1 = array.linspace(-1, 1, 100)
@@ -148,14 +148,14 @@ def test_array_synchronous():
     assert out2[0] == approx(2)
     assert out2[-1] == approx(-2)
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_basic_math_and_array_asynchronous():
 
-    services = helper.ServiceStarter(BasicMath, MyArray)
+    manager = conftest.Manager(BasicMath, MyArray)
 
-    cxn = connect(**services.kwargs)
+    cxn = connect(**manager.kwargs)
 
     bm = cxn.link('BasicMath')
     array = cxn.link('MyArray')
@@ -168,14 +168,14 @@ def test_basic_math_and_array_asynchronous():
     assert power.result() == approx(math.pi ** math.exp(1))
     assert len(linspace.result()) == 1e6
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_spawn_basic_math_and_array_asynchronous():
 
-    services = helper.ServiceStarter(BasicMath, MyArray)
+    manager = conftest.Manager(BasicMath, MyArray)
 
-    cxn1 = connect(**services.kwargs)
+    cxn1 = connect(**manager.kwargs)
     cxn2 = cxn1.spawn()
 
     bm = cxn1.link('BasicMath')
@@ -193,7 +193,7 @@ def test_spawn_basic_math_and_array_asynchronous():
     assert cxn2.address_manager is not None
     assert cxn2.port is not None
 
-    services.shutdown(cxn1)
+    manager.shutdown(connection=cxn1)
 
     # shutting down the manager using cxn1 will also disconnect cxn2
     assert cxn2.address_manager is None
@@ -201,21 +201,21 @@ def test_spawn_basic_math_and_array_asynchronous():
 
 
 def test_private_retrieval():
-    services = helper.ServiceStarter(BasicMath)
+    manager = conftest.Manager(BasicMath)
 
-    cxn = connect(**services.kwargs)
+    cxn = connect(**manager.kwargs)
     bm = cxn.link('BasicMath')
 
-    assert bm.password('any name') != services.admin_password
+    assert bm.password('any name') != manager.admin_password
     with raises(MSLNetworkError):
         bm._password()
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_basic_math_timeout_synchronous():
-    services = helper.ServiceStarter(BasicMath)
-    cxn = connect(**services.kwargs)
+    manager = conftest.Manager(BasicMath)
+    cxn = connect(**manager.kwargs)
     bm = cxn.link('BasicMath')
 
     a, b = 2, 10
@@ -231,12 +231,12 @@ def test_basic_math_timeout_synchronous():
     with raises(TimeoutError):
         bm.power(a, b, timeout=3)
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_basic_math_timeout_asynchronous():
-    services = helper.ServiceStarter(BasicMath)
-    cxn = connect(**services.kwargs)
+    manager = conftest.Manager(BasicMath)
+    cxn = connect(**manager.kwargs)
     bm = cxn.link('BasicMath')
 
     a, b = 2, 10
@@ -258,12 +258,12 @@ def test_basic_math_timeout_asynchronous():
         # must wait for all futures to finish, so the `power` method is taking too long
         cxn.send_pending_requests(timeout=3)
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_echo_json_not_serializable_synchronous():
-    services = helper.ServiceStarter(Echo)
-    cxn = connect(**services.kwargs)
+    manager = conftest.Manager(Echo)
+    cxn = connect(**manager.kwargs)
 
     e = cxn.link('Echo')
 
@@ -281,12 +281,12 @@ def test_echo_json_not_serializable_synchronous():
     assert a[0] == 1
     assert not k
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_echo_json_not_serializable_asynchronous():
-    services = helper.ServiceStarter(Echo)
-    cxn = connect(**services.kwargs)
+    manager = conftest.Manager(Echo)
+    cxn = connect(**manager.kwargs)
 
     e = cxn.link('Echo')
 
@@ -309,7 +309,7 @@ def test_echo_json_not_serializable_asynchronous():
     assert a[0] == 1
     assert not k
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_cannot_specify_multiple_passwords():
@@ -320,8 +320,8 @@ def test_cannot_specify_multiple_passwords():
 
 def test_max_clients():
     # no limit
-    services = helper.ServiceStarter(Echo)
-    cxn = connect(**services.kwargs)
+    manager = conftest.Manager(Echo)
+    cxn = connect(**manager.kwargs)
     spawns, links = [], []
     for i in range(40):  # pretend that 40 == infinity (approximately the limit for macOS)
         spawns.append(cxn.spawn('Client%d' % i))
@@ -330,11 +330,11 @@ def test_max_clients():
     assert len(cxn.manager()['clients']) == len(spawns) + 1
     for spawn in spawns:
         spawn.disconnect()
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
     # only 1 Client at a time
-    services = helper.ServiceStarter(Echo, BasicMath, max_clients=1)
-    client1 = connect(**services.kwargs)
+    manager = conftest.Manager(Echo, BasicMath, max_clients=1)
+    client1 = connect(**manager.kwargs)
     echo1 = client1.link('Echo')
     assert echo1.echo('abc123')[0][0] == 'abc123'
     math1 = client1.link('BasicMath')
@@ -349,11 +349,11 @@ def test_max_clients():
     assert echo2.echo(9.9)[0][0] == 9.9
     math2 = client2.link('BasicMath')
     assert math2.add(9, 5) == 14
-    services.shutdown(client2)
+    manager.shutdown(connection=client2)
 
     # only 5 Clients at a time
-    services = helper.ServiceStarter(Echo, max_clients=5)
-    cxn = connect(**services.kwargs)
+    manager = conftest.Manager(Echo, max_clients=5)
+    cxn = connect(**manager.kwargs)
     spawns, links = [], []
     for i in range(5):
         spawns.append(cxn.spawn('Client%d' % i))
@@ -366,21 +366,21 @@ def test_max_clients():
     for spawn in spawns:
         spawn.disconnect()
     client6.disconnect()
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
     # the same Client link multiple times to the same Service
-    services = helper.ServiceStarter(Echo, max_clients=1)
-    cxn = connect(**services.kwargs)
+    manager = conftest.Manager(Echo, max_clients=1)
+    cxn = connect(**manager.kwargs)
     link1 = cxn.link('Echo')
     assert link1.echo('foo')[0][0] == 'foo'
     link2 = cxn.link('Echo')
     assert link2.echo('bar')[0][0] == 'bar'
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
 
 def test_ignore_attributes():
-    services = helper.ServiceStarter(MyArray, ignore_attributes=['linspace'])
-    cxn = connect(**services.kwargs)
+    manager = conftest.Manager(MyArray, ignore_attributes=['linspace'])
+    cxn = connect(**manager.kwargs)
 
     # 'linspace' is not a publicly know attribute
     identity = cxn.manager()['services']['MyArray']
@@ -401,4 +401,4 @@ def test_ignore_attributes():
     for r, e in zip(result, expected):
         assert r == approx(e*10)
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)

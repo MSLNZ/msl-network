@@ -2,7 +2,7 @@ import os
 import sys
 import tempfile
 
-import helper
+import conftest
 
 from msl.network import cli
 from msl.network.database import UsersTable

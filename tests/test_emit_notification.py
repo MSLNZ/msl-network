@@ -1,6 +1,6 @@
 import time
 
-import helper  # located in the tests folder
+import conftest
 
 from msl.network import connect, LinkedClient
 from msl.examples.network import Heartbeat, Echo
@@ -25,18 +25,16 @@ def test_client_linkedclient_handlers():
     def handler4(*args, **kwargs):
         values4.append(1)
 
-    services = helper.ServiceStarter(Heartbeat, Echo)
-
-    cxn = connect(**services.kwargs)
-
+    manager = conftest.Manager(Heartbeat, Echo)
+    cxn = connect(**manager.kwargs)
     link_hb = cxn.link('Heartbeat')
-    lc_hb = LinkedClient('Heartbeat', **services.kwargs)
+    lc_hb = LinkedClient('Heartbeat', **manager.kwargs)
 
     # the Echo Service does not emit notifications so make sure that the Manager
     # does not route any notifications from Heartbeat to the links with Echo
     link_echo = cxn.link('Echo')
     link_echo.notification_handler = handler3
-    lc_echo = LinkedClient('Echo', **services.kwargs)
+    lc_echo = LinkedClient('Echo', **manager.kwargs)
     lc_echo.notification_handler = handler4
 
     assert link_echo.echo('foo', x=-1) == [['foo'], {'x': -1}]
@@ -69,4 +67,4 @@ def test_client_linkedclient_handlers():
     lc_hb.unlink()
     link_echo.disconnect()  # disconnect is an alias for unlink for a LinkedClient
     lc_echo.disconnect()
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)

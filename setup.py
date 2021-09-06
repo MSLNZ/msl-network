@@ -148,7 +148,7 @@ def get_version():
 install_requires = ['cryptography', 'paramiko']
 
 tests_require = [
-    'pytest',
+    'pytest>=4.4',  # >=4.4 to support the "-p conftest" option
     'pytest-cov',
     'python-rapidjson',
     'simplejson',

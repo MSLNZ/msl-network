@@ -1,6 +1,6 @@
 import threading
 
-import helper  # located in the tests folder
+import conftest
 
 import pytest
 
@@ -12,10 +12,10 @@ from msl.network.manager import run_services
 
 def test_unlink_client_max1():
 
-    services = helper.ServiceStarter(Echo, max_clients=1)
+    manager = conftest.Manager(Echo, max_clients=1)
 
-    cxn1 = connect(**services.kwargs)
-    cxn2 = connect(**services.kwargs)
+    cxn1 = connect(**manager.kwargs)
+    cxn2 = connect(**manager.kwargs)
 
     link1 = cxn1.link('Echo')
     assert repr(link1).startswith("<Link with Echo[")
@@ -53,7 +53,7 @@ def test_unlink_client_max1():
         link2.unlink()
         link2.disconnect()  # an alias for unlink
 
-    services.shutdown(cxn1)
+    manager.shutdown(connection=cxn1)
 
     # shutting down the manager using cxn1 will also disconnect cxn2
     assert cxn2.address_manager is None
@@ -62,15 +62,15 @@ def test_unlink_client_max1():
 
 def test_unlink_client_max10():
 
-    services = helper.ServiceStarter(Echo, max_clients=10)
+    manager = conftest.Manager(Echo, max_clients=10)
 
-    clients = [connect(**services.kwargs) for _ in range(10)]
+    clients = [connect(**manager.kwargs) for _ in range(10)]
     links = [client.link('Echo') for client in clients]
     for link in links:
         assert link.service_name == 'Echo'
         assert link.echo(1, x=2) == [[1], {'x': 2}]
 
-    cxn = connect(**services.kwargs)
+    cxn = connect(**manager.kwargs)
 
     # another Client cannot link
     with pytest.raises(MSLNetworkError, match=r'The maximum number of Clients are already linked'):
@@ -91,7 +91,7 @@ def test_unlink_client_max10():
     with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
         link2.echo(1)
 
-    services.shutdown(cxn)
+    manager.shutdown(connection=cxn)
 
     # shutting down the manager using cxn will also disconnect all clients
     for client in clients:
@@ -109,17 +109,17 @@ def test_unlink_linkedclient_max10():
         def shutdown_service(self):
             pass
 
-    port = helper.ServiceStarter.get_available_port()
+    port = conftest.Manager.get_available_port()
 
     run_thread = threading.Thread(
         target=run_services,
         args=(ShutdownableEcho(),),
-        kwargs={'port': port, 'logfile': helper.ServiceStarter.logfile}
+        kwargs={'port': port, 'log_file': conftest.Manager.log_file}
     )
     run_thread.start()
 
     # wait for the Manager to be running
-    helper.ServiceStarter.wait_start(port, 'Cannot connect to manager')
+    conftest.Manager.wait_start(port, 'Cannot connect to manager')
 
     linked_clients = [LinkedClient('ShutdownableEcho', port=port, name='foobar%d' % i) for i in range(10)]
 

@@ -1,7 +1,7 @@
 import time
 import threading
 
-import helper
+import conftest
 
 import pytest
 
@@ -16,17 +16,17 @@ def test_single_service():
         def shutdown_service(self, *args, **kwargs):
             pass
 
-    port = helper.ServiceStarter.get_available_port()
+    port = conftest.Manager.get_available_port()
 
     run_thread = threading.Thread(
         target=run_services,
         args=(ShutdownableEcho(),),
-        kwargs={'port': port, 'logfile': helper.ServiceStarter.logfile}
+        kwargs={'port': port, 'log_file': conftest.Manager.log_file}
     )
     run_thread.start()
 
     # wait for the Manager to be running
-    helper.ServiceStarter.wait_start(port, 'Cannot connect to manager')
+    conftest.Manager.wait_start(port, 'Cannot connect to manager')
 
     # the LinkedClient waits for the Service to be running in LinkedClient.__init__
     link = LinkedClient('ShutdownableEcho', port=port, name='foobar')
@@ -84,7 +84,7 @@ def test_multiple_services():
             return a - b
 
     password_manager = '<hey~you>'
-    port = helper.ServiceStarter.get_available_port()
+    port = conftest.Manager.get_available_port()
 
     run_thread = threading.Thread(
         target=run_services,
@@ -92,13 +92,13 @@ def test_multiple_services():
         kwargs={
             'password_manager': password_manager,
             'port': port,
-            'logfile': helper.ServiceStarter.logfile
+            'log_file': conftest.Manager.log_file
         }
     )
     run_thread.start()
 
     # wait for the Manager to be running
-    helper.ServiceStarter.wait_start(port, 'Cannot connect to manager')
+    conftest.Manager.wait_start(port, 'Cannot connect to manager')
 
     cxn = connect(password_manager=password_manager, port=port)
 
