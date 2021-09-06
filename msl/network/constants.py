@@ -20,7 +20,7 @@ HOSTNAME = socket.gethostname()
 # things more consistent across more platforms.
 USER_DIR = os.path.expanduser('~'+os.getenv('SUDO_USER', ''))
 
-HOME_DIR = os.environ.get('MSL_NETWORK_HOME', os.path.join(USER_DIR, '.msl', 'network'))
+HOME_DIR = os.getenv('MSL_NETWORK_HOME', os.path.join(USER_DIR, '.msl', 'network'))
 """:class:`str`: The default directory where all files are to be located. 
 
 Can be overwritten by specifying a ``MSL_NETWORK_HOME`` environment variable.
