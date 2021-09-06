@@ -928,8 +928,10 @@ def _create_manager_and_loop(
     # get the port number
     try:
         port = int(port)
+        if port <= 0:
+            raise ValueError
     except ValueError:
-        msg = 'ValueError: The port number must be an integer'
+        msg = 'ValueError: The port must be a positive integer'
         logger.error(msg)
         print(msg, file=sys.stderr)
         return
