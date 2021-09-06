@@ -10,7 +10,7 @@ def test_filter_service_start_kwargs():
         'timeout': 'c',
         'username': 'd',
         'password': 'e',
-        'certfile': 'f',
+        'cert_file': 'f',
         'disable_tls': 'g',
         'assert_hostname': 'h',
         'debug': 'i',
@@ -18,20 +18,24 @@ def test_filter_service_start_kwargs():
         # so the `password_manager` key should be created
         'auth_password': 'j',
         'foo': 'bar',  # ignored
+        'name': 'buddy',
+        'auto_save': True,
     }
     k = filter_service_start_kwargs(**kwargs)
-    assert len(k) == 10
+    assert len(k) == 12
+    assert k['name'] == 'buddy'
     assert k['host'] == 'a'
     assert k['port'] == 'b'
     assert k['timeout'] == 'c'
     assert k['username'] == 'd'
     assert k['password'] == 'e'
-    assert k['certfile'] == 'f'
+    assert k['cert_file'] == 'f'
     assert k['disable_tls'] == 'g'
     assert k['assert_hostname'] == 'h'
     assert k['debug'] == 'i'
     assert k['password_manager'] == 'j'
     assert 'foo' not in k
+    assert k['auto_save'] is True
 
 
 def test_filter_run_forever_kwargs():
@@ -45,11 +49,12 @@ def test_filter_run_forever_kwargs():
         'database': 'e',
         'debug': 'f',
         'disable_tls': 'g',
-        'certfile': 'h',
-        'keyfile': 'i',
-        'keyfile_password': 'j',
-        'logfile': 'k',
+        'cert_file': 'h',
+        'key_file': 'i',
+        'key_file_password': 'j',
+        'log_file': 'k',
         'foo': 'bar',  # ignored
+        'auto_save': 'ignored',
     }
     k = filter_run_forever_kwargs(**kwargs)
     assert len(k) == 11
@@ -60,11 +65,12 @@ def test_filter_run_forever_kwargs():
     assert k['database'] == 'e'
     assert k['debug'] == 'f'
     assert k['disable_tls'] == 'g'
-    assert k['certfile'] == 'h'
-    assert k['keyfile'] == 'i'
-    assert k['keyfile_password'] == 'j'
-    assert k['logfile'] == 'k'
+    assert k['cert_file'] == 'h'
+    assert k['key_file'] == 'i'
+    assert k['key_file_password'] == 'j'
+    assert k['log_file'] == 'k'
     assert 'foo' not in k
+    assert 'auto_save' not in k
 
 
 def test_filter_client_connect_kwargs():
@@ -74,7 +80,7 @@ def test_filter_client_connect_kwargs():
         'timeout': 'c',
         'username': 'd',
         'password': 'e',
-        'certfile': 'f',
+        'cert_file': 'f',
         'disable_tls': 'g',
         'assert_hostname': 'h',
         'debug': 'i',
@@ -82,19 +88,21 @@ def test_filter_client_connect_kwargs():
         'name': 'k',
         'foo': 'bar',  # ignored
         'new': 9,  # ignored
+        'auto_save': False,
     }
     k = filter_client_connect_kwargs(**kwargs)
-    assert len(k) == 11
+    assert len(k) == 12
     assert k['host'] == 'a'
     assert k['port'] == 'b'
     assert k['timeout'] == 'c'
     assert k['username'] == 'd'
     assert k['password'] == 'e'
-    assert k['certfile'] == 'f'
+    assert k['cert_file'] == 'f'
     assert k['disable_tls'] == 'g'
     assert k['assert_hostname'] == 'h'
     assert k['debug'] == 'i'
     assert k['password_manager'] == 'j'
     assert k['name'] == 'k'
+    assert k['auto_save'] is False
     assert 'foo' not in k
     assert 'new' not in k
