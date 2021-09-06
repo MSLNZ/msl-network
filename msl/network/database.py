@@ -7,7 +7,6 @@ from datetime import datetime
 
 from cryptography.exceptions import InvalidKey
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from .constants import DATABASE
@@ -359,7 +358,6 @@ class UsersTable(Database):
             length=self._length,
             salt=salt,
             iterations=self._iterations,
-            backend=default_backend()
         )
         key = kdf.derive(password.encode())
         try:
@@ -406,7 +404,6 @@ class UsersTable(Database):
             length=self._length,
             salt=salt,
             iterations=self._iterations,
-            backend=default_backend()
         ).derive(password.encode())
 
         if is_admin is None:
@@ -496,7 +493,6 @@ class UsersTable(Database):
             length=self._length,
             salt=key_salt[1],
             iterations=self._iterations,
-            backend=default_backend()
         )
         try:
             kdf.verify(password.encode(), key_salt[0])
