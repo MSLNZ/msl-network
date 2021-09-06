@@ -901,7 +901,7 @@ def _create_manager_and_loop(
     # set up logging -- FileHandler and StreamHandler
     if log_file is None:
         now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        logfile = os.path.join(HOME_DIR, 'logs', 'manager-{}.log'.format(now))
+        log_file = os.path.join(HOME_DIR, 'logs', 'manager-{}.log'.format(now))
     ensure_root_path(log_file)
 
     # set the root logger level to DEBUG and make sure that it has no handlers
