@@ -217,14 +217,12 @@ class Client(Network, asyncio.Protocol):
 
         Examples
         --------
-        ::
-
-            >>> from msl.network import connect  # doctest: +SKIP
-            >>> cxn = connect()  # doctest: +SKIP
-            >>> unames = cxn.admin_request('users_table.usernames')  # doctest: +SKIP
-            >>> is_niels = cxn.admin_request('users_table.is_user_registered', 'n.bohr')  # doctest: +SKIP
-            >>> conns = cxn.admin_request('connections_table.connections', timestamp1='2017-11-29', timestamp2='2017-11-30')  # doctest: +SKIP
-            >>> cxn.admin_request('shutdown_manager')  # doctest: +SKIP
+        >>> from msl.network import connect  # doctest: +SKIP
+        >>> cxn = connect()  # doctest: +SKIP
+        >>> unames = cxn.admin_request('users_table.usernames')  # doctest: +SKIP
+        >>> is_niels = cxn.admin_request('users_table.is_user_registered', 'n.bohr')  # doctest: +SKIP
+        >>> conns = cxn.admin_request('connections_table.connections', timestamp1='2017-11-29', timestamp2='2017-11-30')  # doctest: +SKIP
+        >>> cxn.admin_request('shutdown_manager')  # doctest: +SKIP
         """
         # don't pop() the timeout, _send_request_for_manager uses it also
         timeout = kwargs.get('timeout', None)
