@@ -5,6 +5,7 @@ import os
 import ssl
 import inspect
 import datetime
+import textwrap
 
 from cryptography import x509
 from cryptography.x509.oid import NameOID
@@ -440,7 +441,7 @@ def get_metadata_as_string(cert):
     return '\n'.join(details)
 
 
-def get_ssl_context(*, host=None, port=None, certfile=None):
+def get_ssl_context(*, cert_file=None, host=None, port=None, auto_save=False):
     """Get the SSL context.
 
     Gets the context either from connecting to a remote server or from loading
@@ -452,14 +453,22 @@ def get_ssl_context(*, host=None, port=None, certfile=None):
     .. versionchanged:: 0.4
        Renamed `certificate` to `certfile`.
 
+    .. versionchanged:: 0.6
+       Renamed `certfile` to `cert_file`.
+       Added the `auto_save` keyword argument.
+
     Parameters
     ----------
+    cert_file : :class:`str`, optional
+        The path to a certificate file to load. If specified then
+        `host`, `port` and `auto_save` are ignored.
     host : :class:`str`, optional
         The hostname or IP address of the remote server to connect to.
     port : :class:`int`, optional
         The port number of the remote server to connect to.
-    certfile : :class:`str`, optional
-        The path to the certificate file to load.
+    auto_save : :class:`bool`, optional
+        Whether to automatically save the certificate from the server.
+        Default is to ask before saving.
 
     Returns
     -------
@@ -468,38 +477,53 @@ def get_ssl_context(*, host=None, port=None, certfile=None):
     :class:`ssl.SSLContext`
         The SSL context.
     """
-    if certfile is None:
+    ca_file = cert_file or os.path.join(CERT_DIR, '{}.crt'.format(host))
+    try:
+        return ca_file, ssl.create_default_context(cafile=ca_file)
+    except FileNotFoundError:
+        if cert_file is not None:
+            raise
 
-        # check that the default certificate exists
-        # if it does not exist then fetch it
-        certfile = os.path.join(CERT_DIR, host + '.crt')
-        if not os.path.isfile(certfile):
-            cert_data = ssl.get_server_certificate((host, port)).encode()
-            cert = load_certificate(cert_data)
-            fingerprint = get_fingerprint(cert)
-            name = cert.signature_algorithm_oid._name
+    if host is None or port is None:
+        raise ValueError('Must specify the host and port or the cert_file')
 
-            print('The certificate for {host} is not cached in the registry.\n'
-                  'You have no guarantee that the server is the computer that\n'
-                  'you think it is.\n\n'
-                  'The server\'s {name} key fingerprint is\n{fingerprint}\n\n'
-                  'If you trust this host you can save the certificate in the\n'
-                  'registry and continue to connect, otherwise this is your\n'
-                  'final chance to abort.\n'.format(host=host, name=name, fingerprint=fingerprint))
+    # TODO Starting from Python 3.10 the ssl.get_server_certificate()
+    #  function will accept a timeout argument so a `timeout` kwarg
+    #  could be added to get_ssl_context()
+    cert_data = ssl.get_server_certificate((host, port)).encode()
 
-            while True:
-                r = input('Continue? y/n: ').lower()
-                if r.startswith('n'):
-                    return certfile, None
-                elif r.startswith('y'):
-                    break
+    cert = load_certificate(cert_data)
+    fingerprint = get_fingerprint(cert)
+    name = cert.signature_algorithm_oid._name
 
-            ensure_root_path(certfile)
-            with open(certfile, 'wb') as f:
-                f.write(cert_data)
+    if not auto_save:
+        p1 = 'The certificate for {host} is not cached in the registry. ' \
+             'You have no guarantee that the server is the computer that ' \
+             'you think it is.'.format(host=host)
+        p2 = '\nThe server\'s {name} key fingerprint is\n{fingerprint}\n'.format(
+            name=name, fingerprint=fingerprint)
+        p3 = 'If you trust this host you can save the certificate in the registry ' \
+             'and continue to connect, otherwise this is your final chance to abort.'
 
-    elif not os.path.isfile(certfile):
-        raise OSError('Cannot find certificate ' + certfile)
+        width = 60
+        print('\n'.join(textwrap.wrap(p1, width=width)))
+        print(p2)
+        print('\n'.join(textwrap.wrap(p3, width=width)))
+        print('')
+
+        while True:
+            r = input('Continue? y/n: ').lower()
+            if r.startswith('n'):
+                return '', None
+            elif r.startswith('y'):
+                break
+
+    ensure_root_path(ca_file)
+    with open(ca_file, mode='wb') as f:
+        f.write(cert_data)
+
+    return get_ssl_context(cert_file=ca_file)
+
 
 def _hash_class(*, algorithm='', digest_size=None):
     """Return an instance of the HashAlgorithm.
