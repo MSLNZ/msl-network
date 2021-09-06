@@ -67,12 +67,13 @@ def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve=
     elif algorithm_u == 'DSA':
         key = dsa.generate_private_key(size)
     elif algorithm_u == 'ECC':
+        curve_u = curve.upper()
+        types = {k.upper(): v for k, v in ec._CURVE_TYPES.items()}  # yep, access the private dict
         try:
-            curve_class = ec._CURVE_TYPES[curve.lower()]  # yeah, access the private variable...
+            curve_class = types[curve_u]
         except KeyError:
-            names = [key.upper() for key in ec._CURVE_TYPES]
-            msg = 'Unknown curve name {}. Allowed names are {}'.format(
-                curve.upper(), ', '.join(sorted(names)))
+            msg = 'Invalid curve name {!r}. Allowed curves are\n{}'.format(
+                curve_u, ', '.join(sorted(types.keys())))
             raise ValueError(msg) from None
         key = ec.generate_private_key(curve_class)
     else:
