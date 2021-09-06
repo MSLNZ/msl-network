@@ -89,9 +89,9 @@ def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve=
     if password is None:
         encryption = serialization.NoEncryption()
     else:
-        encryption = serialization.BestAvailableEncryption(str(password).encode())
+        encryption = serialization.BestAvailableEncryption(password.encode())
 
-    with open(path, 'wb') as f:
+    with open(path, mode='wb') as f:
         f.write(key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
@@ -117,9 +117,9 @@ def load_key(path, *, password=None):
     :class:`~cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey`, :class:`~cryptography.hazmat.primitives.asymmetric.dsa.DSAPrivateKey` or :class:`~cryptography.hazmat.primitives.asymmetric.ec.EllipticCurvePrivateKey`
         The private key.
     """
-    with open(path, 'rb') as f:
+    with open(path, mode='rb') as f:
         data = f.read()
-    pw = None if password is None else bytes(str(password).encode())
+    pw = None if password is None else password.encode()
     logger.debug('load private key ' + path)
     return serialization.load_pem_private_key(data=data, password=pw)
 
@@ -194,7 +194,7 @@ def generate_certificate(*, path=None, key_path=None, key_password=None, algorit
     cert = cert.not_valid_after(expires)
     cert = cert.sign(key, hash_class)
 
-    with open(path, 'wb') as f:
+    with open(path, mode='wb') as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
     logger.debug('create self-signed certificate ' + path)
@@ -221,7 +221,7 @@ def load_certificate(cert):
         If `cert` is not of type :class:`str` or :class:`bytes`.
     """
     if isinstance(cert, str):
-        with open(cert, 'rb') as f:
+        with open(cert, mode='rb') as f:
             data = f.read()
         logger.debug('load certificate ' + cert)
     elif isinstance(cert, bytes):
