@@ -28,7 +28,7 @@ Examples::
   msl-network start --auth-password abc 123
 
   # use a specific certificate and key for the secure TLS protocol 
-  msl-network start --certfile /path/to/cert.pem --keyfile /path/to/key.pem
+  msl-network start --cert-file /path/to/cert.pem --key-file /path/to/key.pem
 
   # require that a valid username and password are specified for 
   # Clients and Services to be able to connect to the Network Manager 
@@ -84,7 +84,7 @@ def add_parser_start(parser):
              'password.'
     )
     p.add_argument(
-        '-c', '--certfile',
+        '-c', '--cert-file',
         help='The path to a certificate file to use for the secure TLS\n'
              'connection. If omitted then a default certificate is used.\n'
              'See also: msl-network certgen'
@@ -109,16 +109,16 @@ def add_parser_start(parser):
         help='Start the Network Manager without using the TLS protocol.'
     )
     p.add_argument(
-        '-k', '--keyfile',
+        '-k', '--key-file',
         help='The path to the private key which was used to digitally\n'
              'sign the certificate. If omitted then the default key is\n'
-             'used. If --certfile is omitted and --keyfile is specified then\n'
-             'this key is used to create (or overwrite) the default\n'
+             'used. If --cert-file is omitted and --key-file is specified\n'
+             'then this key is used to create (or overwrite) the default\n'
              'certificate and this new certificate will be used for the\n'
              'secure TLS connection. See also: msl-network keygen'
     )
     p.add_argument(
-        '-D', '--keyfile-password',
+        '-D', '--key-file-password',
         nargs='+',
         help='The password to use to decrypt the private key. Only required\n'
              'if the key file is encrypted. Specify a path to a file if you\n'
@@ -135,7 +135,7 @@ def add_parser_start(parser):
              'Default is %(default)s.'
     )
     p.add_argument(
-        '-l', '--logfile',
+        '-l', '--log-file',
         help='The file path to save logging messages to. Default is\n'
              'to create a new file in the $HOME/.msl/network/logs\n'
              'directory.'

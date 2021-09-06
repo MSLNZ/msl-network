@@ -666,62 +666,79 @@ class Peer(object):
         self.network_name = '<Unknown>[{}]'.format(self.address)
 
 
-def run_forever(*, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
-                database=None, debug=False, disable_tls=False, certfile=None, keyfile=None,
-                keyfile_password=None, logfile=None):
+def run_forever(
+        *, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
+        database=None, debug=False, disable_tls=False, cert_file=None, key_file=None,
+        key_file_password=None, log_file=None):
     """Start the event loop for the Network :class:`.Manager`.
 
-    This is a blocking call and it will not return until the event loop of the :class:`.Manager`
-    has stopped.
+    This is a blocking call and it will not return until the event loop of
+    the :class:`.Manager` has stopped.
 
     .. versionadded:: 0.4
+
+    .. versionchanged:: 0.6
+       Renamed `certfile` to `cert_file`.
+       Renamed `keyfile` to `key_file`.
+       Renamed `keyfile_password` to `key_file_password`.
+       Renamed `logfile` to `log_file`.
 
     Parameters
     ----------
     port : :class:`int`, optional
         The port number to run the Network :class:`Manager` on.
     auth_hostname : :class:`bool`, optional
-        If :data:`True` then only connections from trusted hosts are allowed. If enabling
-        `auth_hostname` then do not specify an `auth_password` and do not enable `auth_login`.
-        Run ``msl-network hostname --help`` for more details.
+        If :data:`True` then only connections from trusted hosts are allowed.
+        If enabling `auth_hostname` then do not specify an `auth_password`
+        and do not enable `auth_login`. Run ``msl-network hostname --help``
+        for more details.
     auth_login : :class:`bool`, optional
-        If :data:`True` then checks a users login credentials (the username and password)
-        before a :class:`~msl.network.client.Client` or :class:`~msl.network.service.Service`
-        successfully connects. If enabling `auth_login` then do not specify an `auth_password`
-        and do not enable `auth_hostname`. Run ``msl-network user --help`` for more details.
+        If :data:`True` then checks a users login credentials (the username
+        and password) before a :class:`~msl.network.client.Client` or
+        :class:`~msl.network.service.Service` successfully connects. If enabling
+        `auth_login` then do not specify an `auth_password` and do not enable
+        `auth_hostname`. Run ``msl-network user --help`` for more details.
     auth_password : :class:`str`, optional
         The password of the Network :class:`Manager`. Essentially, this can be a
         thought of as a single password that all :class:`~msl.network.client.Client`\\s
         and :class:`~msl.network.service.Service`\\s need to specify before the
-        connection to the Network :class:`Manager` is successful. Can be a path to a file
-        that contains the password on the first line in the file *(WARNING if the path is invalid*
-        *then the value of the path becomes the password)*. If using an `auth_password`
-        then do not enable `auth_login` nor `auth_hostname`.
+        connection to the Network :class:`Manager` is successful. Can be a path
+        to a file that contains the password on the first line in the file
+        (**WARNING!!** if the path does not exist then the value of the path
+        becomes the password). If using an `auth_password` then do not enable
+        `auth_login` nor `auth_hostname`.
     database : :class:`str`, optional
-        The path to the sqlite3 database that contains the records for the following tables --
-        :class:`.ConnectionsTable`, :class:`.HostnamesTable`, :class:`.UsersTable`. If
-        :data:`None` then loads the default database.
+        The path to the sqlite3 database that contains the records for the
+        following tables -- :class:`.ConnectionsTable`, :class:`.HostnamesTable`,
+        :class:`.UsersTable`. If :data:`None` then loads the default database.
     debug : :class:`bool`, optional
-        Whether :py:ref:`DEBUG <levels>` logging messages are displayed. On Windows, enabling
-        debug mode also allows for the ``CTRL+C`` interrupt to stop the event loop.
+        Whether :ref:`DEBUG <levels>` logging messages are displayed. On
+        Windows, enabling debug mode also allows for the ``CTRL+C`` interrupt
+        to stop the event loop. The interrupt signal did not work properly in
+        Python <3.8.
     disable_tls : :class:`bool`, optional
         Whether to disable using TLS for the protocol.
-    certfile : :class:`str`, optional
-        The path to the TLS certificate file. See :meth:`~ssl.SSLContext.load_cert_chain` for
-        more details. Only required if using TLS.
-    keyfile : :class:`str`, optional
-        The path to the TLS key file. See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
-    keyfile_password : :class:`str`, optional
-        The password to decrypt key. See :meth:`~ssl.SSLContext.load_cert_chain` for more details.
-        Can be a path to a file that contains the password on the first line in the file
-        *(WARNING if the path is invalid then the value of the path becomes the password).*
-    logfile : :class:`str`, optional
-        The file path to write logging messages to. If :data:`None` then uses the default file path.
+    cert_file : :class:`str`, optional
+        The path to the TLS certificate file. See
+        :meth:`~ssl.SSLContext.load_cert_chain`
+        for more details. Only required if using TLS.
+    key_file : :class:`str`, optional
+        The path to the TLS key file. See
+        :meth:`~ssl.SSLContext.load_cert_chain` for more details.
+    key_file_password : :class:`str`, optional
+        The password to decrypt key. See :meth:`~ssl.SSLContext.load_cert_chain`
+        for more details. Can be a path to a file that contains the password on
+        the first line in the file (**WARNING!!** if the path does not exist
+        then the value of the path becomes the password).
+    log_file : :class:`str`, optional
+        The file path to write logging messages to. If :data:`None` then uses
+        the default file path.
     """
     output = _create_manager_and_loop(
-        port=port, auth_hostname=auth_hostname, auth_login=auth_login, auth_password=auth_password,
-        database=database, debug=debug, disable_tls=disable_tls, certfile=certfile, keyfile=keyfile,
-        keyfile_password=keyfile_password, logfile=logfile
+        port=port, auth_hostname=auth_hostname, auth_login=auth_login,
+        auth_password=auth_password, database=database, debug=debug,
+        disable_tls=disable_tls, cert_file=cert_file, key_file=key_file,
+        key_file_password=key_file_password, log_file=log_file
     )
 
     if not output:
@@ -744,22 +761,23 @@ def run_services(*services, **kwargs):
     connected to the :class:`.Manager`. Once all :class:`~msl.network.service.Service`\\s
     disconnect from the :class:`.Manager` then the :class:`.Manager` shuts down.
 
-    This is a blocking call and it will not return until the event loop of the :class:`.Manager`
-    has stopped.
+    This is a blocking call and it will not return until the event loop of
+    the :class:`.Manager` has stopped.
 
     .. versionadded:: 0.4
 
     Parameters
     ----------
     services
-        The :class:`~msl.network.service.Service`\\s to run on the :class:`.Manager`.
-        Each :class:`~msl.network.service.Service` must be instantiated but not started.
-        This :func:`run_services` function will start each :class:`~msl.network.service.Service`.
+        The :class:`~msl.network.service.Service`\\s to run on the
+        :class:`.Manager`. Each :class:`~msl.network.service.Service` must be
+        instantiated but not started. This :func:`run_services` function will
+        start each :class:`~msl.network.service.Service`.
     kwargs
         Keyword arguments are passed to :func:`run_forever` and to
-        :meth:`~msl.network.service.Service.start`. The keyword arguments that are passed to
-        :func:`run_forever` and :meth:`~msl.network.service.Service.start` that are not valid
-        for that function are silently ignored.
+        :meth:`~msl.network.service.Service.start`. The keyword arguments that
+        are passed to :func:`run_forever` and :meth:`~msl.network.service.Service.start`
+        that are not valid for that function are silently ignored.
 
     Examples
     --------
@@ -859,30 +877,32 @@ def filter_run_forever_kwargs(**kwargs):
     Returns
     -------
     :class:`dict`
-        Valid keyword arguments that can be passed to :func:`~msl.network.manager.run_forever`.
+        Valid keyword arguments that can be passed to
+        :func:`~msl.network.manager.run_forever`.
     """
     kws = {}
     for item in inspect.getfullargspec(run_forever).kwonlyargs:
         if item in kwargs:
             kws[item] = kwargs[item]
 
-    # the manager uses an `auth_password` kwarg but a service uses a `password_manager` kwarg
-    # however, these kwargs represent the same thing
+    # the manager uses an `auth_password` kwarg but a service uses a
+    # `password_manager` kwarg however, these kwargs represent the same thing
     if 'password_manager' in kwargs and 'auth_password' not in kws:
         kws['auth_password'] = kwargs['password_manager']
 
     return kws
 
 
-def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
-                             database=None, debug=False, disable_tls=False, certfile=None, keyfile=None,
-                             keyfile_password=None, logfile=None):
+def _create_manager_and_loop(
+        *, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
+        database=None, debug=False, disable_tls=False, cert_file=None, key_file=None,
+        key_file_password=None, log_file=None):
 
     # set up logging -- FileHandler and StreamHandler
-    if logfile is None:
+    if log_file is None:
         now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
         logfile = os.path.join(HOME_DIR, 'logs', 'manager-{}.log'.format(now))
-    ensure_root_path(logfile)
+    ensure_root_path(log_file)
 
     # set the root logger level to DEBUG and make sure that it has no handlers
     root_logger = logging.getLogger()
@@ -890,7 +910,7 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
     root_logger.setLevel(logging.DEBUG)
 
     # add a FileHandler and it will always log at the debug level
-    fh = logging.FileHandler(logfile, mode='w')
+    fh = logging.FileHandler(log_file, mode='wt')
     fh.setLevel(logging.DEBUG)
     ff = logging.Formatter('%(asctime)s [%(levelname)-8s] %(name)s - %(message)s')
     ff.default_msec_format = '%s.%03d'
@@ -918,29 +938,31 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
     context = None
     if not disable_tls:
         # get the password to decrypt the private key
-        if isinstance(keyfile_password, (list, tuple)):
-            keyfile_password = ' '.join(keyfile_password)
-        if keyfile_password is not None and os.path.isfile(keyfile_password):
-            with open(keyfile_password, 'r') as fp:
-                keyfile_password = fp.readline().strip()
+        if isinstance(key_file_password, (list, tuple)):
+            key_file_password = ' '.join(key_file_password)
+        if key_file_password is not None and os.path.isfile(key_file_password):
+            with open(key_file_password, 'r') as fp:
+                key_file_password = fp.readline().strip()
 
         # get the path to the certificate and to the private key
-        if certfile is None and keyfile is None:
-            keyfile = cryptography.get_default_key_path()
-            if not os.path.isfile(keyfile):
-                cryptography.generate_key(path=keyfile, password=keyfile_password)
-            certfile = cryptography.get_default_cert_path()
-            if not os.path.isfile(certfile):
-                cryptography.generate_certificate(path=certfile, key_path=keyfile, key_password=keyfile_password)
-        elif certfile is None and keyfile is not None:
+        if cert_file is None and key_file is None:
+            key_file = cryptography.get_default_key_path()
+            if not os.path.isfile(key_file):
+                cryptography.generate_key(path=key_file, password=key_file_password)
+            cert_file = cryptography.get_default_cert_path()
+            if not os.path.isfile(cert_file):
+                cryptography.generate_certificate(path=cert_file, key_path=key_file,
+                                                  key_password=key_file_password)
+        elif cert_file is None and key_file is not None:
             # create (or overwrite) the default certificate to match the key
-            certfile = cryptography.generate_certificate(key_path=keyfile, key_password=keyfile_password)
-        elif certfile is not None and keyfile is None:
+            cert_file = cryptography.generate_certificate(key_path=key_file,
+                                                          key_password=key_file_password)
+        elif cert_file is not None and key_file is None:
             pass  # assume that the certificate file also contains the private key
 
         context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
-        context.load_cert_chain(certfile, keyfile=keyfile, password=keyfile_password)
-        logger.info('loaded certificate {!r}'.format(certfile))
+        context.load_cert_chain(cert_file, keyfile=key_file, password=key_file_password)
+        logger.info('loaded certificate {!r}'.format(cert_file))
 
     # get database file
     if database is not None:
@@ -1012,11 +1034,13 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
     asyncio.set_event_loop(loop)
 
     # create the network manager
-    manager = Manager(port, password, login, hostnames, conn_table, users_table, hostnames_table, debug, loop)
+    manager = Manager(port, password, login, hostnames, conn_table,
+                      users_table, hostnames_table, debug, loop)
 
     try:
         server = loop.run_until_complete(
-            asyncio.start_server(manager.new_connection, port=port, ssl=context, limit=sys.maxsize)
+            asyncio.start_server(manager.new_connection, port=port,
+                                 ssl=context, limit=sys.maxsize)
         )
     except OSError as err:
         users_table.close()
@@ -1026,8 +1050,8 @@ def _create_manager_and_loop(*, port=PORT, auth_hostname=False, auth_login=False
         print(err, file=sys.stderr)
         return
 
-    # enable this hack only in DEBUG mode and only on Windows when the SelectorEventLoop is being used
-    # See: https://bugs.python.org/issue23057
+    # enable this hack only in DEBUG mode and only on Windows when the
+    # SelectorEventLoop is being used. See: https://bugs.python.org/issue23057
     if debug and IS_WINDOWS and isinstance(loop, asyncio.SelectorEventLoop):
         async def wakeup():
             while True:
