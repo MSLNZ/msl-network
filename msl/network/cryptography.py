@@ -77,7 +77,10 @@ def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve=
             raise ValueError(msg) from None
         key = ec.generate_private_key(curve_class)
     else:
-        raise ValueError('The encryption algorithm must be RSA, DSA or ECC. Got ' + algorithm_u)
+        raise ValueError(
+            'The encryption algorithm must be '
+            'RSA, DSA or ECC. Got {}'.format(algorithm_u)
+        )
 
     if path is None:
         path = get_default_key_path()
