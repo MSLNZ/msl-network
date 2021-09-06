@@ -39,9 +39,9 @@ class Database(object):
         if self._path == ':memory:':
             logger.debug('creating a database in RAM')
         elif not os.path.isfile(self._path):
-            logger.debug('creating a new database ' + self._path)
+            logger.debug('creating a new database {}'.format(self._path))
         else:
-            logger.debug('opening ' + self._path)
+            logger.debug('opening {}'.format(self._path))
 
         kwargs.setdefault('timeout', 60.0)
 
@@ -71,7 +71,7 @@ class Database(object):
         if self._connection is not None:
             self._connection.close()
             self._connection = None
-            logger.debug('closed ' + self._path)
+            logger.debug('closed {}'.format(self._path))
 
     def execute(self, sql, parameters=None):
         """Wrapper around :meth:`sqlite3.Cursor.execute`.
@@ -87,7 +87,7 @@ class Database(object):
             logger.debug(sql)
             self._cursor.execute(sql)
         else:
-            logger.debug(sql + ' {}'.format(parameters))
+            logger.debug('{} {}'.format(sql, parameters))
             self._cursor.execute(sql, parameters)
 
     def tables(self):
@@ -115,7 +115,7 @@ class Database(object):
             * 4 - the default value for the column
             * 5 - whether or not the column is used as a primary key (0 or 1)
         """
-        self.execute("PRAGMA table_info('%s');" % name)
+        self.execute('PRAGMA table_info({!r});'.format(name))
         return self._cursor.fetchall()
 
     def column_names(self, table_name):
@@ -174,13 +174,13 @@ class ConnectionsTable(Database):
             kwargs['detect_types'] = sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
 
         super(ConnectionsTable, self).__init__(database, **kwargs)
-        self.execute('CREATE TABLE IF NOT EXISTS %s ('
+        self.execute('CREATE TABLE IF NOT EXISTS %{} ('
                      'pid INTEGER PRIMARY KEY AUTOINCREMENT, '
                      'timestamp TIMESTAMP NOT NULL, '
                      'ip_address TEXT NOT NULL, '
                      'domain TEXT NOT NULL, '
                      'port INTEGER NOT NULL, '
-                     'message TEXT NOT NULL);' % self.NAME)
+                     'message TEXT NOT NULL);'.format(self.NAME))
         self.connection.commit()
 
     def insert(self, peer, message):
@@ -194,7 +194,7 @@ class ConnectionsTable(Database):
             The message about what happened.
         """
         now = datetime.now().replace(microsecond=0).isoformat(sep='T')
-        self.execute('INSERT INTO %s VALUES(NULL, ?, ?, ?, ?, ?);' % self.NAME,
+        self.execute('INSERT INTO {} VALUES(NULL, ?, ?, ?, ?, ?);'.format(self.NAME),
                      (now, peer.ip_address, peer.domain, peer.port, message))
         self.connection.commit()
 
@@ -221,13 +221,15 @@ class ConnectionsTable(Database):
             The connection records.
         """
         if timestamp1 is None and timestamp2 is None:
-            self.execute('SELECT * FROM %s;' % self.NAME)
+            self.execute('SELECT * FROM {};'.format(self.NAME))
         elif timestamp1 is not None and timestamp2 is None:
-            self.execute('SELECT * FROM %s WHERE timestamp > ?;' % self.NAME, (timestamp1,))
+            self.execute('SELECT * FROM {} WHERE timestamp > ?;'.format(self.NAME),
+                         (timestamp1,))
         elif timestamp1 is None and timestamp2 is not None:
-            self.execute('SELECT * FROM %s WHERE timestamp < ?;' % self.NAME, (timestamp2,))
+            self.execute('SELECT * FROM {} WHERE timestamp < ?;'.format(self.NAME),
+                         (timestamp2,))
         else:
-            self.execute('SELECT * FROM %s WHERE timestamp > ? AND timestamp < ?;' % self.NAME,
+            self.execute('SELECT * FROM {} WHERE timestamp > ? AND timestamp < ?;'.format(self.NAME),
                          (timestamp1, timestamp2))
         return self.cursor.fetchall()
 
@@ -251,7 +253,9 @@ class HostnamesTable(Database):
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
        """
         super(HostnamesTable, self).__init__(database, **kwargs)
-        self.execute('CREATE TABLE IF NOT EXISTS %s (hostname TEXT NOT NULL, UNIQUE(hostname));' % self.NAME)
+        self.execute('CREATE TABLE IF NOT EXISTS {} ('
+                     'hostname TEXT NOT NULL, UNIQUE(hostname)'
+                     ');'.format(self.NAME))
         self.connection.commit()
 
         if not self.hostnames():
@@ -268,7 +272,8 @@ class HostnamesTable(Database):
         hostname : :class:`str`
             The trusted hostname.
         """
-        self.execute('INSERT OR IGNORE INTO %s VALUES(?);' % self.NAME, (hostname,))
+        self.execute('INSERT OR IGNORE INTO {} VALUES(?);'.format(self.NAME),
+                     (hostname,))
         self.connection.commit()
 
     def delete(self, hostname):
@@ -286,13 +291,13 @@ class HostnamesTable(Database):
         """
         # want to know if this hostname is not in the table
         if hostname not in self.hostnames():
-            raise ValueError('Cannot delete "{}". This hostname is not in the table.'.format(hostname))
-        self.execute('DELETE FROM %s WHERE hostname = ?;' % self.NAME, (hostname,))
+            raise ValueError('Cannot delete {!r}. This hostname is not in the table.'.format(hostname))
+        self.execute('DELETE FROM {} WHERE hostname = ?;'.format(self.NAME), (hostname,))
         self.connection.commit()
 
     def hostnames(self):
         """:class:`list` of :class:`str`: Returns all the trusted hostnames."""
-        self.execute('SELECT * FROM %s;' % self.NAME)
+        self.execute('SELECT * FROM {};'.format(self.NAME))
         return [item[0] for item in self.cursor.fetchall()]
 
 
@@ -315,13 +320,13 @@ class UsersTable(Database):
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
         """
         super(UsersTable, self).__init__(database, **kwargs)
-        self.execute('CREATE TABLE IF NOT EXISTS %s ('
+        self.execute('CREATE TABLE IF NOT EXISTS {} ('
                      'pid INTEGER PRIMARY KEY AUTOINCREMENT, '
                      'username TEXT NOT NULL, '
                      'key BLOB NOT NULL, '
                      'salt BLOB NOT NULL, '
                      'is_admin BOOLEAN NOT NULL, '
-                     'UNIQUE(username));' % self.NAME)
+                     'UNIQUE(username));'.format(self.NAME))
         self.connection.commit()
 
         self._salt_size = 16
@@ -366,9 +371,10 @@ class UsersTable(Database):
         )
         key = kdf.derive(password.encode())
         try:
-            self.execute('INSERT INTO %s VALUES(NULL, ?, ?, ?, ?);' % self.NAME, (username, key, salt, bool(is_admin)))
+            self.execute('INSERT INTO {} VALUES(NULL, ?, ?, ?, ?);'.format(self.NAME),
+                         (username, key, salt, bool(is_admin)))
         except sqlite3.IntegrityError:
-            raise ValueError('A user with the name "{}" already exists'.format(username)) from None
+            raise ValueError('A user with the name {!r} already exists'.format(username)) from None
         self.connection.commit()
 
     def update(self, username, *, password=None, is_admin=None):
@@ -396,7 +402,8 @@ class UsersTable(Database):
             raise ValueError('Must specify either the password and/or the admin rights when updating')
 
         if password is None:
-            self.execute('UPDATE %s SET is_admin=? WHERE username=?;' % self.NAME, (bool(is_admin), username))
+            self.execute('UPDATE {} SET is_admin=? WHERE username=?;'.format(self.NAME),
+                         (bool(is_admin), username))
             self.connection.commit()
             return
 
@@ -412,10 +419,10 @@ class UsersTable(Database):
         ).derive(password.encode())
 
         if is_admin is None:
-            self.execute('UPDATE %s SET key=?, salt=? WHERE username=?;' % self.NAME,
+            self.execute('UPDATE {} SET key=?, salt=? WHERE username=?;'.format(self.NAME),
                          (key, salt, username))
         else:
-            self.execute('UPDATE %s SET key=?, salt=?, is_admin=? WHERE username=?;' % self.NAME,
+            self.execute('UPDATE {} SET key=?, salt=?, is_admin=? WHERE username=?;'.format(self.NAME),
                          (key, salt, bool(is_admin), username))
 
         self.connection.commit()
@@ -434,7 +441,8 @@ class UsersTable(Database):
             If `username` is not in the table.
         """
         self._ensure_user_exists(username, 'delete')
-        self.execute('DELETE FROM %s WHERE username = ?;' % self.NAME, (username,))
+        self.execute('DELETE FROM {} WHERE username = ?;'.format(self.NAME),
+                     (username,))
         self.connection.commit()
 
     def get_user(self, username):
@@ -450,28 +458,30 @@ class UsersTable(Database):
         :class:`tuple`
             Returns (pid, username, key, salt, is_admin) for the specified `username`.
         """
-        self.execute('SELECT * FROM %s WHERE username = ?;' % self.NAME, (username,))
+        self.execute('SELECT * FROM {} WHERE username = ?;'.format(self.NAME),
+                     (username,))
         return self.cursor.fetchone()
 
     def records(self):
         """:class:`list` of :class:`tuple`: Returns [(pid, username, key, salt, is_admin), ...]
         for all users."""
-        self.execute('SELECT * FROM %s;' % self.NAME)
+        self.execute('SELECT * FROM {};'.format(self.NAME))
         return self.cursor.fetchall()
 
     def usernames(self):
         """:class:`list` of :class:`str`: Returns the names of all registered users."""
-        self.execute('SELECT username FROM %s;' % self.NAME)
+        self.execute('SELECT username FROM {};'.format(self.NAME))
         return [item[0] for item in self.cursor.fetchall()]
 
     def users(self):
         """:class:`list` of :class:`tuple`: Returns [(username, is_admin), ... ] for all users."""
-        self.execute('SELECT username,is_admin FROM %s;' % self.NAME)
+        self.execute('SELECT username,is_admin FROM {};'.format(self.NAME))
         return [(item[0], bool(item[1])) for item in self.cursor.fetchall()]
 
     def is_user_registered(self, username):
         """:class:`bool`: Whether `username` is a registered user."""
-        self.execute('SELECT count(*) FROM %s WHERE username = ?;' % self.NAME, (username,))
+        self.execute('SELECT count(*) FROM {} WHERE username = ?;'.format(self.NAME),
+                     (username,))
         return bool(self.cursor.fetchone()[0])
 
     def is_password_valid(self, username, password):
@@ -489,7 +499,8 @@ class UsersTable(Database):
         :class:`bool`
             Whether `password` matches the password in the database for the user.
         """
-        self.execute('SELECT key,salt FROM %s WHERE username = ?;' % self.NAME, (username,))
+        self.execute('SELECT key,salt FROM {} WHERE username = ?;'.format(self.NAME),
+                     (username,))
         key_salt = self._cursor.fetchone()
         if not key_salt:
             return False
@@ -518,7 +529,8 @@ class UsersTable(Database):
         :class:`bool`
             Whether the user has admin rights.
         """
-        self.execute('SELECT is_admin FROM %s WHERE username = ?;' % self.NAME, (username,))
+        self.execute('SELECT is_admin FROM {} WHERE username = ?;'.format(self.NAME),
+                     (username,))
         user = self.cursor.fetchone()
         if user:
             return bool(user[0])
@@ -527,4 +539,7 @@ class UsersTable(Database):
     def _ensure_user_exists(self, username, action):
         # want to know if this user is not in the table
         if username not in self.usernames():
-            raise ValueError('Cannot {} "{}". This user is not in the table.'.format(action, username))
+            raise ValueError(
+                'Cannot {} "{}". '
+                'This user is not in the table.'.format(action, username)
+            )
