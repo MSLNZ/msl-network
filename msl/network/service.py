@@ -30,8 +30,10 @@ from .constants import (
     SHUTDOWN_SERVICE,
 )
 
-_ignore_attribs = ['port', 'address_manager', 'username', 'start', 'password',
-                   'set_debug', 'max_clients', 'ignore_attributes', 'emit_notification']
+_ignore_attribs = [
+    'port', 'address_manager', 'username', 'start', 'password',
+    'set_debug', 'max_clients', 'ignore_attributes', 'emit_notification'
+]
 _ignore_attribs += list(a for a in dir(Network) + dir(asyncio.Protocol) if not a.startswith('_'))
 
 
@@ -49,12 +51,13 @@ class Service(Network, asyncio.Protocol):
         Parameters
         ----------
         name : :class:`str`, optional
-            The name of the Service as it will appear on the Network :class:`~msl.network.manager.Manager`.
-            If not specified then uses the class name.
+            The name of the Service as it will appear on the Network
+            :class:`~msl.network.manager.Manager`. If not specified
+            then the class name is used.
         max_clients : :class:`int`, optional
-            The maximum number of :class:`~msl.network.client.Client`\\s that can be linked
-            with this :class:`Service`. A value :math:`\\leq` 0 or :data:`None` means that
-            there is no limit.
+            The maximum number of :class:`~msl.network.client.Client`\\s
+            that can be linked with this :class:`Service`. A value :math:`\\leq` 0
+            or :data:`None` means that there is no limit.
         ignore_attributes : :class:`list` of :class:`str`, optional
             The names of the attributes to not include in the
             :obj:`~msl.network.network.Network.identity` of the :class:`Service`.
