@@ -31,68 +31,77 @@ from .constants import (
 )
 
 
-def connect(*, name='Client', host='localhost', port=PORT, timeout=10, username=None,
-            password=None, password_manager=None, certfile=None, disable_tls=False,
-            assert_hostname=True, debug=False):
+def connect(*, name='Client', host='localhost', port=PORT, timeout=10,
+            username=None, password=None, password_manager=None,
+            cert_file=None, disable_tls=False, assert_hostname=True,
+            debug=False, auto_save=False):
     """Create a new connection to a Network :class:`~msl.network.manager.Manager`
     as a :class:`Client`.
 
     .. versionchanged:: 0.4
        Renamed `certificate` to `certfile`.
 
+    .. versionchanged:: 0.6
+       Renamed `certfile` to `cert_file`.
+       Added the `auto_save` keyword argument.
+
     Parameters
     ----------
     name : :class:`str`, optional
         A name to assign to the :class:`Client`.
     host : :class:`str`, optional
-        The hostname (or IP address) of the Network :class:`~msl.network.manager.Manager`
-        that the :class:`~msl.network.client.Client` should connect to.
+        The hostname (or IP address) of the Network
+        :class:`~msl.network.manager.Manager` that the
+        :class:`~msl.network.client.Client` should connect to.
     port : :class:`int`, optional
         The port number of the Network :class:`~msl.network.manager.Manager`
         that the :class:`~msl.network.client.Client` should connect to.
     timeout : :class:`float`, optional
-        The maximum number of seconds to wait to establish the connection to the
+        The maximum number of seconds to wait to connect to the Network
         :class:`~msl.network.manager.Manager` before raising a :exc:`TimeoutError`.
     username : :class:`str`, optional
-        The username to use to connect to the Network :class:`~msl.network.manager.Manager`.
-        You need to specify a username only if the Network :class:`~msl.network.manager.Manager`
-        was started with the ``--auth-login`` flag. If a username is required and you have not
-        specified it when you called this function then you will be asked for a username.
+        The username to use to connect to the Network
+        :class:`~msl.network.manager.Manager`. You need to specify a username
+        only if the Network :class:`~msl.network.manager.Manager` was started
+        with the ``--auth-login`` flag. If a username is required and you have
+        not specified it when you called this function then you will be asked
+        for a username.
     password : :class:`str`, optional
-        The password that is associated with `username`. If a password is required and you
-        have not specified it when you called this function then you will be asked for the password.
+        The password that is associated with `username`. If a password is
+        required and you have not specified it when you called this function
+        then you will be asked for the password.
     password_manager : :class:`str`, optional
-        The password that is associated with the Network :class:`~msl.network.manager.Manager`.
-        You need to specify the password only if the Network :class:`~msl.network.manager.Manager`
-        was started with the ``--auth-password`` flag. If a password is required and you
-        have not specified it when you called this function then you will be asked for the password.
-    certfile : :class:`str`, optional
+        The password that is associated with the Network
+        :class:`~msl.network.manager.Manager`. You need to specify the password
+        only if the Network :class:`~msl.network.manager.Manager` was started
+        with the ``--auth-password`` flag. If a password is required and you
+        have not specified it when you called this function then you will be
+        asked for the password.
+    cert_file : :class:`str`, optional
         The path to the certificate file to use for the secure connection
         with the Network :class:`~msl.network.manager.Manager`.
     disable_tls : :class:`bool`, optional
         Whether to connect to the Network :class:`~msl.network.manager.Manager`
         without using the TLS protocol.
     assert_hostname : :class:`bool`, optional
-        Whether to force the hostname of the Network :class:`~msl.network.manager.Manager`
-        to match the value of `host`.
+        Whether to force the hostname of the Network
+        :class:`~msl.network.manager.Manager` to match the value of `host`.
     debug : :class:`bool`, optional
         Whether to log :py:ref:`DEBUG <levels>` messages for the :class:`Client`.
+    auto_save : :class:`bool`, optional
+        Whether to automatically save the certificate of the Network
+        :class:`~msl.network.manager.Manager` if the certificate is not
+        already saved. Not used if `disable_tls` is :data:`True`.
+        Default is to ask before saving.
 
     Returns
     -------
     :class:`Client`
-        A new connection.
-
-    Examples
-    --------
-    ::
-
-        >>> from msl.network import connect
-        >>> cxn = connect()  # doctest: +SKIP
+        A new connection to a Network :class:`~msl.network.manager.Manager`.
     """
+    kwargs = locals()
     client = Client(name)
-    success = client.start(host, port, timeout, username, password, password_manager,
-                           certfile, disable_tls, assert_hostname, debug)
+    success = client.start(**kwargs)
     if not success:
         client.raise_latest_error()
     return client
@@ -115,12 +124,9 @@ def filter_client_connect_kwargs(**kwargs):
     :class:`dict`
         Valid keyword arguments that can be passed to :func:`.connect`.
     """
-    # a Client uses the same keyword arguments (plus an additional `name` kwarg) to
-    # connect to a Manager as a Service does, so we can use the same parser function
-    kws = filter_service_start_kwargs(**kwargs)
-    if 'name' in kwargs:
-        kws['name'] = kwargs['name']
-    return kws
+    # a Client uses the same keyword arguments to connect to a Manager
+    # as a Service does, so we can use the same parser function
+    return filter_service_start_kwargs(**kwargs)
 
 
 class Client(Network, asyncio.Protocol):
@@ -160,6 +166,7 @@ class Client(Network, asyncio.Protocol):
         self._pending_requests_sent = False
         self._assert_hostname = True
         self._links = []
+        self._start_kwargs = {}
 
     def __repr__(self):
         return '<{} manager={} port={}>'.format(self._name, self._address_manager, self._port)
@@ -433,11 +440,7 @@ class Client(Network, asyncio.Protocol):
         :class:`Client`:
             A new Client.
         """
-        return connect(name=name, host=self._host_manager, port=self._port_manager,
-                       timeout=self._timeout, username=self._username, password=self._password,
-                       password_manager=self._password_manager, certfile=self._certificate,
-                       disable_tls=self._disable_tls, assert_hostname=self._assert_hostname,
-                       debug=self._debug)
+        return connect(name=name, **self._start_kwargs)
 
     def unlink(self, link, *, timeout=None):
         """Unlink from a :class:`~msl.network.service.Service` on the Network
@@ -587,28 +590,28 @@ class Client(Network, asyncio.Protocol):
             self._password = getpass.getpass('Enter the password for ' + name + ' > ')
         return self._password
 
-    def start(self, host, port, timeout, username, password, password_manager,
-              certfile, disable_tls, assert_hostname, debug):
+    def start(self, **kwargs):
         """
         .. attention::
             Do not call this method directly. Use :meth:`connect` to connect to
             a Network :class:`~msl.network.manager.Manager`.
         """
-        self._host_manager = HOSTNAME if host in localhost_aliases() else host
-        self._port_manager = port
-        self._disable_tls = bool(disable_tls)
-        self._debug = bool(debug)
-        self._username = username
-        self._password = password
-        self._password_manager = password_manager
-        self._certificate = certfile
-        self._address_manager = '{}:{}'.format(self._host_manager, port)
-        self._timeout = timeout
-        self._assert_hostname = bool(assert_hostname)
-
+        self._start_kwargs = {k: v for k, v in kwargs.items() if k != 'name'}
+        if kwargs['host'] in localhost_aliases():
+            kwargs['host'] = HOSTNAME
+        self._host_manager = kwargs['host']
+        self._port_manager = kwargs['port']
+        self._disable_tls = bool(kwargs['disable_tls'])
+        self._debug = bool(kwargs['debug'])
+        self._username = kwargs['username']
+        self._password = kwargs['password']
+        self._password_manager = kwargs['password_manager']
+        self._certificate = kwargs['cert_file']
+        self._address_manager = '{}:{}'.format(self._host_manager, self._port_manager)
+        self._timeout = kwargs['timeout']
+        self._assert_hostname = bool(kwargs['assert_hostname'])
         self._loop = asyncio.new_event_loop()
-
-        if not self._create_connection(self._host_manager, port, certfile, disable_tls, assert_hostname, timeout):
+        if not self._create_connection(**kwargs):
             return False
 
         threading.Thread(target=self._run_forever, daemon=True).start()
