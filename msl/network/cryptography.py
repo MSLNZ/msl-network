@@ -252,15 +252,22 @@ def get_default_key_path():
     return os.path.join(KEY_DIR, HOSTNAME + '.key')
 
 
-def get_fingerprint(cert, *, algorithm=hashes.SHA1):
+def get_fingerprint(cert, *, algorithm='SHA1', digest_size=None):
     """Get the fingerprint of the certificate.
+
+    .. versionchanged:: 0.6
+       Added the `digest_size` keyword argument and allow
+       `algorithm` to be a string.
 
     Parameters
     ----------
     cert : :class:`~cryptography.x509.Certificate`
         The PEM certificate.
-    algorithm : :class:`~cryptography.hazmat.primitives.hashes.HashAlgorithm`, optional
-        The hash algorithm.
+    algorithm : :class:`str` or :class:`~cryptography.hazmat.primitives.hashes.HashAlgorithm`, optional
+        The hash algorithm to use. See :doc:`hazmat/primitives/cryptographic-hashes`
+        for allowed hash algorithms.
+    digest_size : :class:`int`, optional
+        The digest size, if the hash `algorithm` requires one.
 
     Returns
     -------
