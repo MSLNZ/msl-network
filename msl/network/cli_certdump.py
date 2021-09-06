@@ -57,8 +57,8 @@ def add_parser_certdump(parser):
     )
     p.add_argument(
         '-o', '--out',
-        help='The path to a file to dump the details to. If\n'
-             'omitted then prints the details to the terminal.'
+        help='The file path to dump the details to. If omitted\n'
+             'then prints the details to the terminal.'
     )
     p.set_defaults(func=execute)
 
@@ -76,7 +76,7 @@ def execute(args):
         print(meta)
     else:
         ensure_root_path(args.out)
-        with open(args.out, 'wt') as fp:
+        with open(args.out, mode='wt') as fp:
             fp.write('Certificate details for {}\n'.format(args.certfile))
             fp.write(meta)
         print('Dumped the certificate details to ' + args.out)
