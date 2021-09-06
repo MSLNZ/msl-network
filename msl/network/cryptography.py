@@ -37,23 +37,24 @@ def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve=
     Parameters
     ----------
     path : :class:`str`, optional
-        The path to where to save the private key. Example, ``path/to/store/key.pem``.
-        If :data:`None` then save the key in the default directory with the
-        default filename.
+        The path to save the private key to. If not specified then save the
+        private key in the default directory with the default filename.
     algorithm : :class:`str`, optional
-        The encryption algorithm to use to generate the private key. Options are:
+        The encryption algorithm to use to generate the private key.
+        Options are:
 
-        * ``RSA`` - Rivest, Shamir, and Adleman algorithm.
-        * ``DSA`` - Digital Signature Algorithm.
-        * ``ECC`` - Elliptic Curve Cryptography.
+            * ``RSA`` - Rivest, Shamir, and Adleman algorithm.
+            * ``DSA`` - Digital Signature Algorithm.
+            * ``ECC`` - Elliptic Curve Cryptography.
 
     password : :class:`str`, optional
         The password to use to encrypt the key.
     size : :class:`int`, optional
-        The size (number of bits) of the key. Only used if `algorithm` is ``RSA`` or ``DSA``.
+        The size (number of bits) of the key. Only used if `algorithm` is
+        ``RSA`` or ``DSA``.
     curve : :class:`str`, optional
-        The name of the elliptic curve to use. Only used if `algorithm` is ``ECC``.
-        See `here <https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ec/#elliptic-curves>`_
+        The name of the elliptic curve to use. Only used if `algorithm` is
+        ``ECC``. See :ref:`hazmat/primitives/asymmetric/ec:elliptic curves`
         for example elliptic-curve names.
 
     Returns
@@ -108,7 +109,7 @@ def load_key(path, *, password=None):
     Parameters
     ----------
     path : :class:`str`
-        The path to the key file.
+        The path to a key file.
     password : :class:`str`, optional
         The password to use to decrypt the private key.
 
