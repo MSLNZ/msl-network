@@ -16,13 +16,27 @@ Version 0.6.0.dev0 (in development)
     for the JSON backends in :class:`~msl.network.json.Package`
   * :attr:`~msl.network.constants.TERMINATION` and :attr:`~msl.network.constants.ENCODING`
     attributes
+  * the ``auto_save`` keyword argument to :meth:`~msl.network.client.connect`
+    and :func:`~msl.network.cryptography.get_ssl_context`
+  * the ``digest_size`` keyword argument to
+    :meth:`~msl.network.cryptography.generate_certificate` and
+    :meth:`~msl.network.cryptography.get_fingerprint`
+  * the ``name`` keyword argument to
+    :meth:`~msl.network.cryptography.generate_certificate`,
+  * the ``algorithm`` keyword argument in :meth:`~msl.network.cryptography.get_fingerprint`
+    can now also be of type :class:`str`
 
 - Changed
 
+  * renamed ``certfile`` to ``cert_file`` in :meth:`~msl.network.client.connect`
+    and :func:`~msl.network.cryptography.get_ssl_context`
   * can now change which JSON backend to use during runtime by calling the
     :func:`msl.network.json.use` function
   * moved the ``msl.network.constants.JSONPackage`` class to
     :class:`msl.network.json.Package`
+  * renamed the command line arguments ``--certfile`` to ``--cert-file``,
+    ``--keyfile`` to ``--key-file``, ``--keyfile-password`` to ``--key-file-password``,
+    and ``--logfile`` to ``--log-file`` for the `start` command
 
 - Fixed
 
