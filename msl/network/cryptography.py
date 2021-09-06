@@ -16,6 +16,7 @@ from cryptography.hazmat.primitives.asymmetric import (
     rsa,
     dsa,
 )
+
 from .utils import (
     logger,
     ensure_root_path,
@@ -27,6 +28,8 @@ from .constants import (
     HOSTNAME,
     DEFAULT_YEARS_VALID,
 )
+
+hash_map = {}
 
 
 def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve='SECP384R1'):
@@ -149,21 +152,7 @@ def generate_certificate(*, path=None, key_path=None, key_password=None, algorit
     :class:`str`
         The path to the self-signed certificate.
     """
-    hash_map = {}
-    for item in dir(hashes):
-        obj = getattr(hashes, item)
-        item_upper = item.upper()
-        if item.startswith('_') or not inspect.isclass(obj) or item_upper == 'HASHALGORITHM':
-            continue
-        if issubclass(obj, hashes.HashAlgorithm):
-            hash_map[item_upper] = obj
-
-    try:
-        hash_class = hash_map[algorithm.upper()]()
-    except KeyError:
-        allowed = ', '.join(hash_map.keys())
-        msg = 'Invalid hash algorithm {}. Allowed algorithms are {}'.format(algorithm.upper(), allowed)
-        raise ValueError(msg) from None
+    hash_class = _hash_class(algorithm=algorithm, digest_size=digest_size)
 
     if key_path is None:
         key_path = get_default_key_path()
@@ -264,7 +253,8 @@ def get_fingerprint(cert, *, algorithm=hashes.SHA1):
     :class:`str`
         The fingerprint as a colon-separated hex string.
     """
-    fingerprint = cert.fingerprint(algorithm()).hex()
+    hash_class = _hash_class(algorithm=algorithm, digest_size=digest_size)
+    fingerprint = cert.fingerprint(hash_class).hex()
     return ':'.join(fingerprint[i:i+2] for i in range(0, len(fingerprint), 2))
 
 
@@ -490,4 +480,36 @@ def get_ssl_context(*, host=None, port=None, certfile=None):
     elif not os.path.isfile(certfile):
         raise OSError('Cannot find certificate ' + certfile)
 
-    return certfile, ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=certfile)
+def _hash_class(*, algorithm='', digest_size=None):
+    """Return an instance of the HashAlgorithm.
+
+    Parameters
+    ----------
+    algorithm : str or HashAlgorithm
+    digest_size : None or int
+    """
+    if isinstance(algorithm, hashes.HashAlgorithm):
+        return algorithm
+
+    if not isinstance(algorithm, str):
+        raise TypeError('The hash algorithm must be a string or HashAlgorithm instance')
+
+    if not hash_map:
+        for item in dir(hashes):
+            obj = getattr(hashes, item)
+            item_upper = item.upper()
+            if item.startswith('_') or not inspect.isclass(obj) or item_upper == 'HASHALGORITHM':
+                continue
+            if issubclass(obj, hashes.HashAlgorithm):
+                hash_map[item_upper] = obj
+
+    algorithm_u = algorithm.upper()
+    try:
+        return hash_map[algorithm_u]()
+    except TypeError:
+        return hash_map[algorithm_u](digest_size)
+    except KeyError:
+        allowed = ', '.join(hash_map.keys())
+        msg = 'Invalid hash algorithm {!r}. Allowed algorithms are\n{}'.format(
+            algorithm_u, allowed)
+        raise ValueError(msg) from None
