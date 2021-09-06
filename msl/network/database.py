@@ -193,7 +193,7 @@ class ConnectionsTable(Database):
         message : :class:`str`
             The message about what happened.
         """
-        now = datetime.now().isoformat(sep=' ')
+        now = datetime.now().replace(microsecond=0).isoformat(sep='T')
         self.execute('INSERT INTO %s VALUES(NULL, ?, ?, ?, ?, ?);' % self.NAME,
                      (now, peer.ip_address, peer.domain, peer.port, message))
         self.connection.commit()
@@ -201,14 +201,19 @@ class ConnectionsTable(Database):
     def connections(self, *, timestamp1=None, timestamp2=None):
         """Returns all the connection records.
 
+        .. versionchanged::
+           Use ``T`` as the separator between the date and time.
+
         Parameters
         ----------
         timestamp1 : :class:`datetime.datetime` or :class:`str`, optional
-            Include all records that have a timestamp :math:`\\gt` `timestamp1`. If a
-            :class:`str` then in the ``yyyy-mm-dd`` or ``yyyy-mm-dd HH:MM:SS`` format.
+            Include all records that have a timestamp :math:`\\gt` `timestamp1`.
+            If a :class:`str` then in the ``yyyy-mm-dd`` or
+            ``yyyy-mm-ddTHH:MM:SS`` format.
         timestamp2 : :class:`datetime.datetime` or :class:`str`, optional
-            Include all records that have a timestamp :math:`\\lt` `timestamp2`. If a
-            :class:`str` then in the ``yyyy-mm-dd`` or ``yyyy-mm-dd HH:MM:SS`` format.
+            Include all records that have a timestamp :math:`\\lt` `timestamp2`.
+            If a :class:`str` then in the ``yyyy-mm-dd`` or
+            ``yyyy-mm-ddTHH:MM:SS`` format.
 
         Returns
         -------
