@@ -2,6 +2,7 @@
 Base class for a :class:`~msl.network.manager.Manager`,
 :class:`~msl.network.service.Service` and :class:`~msl.network.client.Client`.
 """
+import socket
 import asyncio
 import traceback
 from time import perf_counter
@@ -13,10 +14,9 @@ from .constants import (
     ENCODING,
 )
 from .cryptography import get_ssl_context
-from .exceptions import MSLNetworkError
 from .utils import (
     logger,
-    localhost_aliases
+    localhost_aliases,
 )
 
 
@@ -269,48 +269,71 @@ class Network(object):
         """
         self.send_data(writer, {'result': reply, 'requester': requester, 'uuid': uuid, 'error': False})
 
-    def _create_connection(self, host, port, certfile, disable_tls, assert_hostname, timeout):
+    def _create_connection(self, **kwargs):
         # common to both Client and Service to connect to the Manager
-
         context = None
-        if not disable_tls:
-            certfile, context = get_ssl_context(host=host, port=port, certfile=certfile)
+        is_localhost = kwargs['host'] in localhost_aliases()
+        if not kwargs['disable_tls']:
+            try:
+                cert_file, context = get_ssl_context(
+                    host=kwargs['host'], port=kwargs['port'],
+                    cert_file=kwargs['cert_file'], auto_save=kwargs['auto_save']
+                )
+            except OSError as e:
+                msg = str(e)
+                if ('WRONG_VERSION_NUMBER' in msg) or ('UNKNOWN_PROTOCOL' in msg):
+                    msg += '\nTry setting disable_tls=True'
+                elif is_localhost:
+                    msg += '\nMake sure a Network Manager is running on this computer'
+                else:
+                    msg += '\nCannot connect to {host}:{port} to get the certificate'.format(**kwargs)
+                raise ConnectionError(msg) from None
+
             if not context:
                 return False
 
-            if not assert_hostname:
-                context.check_hostname = False
-            else:
-                context.check_hostname = host != HOSTNAME
+            kwargs['cert_file'] = cert_file
+            context.check_hostname = kwargs['assert_hostname']
+            logger.debug('Loaded {}'.format(cert_file))
 
         try:
             self._loop.run_until_complete(
-                self._loop.create_connection(
-                    lambda: self,
-                    host=host,
-                    port=port,
-                    ssl=context,
-                ),
+                asyncio.wait_for(
+                    self._loop.create_connection(
+                        lambda: self,
+                        host=kwargs['host'],
+                        port=kwargs['port'],
+                        ssl=context,
+                    ),
+                    kwargs['timeout']
+                )
             )
-        except Exception as e:
-            err = str(e)
-            if 'match' in err:
-                err += '\nTo disable hostname checking set assert_hostname=False\n' \
-                       'Make sure that you trust the connection if you do this'
-            elif 'CERTIFICATE_VERIFY_FAILED' in err:
-                err += '\nPerhaps the Network Manager is using a new certificate...\n' \
-                       'If you trust the network connection then you can delete ' \
-                       'the certificate at\n{}\nand then re-connect to the Network Manager ' \
-                       'to create a new trusted certificate'.format(certfile)
-            elif ('WRONG_VERSION_NUMBER' in err) or ('UNKNOWN_PROTOCOL' in err):
-                err += '\nTry setting disable_tls=True'
-            elif 'Errno 10061' in err:
-                err += '\nMake sure that a Network Manager is running at {}:{}'.format(host, port)
-            elif 'nodename nor servname provided' in err:
-                if host in localhost_aliases():
-                    host = '127.0.0.1'
-                err += '\nYou might need to add "{} {}" to /etc/hosts'.format(host, HOSTNAME)
-            raise MSLNetworkError(err) from None
+        except Exception as error:
+            if isinstance(error, asyncio.TimeoutError):
+                raise TimeoutError(
+                    'Cannot connect to {host}:{port} within {timeout} seconds'.format(**kwargs)
+                ) from None
+
+            msg = str(error)
+            if msg.startswith('Multiple exceptions'):  # comes from asyncio
+                msg = 'Cannot connect to {host}:{port}'.format(**kwargs)
+            elif isinstance(error, (ConnectionRefusedError, socket.gaierror)):
+                msg += '\nCannot connect to {host}:{port}'.format(**kwargs)
+            elif 'mismatch' in msg or "doesn't match" in msg:
+                msg += '\nTo disable hostname checking set assert_hostname=False\n' \
+                       'Make sure you trust the connection to {host}:{port} ' \
+                       'if you decide to do this.'.format(**kwargs)
+            elif 'CERTIFICATE_VERIFY_FAILED' in msg:
+                msg += '\nPerhaps the Network Manager is using a new certificate.\n' \
+                       'If you trust the connection to {host}:{port}, you can delete ' \
+                       'the certificate at\n  {cert_file}\nand then re-connect to ' \
+                       'create a new trusted certificate.'.format(**kwargs)
+            elif ('WRONG_VERSION_NUMBER' in msg) or ('UNKNOWN_PROTOCOL' in msg):
+                msg += '\nTry setting disable_tls=True'
+            elif 'nodename nor servname provided' in msg:
+                msg += '\nYou might need to add "{} {}" to /etc/hosts'.format(
+                    kwargs['host'], HOSTNAME)
+            raise ConnectionError(msg) from None
 
         # Make sure that the Manager registered this Client/Service by requesting its identity.
         # The following fixed the case where the Manager required TLS but the Client/Service was
@@ -319,15 +342,17 @@ class Network(object):
         # Client/Service never raised an exception but just waited at run_forever().
         async def check_for_identity_request():
             t0 = perf_counter()
+            timeout = kwargs['timeout']
             while True:
                 await asyncio.sleep(0.01)
                 if self._connection_successful or self._identity_successful:
                     break
                 if timeout and perf_counter() - t0 > timeout:
-                    msg = 'The connection to the Network Manager was not established.'
-                    if disable_tls:
-                        msg += '\nYou have TLS disabled. Perhaps the Manager is using TLS for the connection.'
-                    raise TimeoutError(msg)
+                    err = 'The connection to {host}:{port} was not established.'.format(**kwargs)
+                    if kwargs['disable_tls']:
+                        err += '\nYou have TLS disabled. Perhaps the Manager is ' \
+                               'using TLS for the connection.'
+                    raise ConnectionError(err)
             while not self._identity_successful:
                 await asyncio.sleep(0.01)
 
