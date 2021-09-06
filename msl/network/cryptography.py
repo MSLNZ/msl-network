@@ -9,7 +9,6 @@ import datetime
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import (
     ec,
@@ -64,9 +63,9 @@ def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve=
     """
     algorithm_u = algorithm.upper()
     if algorithm_u == 'RSA':
-        key = rsa.generate_private_key(65537, size, default_backend())
+        key = rsa.generate_private_key(65537, size)
     elif algorithm_u == 'DSA':
-        key = dsa.generate_private_key(size, default_backend())
+        key = dsa.generate_private_key(size)
     elif algorithm_u == 'ECC':
         try:
             curve_class = ec._CURVE_TYPES[curve.lower()]  # yeah, access the private variable...
@@ -75,7 +74,7 @@ def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve=
             msg = 'Unknown curve name {}. Allowed names are {}'.format(
                 curve.upper(), ', '.join(sorted(names)))
             raise ValueError(msg) from None
-        key = ec.generate_private_key(curve_class, default_backend())
+        key = ec.generate_private_key(curve_class)
     else:
         raise ValueError('The encryption algorithm must be RSA, DSA or ECC. Got ' + algorithm_u)
 
@@ -118,7 +117,7 @@ def load_key(path, *, password=None):
         data = f.read()
     pw = None if password is None else bytes(str(password).encode())
     logger.debug('load private key ' + path)
-    return serialization.load_pem_private_key(data=data, password=pw, backend=default_backend())
+    return serialization.load_pem_private_key(data=data, password=pw)
 
 
 def generate_certificate(*, path=None, key_path=None, key_password=None, algorithm='SHA256', years_valid=None):
@@ -189,7 +188,7 @@ def generate_certificate(*, path=None, key_path=None, key_password=None, algorit
     cert = cert.serial_number(x509.random_serial_number())
     cert = cert.not_valid_before(now)
     cert = cert.not_valid_after(expires)
-    cert = cert.sign(key, hash_class, default_backend())
+    cert = cert.sign(key, hash_class)
 
     with open(path, 'wb') as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
@@ -225,7 +224,7 @@ def load_certificate(cert):
         data = cert
     else:
         raise TypeError('The "cert" parameter must be a string or bytes')
-    return x509.load_pem_x509_certificate(data, default_backend())
+    return x509.load_pem_x509_certificate(data)
 
 
 def get_default_cert_path():
