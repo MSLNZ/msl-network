@@ -125,36 +125,44 @@ def load_key(path, *, password=None):
     return serialization.load_pem_private_key(data=data, password=pw)
 
 
-def generate_certificate(*, path=None, key_path=None, key_password=None, algorithm='SHA256', years_valid=None):
+def generate_certificate(*, path=None, key_path=None, key_password=None,
+                         algorithm='SHA256', years_valid=None, digest_size=None, name=None):
     """Generate a self-signed certificate.
+
+    .. versionchanged:: 0.6
+       Added the `digest_size` and `name` keyword arguments.
 
     Parameters
     ----------
     path : :class:`str`, optional
-        The path to where to save the certificate. Example, ``path/to/store/certificate.pem``.
-        If :data:`None` then save the certificate in the default directory with the
-        default filename.
+        The path to save the certificate to. If not specified then save the
+        certificate in the default directory with the default filename.
     key_path : :class:`str`, optional
-        The path to where the private key is saved which will be used to
-        digitally sign the certificate. If :data:`None` then automatically
-        generates a new private key (overwriting the default private key
-        if one already exists).
+        The path to the private key which will be used to digitally sign the
+        certificate. If not specified then automatically generates a new
+        private key (overwriting the default private key if one already exists).
     key_password : :class:`str`, optional
         The password to use to decrypt the private key.
-    algorithm : :class:`str`, optional
-        The hash algorithm to use. Default is ``SHA256``. See
-        `this <https://cryptography.io/en/latest/hazmat/primitives/cryptographic-hashes/#cryptographic-hash-algorithms>`_
-        link for example hash-algorithm names.
-    years_valid : :class:`float`, optional
+    algorithm : :class:`str` or :class:`~cryptography.hazmat.primitives.hashes.HashAlgorithm`, optional
+        The hash algorithm to use. See :doc:`hazmat/primitives/cryptographic-hashes`
+        for allowed hash algorithms.
+    years_valid : :class:`int` or :class:`float`, optional
         The number of years that the certificate is valid for. If you want to
         specify that the certificate is valid for 3 months then set `years_valid`
-        to be ``0.25``. Default is ``100`` years for 64-bit platforms and ``15``
+        to be 0.25. Default is 100 years for 64-bit platforms and 15
         years for 32-bit platforms.
+    name : :class:`~cryptography.x509.Name`, optional
+        The object to use for the
+        :meth:`~cryptography.x509.CertificateBuilder.subject_name` and the
+        :meth:`~cryptography.x509.CertificateBuilder.issuer_name`. If not
+        specified then a default `name` is used.
+    digest_size : :class:`int`, optional
+        The digest size, if the hash `algorithm` requires one.
 
     Returns
     -------
     :class:`str`
-        The path to the self-signed certificate.
+        The path to the self-signed certificate that was generated.
     """
     hash_class = _hash_class(algorithm=algorithm, digest_size=digest_size)
 
@@ -168,14 +176,16 @@ def generate_certificate(*, path=None, key_path=None, key_password=None, algorit
         path = get_default_cert_path()
     ensure_root_path(path)
 
-    name = x509.Name([
-        x509.NameAttribute(NameOID.COUNTRY_NAME, 'NZ'),
-        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, 'Wellington'),
-        x509.NameAttribute(NameOID.LOCALITY_NAME, 'Lower Hutt'),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, 'Measurement Standards Laboratory of New Zealand'),
-        x509.NameAttribute(NameOID.COMMON_NAME, HOSTNAME),
-        x509.NameAttribute(NameOID.EMAIL_ADDRESS, 'info@measurement.govt.nz'),
-    ])
+    if name is None:
+        a = x509.NameAttribute
+        name = x509.Name([
+            a(NameOID.COUNTRY_NAME, 'NZ'),
+            a(NameOID.STATE_OR_PROVINCE_NAME, 'Wellington'),
+            a(NameOID.LOCALITY_NAME, 'Lower Hutt'),
+            a(NameOID.ORGANIZATION_NAME, 'Measurement Standards Laboratory of New Zealand'),
+            a(NameOID.COMMON_NAME, HOSTNAME),
+            a(NameOID.EMAIL_ADDRESS, 'info@measurement.govt.nz'),
+        ])
 
     now = datetime.datetime.utcnow()
 
