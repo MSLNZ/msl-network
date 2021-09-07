@@ -112,12 +112,19 @@ class Manager(object):
                 thread = Thread(target=service.start, kwargs=self.kwargs, daemon=True)
                 thread.start()
                 t0 = time.time()
-                while name not in cxn.manager()['services']:
+                while True:
                     time.sleep(0.1)
+                    services = cxn.manager()['services']
+                    if name in services:
+                        break
                     if time.time() - t0 > 30:
                         in_use = self.is_port_in_use(service.port)
                         self.shutdown(cxn)
-                        raise RuntimeError('Cannot start {} service. Is port in use? {}'.format(name, in_use))
+                        raise RuntimeError(
+                            'Cannot start {} service.\n'
+                            'Is Service port in use? {}\n'
+                            'Services: {}'.format(name, in_use, services)
+                        )
                 self._service_threads[service] = thread
             cxn.disconnect()
 
