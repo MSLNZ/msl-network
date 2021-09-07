@@ -1,136 +1,211 @@
 import os
-import sys
 import tempfile
+
+import pytest
+
+import conftest
 
 from msl.network import cli
 from msl.network.database import UsersTable
-
-db = os.path.join(tempfile.gettempdir(), 'test_cli_user.db')
-out = os.path.join(tempfile.gettempdir(), 'test_cli_user.tmp')
-pw_file = os.path.join(tempfile.gettempdir(), 'password.tmp')
-
-for item in [db, out, pw_file]:
-    if os.path.isfile(item):
-        os.remove(item)
-
-table = UsersTable(database=db)
+from msl.network.constants import DATABASE
 
 
-def get_args(command):
+def process(command):
     parser = cli.configure_parser()
-    return parser.parse_args(command.split())
-
-
-def check_value_error(out, base, cmd, text):
-    sys.stdout = open(out, 'w')
-    args = get_args(base + cmd)
+    args = parser.parse_args(command.split())
     args.func(args)
-    sys.stdout.close()
-    line = open(out, 'r').readline().strip()
-    assert line.startswith('ValueError:') and text in line
 
 
-def teardown_module(module):
-    table.close()
-    os.remove(db)
-    os.remove(out)
-    os.remove(pw_file)
+def remove_default():
+    try:
+        os.remove(DATABASE)
+    except OSError:
+        pass
 
 
-def test_cli_user():
-
+def create_default():
+    remove_default()
     users = [
         ('admin', 'the administrator', True),
-        ('enforcer', 'the second in command', 1),
+        ('the-enforcer', 'the second in command', 1),
         ('Alice', 'alice123', False),
         ('Bob', 'bob likes cheese', []),
         ('charlie', 'CharliesAngels', 0),
-        ('jdoe', 'anonymous & unknown', None),
+        ('j.doe', 'anonymous & unknown', None),
+    ]
+    with UsersTable() as table:
+        for user in users:
+            table.insert(*user)
+
+
+def test_path():
+    conftest.Manager.remove_files()
+    remove_default()
+
+    assert DATABASE != conftest.Manager.database
+    assert not os.path.isfile(DATABASE)
+    assert not os.path.isfile(conftest.Manager.database)
+
+    # need to specify an action, so use the "list" action
+    process('user list')
+    assert os.path.isfile(DATABASE)
+    assert not os.path.isfile(conftest.Manager.database)
+    os.remove(DATABASE)
+
+    process('user list --database {}'.format(conftest.Manager.database))
+    assert os.path.isfile(conftest.Manager.database)
+    assert not os.path.isfile(DATABASE)
+    os.remove(conftest.Manager.database)
+
+
+@pytest.mark.parametrize('action', ['add', 'insert', 'remove', 'delete', 'update'])
+def test_no_username(action, capsys):
+    process('user ' + action)
+    out, err = capsys.readouterr()
+    assert out.rstrip() == 'ValueError: You must specify a username to {}'.format(action)
+    assert not err
+
+
+def test_list_none(capsys):
+    remove_default()
+    process('user list')
+    out, err = capsys.readouterr()
+    assert out.rstrip() == 'There are no users in the database'
+    assert not err
+
+
+def test_list(capsys):
+    create_default()
+    process('user list')
+    out, err = capsys.readouterr()
+    out_lines = out.splitlines()
+    assert not err
+    assert out_lines[0] == 'Users in {}'.format(DATABASE)
+    assert not out_lines[1]
+    assert out_lines[2] == 'Username     Administrator'
+    assert out_lines[3] == '============ ============='
+    assert out_lines[4] == 'Alice        False'
+    assert out_lines[5] == 'Bob          False'
+    assert out_lines[6] == 'admin        True'
+    assert out_lines[7] == 'charlie      False'
+    assert out_lines[8] == 'j.doe        False'
+    assert out_lines[9] == 'the-enforcer True'
+
+
+@pytest.mark.parametrize('action', ['add', 'insert'])
+def test_add_no_password(action, capsys):
+    process('user {} the.person'.format(action))
+    out, err = capsys.readouterr()
+    assert out.rstrip() == 'ValueError: You must specify a password for the.person'
+    assert not err
+
+
+@pytest.mark.parametrize('action', ['add', 'insert'])
+def test_add(action, capsys):
+    remove_default()
+    process('user {} the.person --password pw'.format(action))
+    out, err = capsys.readouterr()
+    assert out.rstrip() == 'the.person has been {}ed'.format(action)
+    assert not err
+
+
+@pytest.mark.parametrize('action', ['add', 'insert'])
+def test_add_already_exists(action, capsys):
+    process('user {} the.person --password pw'.format(action))
+    out, err = capsys.readouterr()
+    assert out.rstrip() == "ValueError: A user with the name 'the.person' already exists"
+    assert not err
+
+
+@pytest.mark.parametrize('action', ['add', 'insert'])
+def test_add_bad_username(action, capsys):
+    process('user {} person:1234 --password pw'.format(action))
+    out, err = capsys.readouterr()
+    assert out.rstrip() == 'ValueError: A username cannot end with ":<integer>"'
+    assert not err
+
+
+@pytest.mark.parametrize('action', ['add', 'insert'])
+def test_add_use_password_file(action, capsys):
+    remove_default()
+    pw_file = os.path.join(tempfile.gettempdir(), 'password.tmp')
+    with open(pw_file, mode='wt') as fp:
+        fp.write('a password in a file')
+
+    process('user {} person --password {}'.format(action, pw_file))
+    out, err = capsys.readouterr()
+    assert not err
+    assert out.splitlines() == [
+        'Reading the password from the file',
+        'person has been {}ed'.format(action),
     ]
 
-    for user in users:
-        table.insert(*user)
+    os.remove(pw_file)
 
-    base_command = 'user --database {} '.format(db)
 
-    # action: list
-    sys.stdout = open(out, 'w')
-    args = get_args(base_command + 'list')
-    args.func(args)
-    sys.stdout.close()
-    lines = [line.split() for line in open(out, 'r').readlines()]
-    assert lines[0][0] == 'Users'
-    assert lines[2][0] == 'Username'
-    assert lines[3][0].startswith('=')
-    assert ['enforcer', 'True'] in lines
-    assert ['jdoe', 'False'] in lines
+@pytest.mark.parametrize('action', ['remove', 'delete'])
+def test_remove(action, capsys):
+    create_default()
+    process('user {} Alice'.format(action))
+    out, err = capsys.readouterr()
+    assert out.rstrip() == 'Alice has been {}d'.format(action)
+    assert not err
 
-    # action: no username
-    for item in ('insert', 'add', 'remove', 'delete', 'update'):
-        check_value_error(out, base_command, item, 'username')
 
-    # action: insert/add ... no password specified
-    check_value_error(out, base_command, 'insert person', 'password')
-    check_value_error(out, base_command, 'add person', 'password')
+@pytest.mark.parametrize('action', ['remove', 'delete'])
+def test_remove_not_exist(action, capsys):
+    create_default()
+    process('user {} Dirac'.format(action))
+    out, err = capsys.readouterr()
+    assert not err
+    assert out.rstrip() == "ValueError: Cannot {} 'Dirac'. This " \
+                           "user is not in the table.".format(action)
 
-    # action insert
-    sys.stdout = open(out, 'w')
-    args = get_args(base_command + 'add person1 --password password123')
-    args.func(args)
-    sys.stdout.close()
-    line = open(out, 'r').readline().strip()
-    assert line.startswith('person1') and line.endswith('added')
-    assert 'person1' in table.usernames()
 
-    # action insert ... already exists
-    sys.stdout = open(out, 'w')
-    args = get_args(base_command + 'add person1 --password password123')
-    args.func(args)
-    sys.stdout.close()
-    assert open(out, 'r').readline().startswith('ValueError:')
+def test_update(capsys):
+    create_default()
+    process('user update Alice')
+    out, err = capsys.readouterr()
+    assert out.rstrip() == 'Updated Alice'
+    assert not err
 
-    # action remove
-    sys.stdout = open(out, 'w')
-    args = get_args(base_command + 'remove person1')
-    args.func(args)
-    sys.stdout.close()
-    line = open(out, 'r').readline().strip()
-    assert line.startswith('person1') and line.endswith('removed')
-    assert 'person1' not in table.usernames()
 
-    # action remove ... does not exist
-    sys.stdout = open(out, 'w')
-    args = get_args(base_command + 'add person2')
-    args.func(args)
-    sys.stdout.close()
-    assert open(out, 'r').readline().startswith('ValueError:')
+def test_update_password(capsys):
+    create_default()
+    process('user update Alice --password pw')
+    out, err = capsys.readouterr()
+    assert out.rstrip() == 'Updated Alice'
+    assert not err
 
-    # action update
-    sys.stdout = open(out, 'w')
-    args = get_args(base_command + 'update Alice --password password123 --admin')
-    args.func(args)
-    sys.stdout.close()
-    line = open(out, 'r').readline().strip()
-    assert line.startswith('Updated') and line.endswith('Alice')
-    assert table.is_admin('Alice')
 
-    # action update ... does not exist
-    sys.stdout = open(out, 'w')
-    args = get_args(base_command + 'update person3')
-    args.func(args)
-    sys.stdout.close()
-    assert open(out, 'r').readline().startswith('ValueError:')
+def test_update_admin(capsys):
+    create_default()
+    process('user update Alice --admin')
+    out, err = capsys.readouterr()
+    assert out.rstrip() == 'Updated Alice'
+    assert not err
 
-    # action update ... password from a file
-    sys.stdout = open(out, 'w')
-    password = 'a password in a file'
-    with open(pw_file, 'w') as fp:
-        fp.write(password)
 
-    args = get_args(base_command + 'update Alice --password ' + pw_file)
-    args.func(args)
-    sys.stdout.close()
-    lines = [line.strip() for line in open(out, 'r').readlines()]
-    assert lines[0] == 'Reading the password from the file'
-    assert lines[1].startswith('Updated') and line.endswith('Alice')
-    assert table.is_password_valid('Alice', password)
+def test_update_password_file(capsys):
+    create_default()
+    pw_file = os.path.join(tempfile.gettempdir(), 'password.tmp')
+    with open(pw_file, mode='wt') as fp:
+        fp.write('a password in a file')
+
+    process('user update Alice --password {}'.format(pw_file))
+    out, err = capsys.readouterr()
+    assert out.splitlines() == [
+        'Reading the password from the file',
+        'Updated Alice',
+    ]
+
+    os.remove(pw_file)
+
+
+def test_update_not_exist(capsys):
+    create_default()
+    process('user update Dirac')
+    out, err = capsys.readouterr()
+    assert not err
+    assert out.rstrip() == "ValueError: Cannot update 'Dirac'. This " \
+                           "user is not in the table."
