@@ -19,7 +19,7 @@ def get_args(command):
      '--auth-hostname --auth-login',
      '--auth-login --auth-password h e l l o']
 )
-def test_cannot_use_multiple_auth_methods(flag, capsys):
+def test_multiple_auth_methods(flag, capsys):
     args = get_args('start ' + flag)
     args.func(args)
     _, err = capsys.readouterr()
