@@ -10,7 +10,7 @@ import os
 
 from .cryptography import generate_key
 
-HELP = 'Generates a private key to digitally sign a PEM certificate.'
+HELP = 'Generate a private key to digitally sign a PEM certificate.'
 
 DESCRIPTION = HELP + """
 
@@ -75,7 +75,7 @@ def add_parser_keygen(parser):
     )
     p.add_argument(
         '-o', '--out',
-        help='The path to where to save the private key\n'
+        help='The path to save the private key to\n'
              '(e.g., --out /where/to/save/key.pem). If omitted then\n'
              'the default directory and filename is used to save the\n'
              'private key file.'
@@ -93,22 +93,28 @@ def execute(args):
     """Executes the ``keygen`` command."""
     try:
         size = int(args.size)
+        if size <= 0:
+            raise ValueError
     except ValueError:
-        print('ValueError: The --size value must be an integer')
+        print('ValueError: The --size value must be a positive integer')
         return
 
     password = None if args.password is None else ' '.join(args.password)
     if password is not None and os.path.isfile(password):
         print('Reading the key password from the file')
-        with open(password, 'r') as fp:
+        with open(password, mode='rt') as fp:
             password = fp.readline().strip()
 
-    path = generate_key(
-        path=args.out,
-        algorithm=args.algorithm,
-        password=password,
-        size=size,
-        curve=args.curve
-    )
+    try:
+        path = generate_key(
+            path=args.out,
+            algorithm=args.algorithm,
+            password=password,
+            size=size,
+            curve=args.curve
+        )
+    except Exception as e:
+        print('{}: {}'.format(e.__class__.__name__, e))
+        return
 
-    print('Created private {} key {}'.format(args.algorithm.upper(), path))
+    print('Created private {} key {!r}'.format(args.algorithm.upper(), path))
