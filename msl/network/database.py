@@ -373,7 +373,7 @@ class UsersTable(Database):
         if _is_manager_regex.search(username) is not None:
             raise ValueError('A username cannot end with ":<integer>"')
         if not password:
-            raise ValueError('You must specify a password')
+            raise ValueError('You must specify a password for {!r}'.format(username))
 
         salt = os.urandom(self._salt_size)
         kdf = PBKDF2HMAC(
@@ -421,7 +421,7 @@ class UsersTable(Database):
             return
 
         if not password:
-            raise ValueError('You must specify a password')
+            raise ValueError('You must specify a password for {!r}'.format(username))
 
         salt = os.urandom(self._salt_size)
         key = PBKDF2HMAC(
@@ -553,7 +553,7 @@ class UsersTable(Database):
         # want to know if this user is not in the table
         if username not in self.usernames():
             raise ValueError(
-                'Cannot {} "{}". '
+                'Cannot {} {!r}. '
                 'This user is not in the table.'.format(action, username)
             )
 
