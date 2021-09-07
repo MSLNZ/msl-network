@@ -7,6 +7,8 @@ Version 0.6.0.dev0 (in development)
 
 - Added
 
+  * ability to use all :class:`~msl.network.database.Database` classes as a
+    context manager (i.e., using a ``with`` statement)
   * support for Python 3.9
   * the :meth:`~msl.network.client.Client.clear_futures_and_requests` method
   * the ``delete`` command-line argument to delete files that are created by MSL-Network
