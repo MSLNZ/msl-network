@@ -478,7 +478,7 @@ class UsersTable(Database):
     def users(self):
         """:class:`list` of :class:`tuple`: Returns [(username, is_admin), ... ] for all users."""
         self.execute('SELECT username,is_admin FROM {};'.format(self.NAME))
-        return [(item[0], bool(item[1])) for item in self.cursor.fetchall()]
+        return sorted([(item[0], bool(item[1])) for item in self.cursor.fetchall()])
 
     def is_user_registered(self, username):
         """:class:`bool`: Whether `username` is a registered user."""
