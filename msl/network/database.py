@@ -298,7 +298,7 @@ class HostnamesTable(Database):
     def hostnames(self):
         """:class:`list` of :class:`str`: Returns all the trusted hostnames."""
         self.execute('SELECT * FROM {};'.format(self.NAME))
-        return [item[0] for item in self.cursor.fetchall()]
+        return sorted([item[0] for item in self.cursor.fetchall()])
 
 
 class UsersTable(Database):
