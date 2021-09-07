@@ -96,7 +96,7 @@ def test_list(capsys):
 def test_add_no_password(action, capsys):
     process('user {} the.person'.format(action))
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'ValueError: You must specify a password for the.person'
+    assert out.rstrip() == "ValueError: You must specify a password for 'the.person'"
     assert not err
 
 
