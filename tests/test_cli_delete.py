@@ -313,5 +313,46 @@ def test_no_args(capsys):
     # execute command
     args.func(args)
 
-    out, _ = capsys.readouterr()
-    assert 'You must specify what you want to delete' in out
+    out, err = capsys.readouterr()
+    assert out.startswith('You must specify what you want to delete')
+    assert not err
+
+
+def test_not_a_directory(capsys):
+    try:
+        shutil.rmtree(ROOT_DIR)
+    except:
+        pass
+
+    args = get_args('--logs')
+    args.func(args)
+
+    out, err = capsys.readouterr()
+    assert out.rstrip() == 'The {!r} directory does not exist'.format(ROOT_DIR)
+    assert not err
+
+
+def test_no_files(capsys):
+    try:
+        shutil.rmtree(ROOT_DIR)
+    except:
+        pass
+
+    os.makedirs(ROOT_DIR)
+    args = get_args('--all')
+    args.func(args)
+
+    out, err = capsys.readouterr()
+    assert not err
+    assert out.splitlines() == [
+        'No database file found',
+        '',
+        'Searching for certificates ... no certificates found',
+        '',
+        'Searching for keys ... no keys found',
+        '',
+        'Searching for log files ... no log files found',
+    ]
+
+    # cleanup
+    shutil.rmtree(ROOT_DIR)
