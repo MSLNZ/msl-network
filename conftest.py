@@ -164,7 +164,8 @@ class Manager(object):
             cmd = ['lsof', '-nP', '-iTCP:%d' % port]
         else:
             cmd = ['netstat', '-an']
-        out = subprocess.check_output(cmd)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, _ = p.communicate()
         return out.find(b':%d ' % port) > 0
 
     @staticmethod
