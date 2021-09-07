@@ -132,4 +132,4 @@ def execute(args):
     print('Created the self-signed certificate {!r}'.format(path))
     if args.show:
         print('')
-        print(cryptography.get_metadata(cryptography.load_certificate(path)))
+        print(cryptography.get_metadata_as_string(cryptography.load_certificate(path)))
