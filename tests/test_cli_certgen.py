@@ -45,6 +45,19 @@ def test_password(capsys):
     os.remove(key_file)
 
 
+def test_password_invalid(capsys):
+    key_file = os.path.join(tempfile.gettempdir(), 'key.private')
+    generate_key(path=key_file, password='the password')
+
+    process('certgen --key-file {} --key-file-password invalid'.format(key_file))
+    out, err = capsys.readouterr()
+    # an error message from the cryptography developers
+    assert out.startswith('ValueError: ')
+    assert not err
+
+    os.remove(key_file)
+
+
 def test_password_file(capsys):
     pw_file = os.path.join(tempfile.gettempdir(), 'password.tmp')
     pw = 'the password'
