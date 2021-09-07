@@ -23,7 +23,7 @@ def test_invalid_certificate(capsys):
 
 
 def test_file(capsys):
-    tmp = tempfile.gettempdir() + 'out.tmp'
+    tmp = os.path.join(tempfile.gettempdir(), 'out.tmp')
     path = generate_certificate()
     process('certdump {} --out {}'.format(path, tmp))
     out, err = capsys.readouterr()
