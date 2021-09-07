@@ -211,7 +211,7 @@ class ConnectionsTable(Database):
 
     def connections(self, *, start=None, end=None):
         """Return the information of the devices that have connected to the
-        Network :class:`~msl.network.manager.Manager.
+        Network :class:`~msl.network.manager.Manager`.
 
         .. versionchanged:: 0.6
            Use ``T`` as the separator between the date and time.
