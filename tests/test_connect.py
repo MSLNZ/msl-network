@@ -1,4 +1,5 @@
 import os
+import sys
 import tempfile
 from time import perf_counter
 
@@ -32,13 +33,13 @@ def test_no_manager_no_certificate_remotehost():
 
 
 def test_no_manager_timeout_asyncio():
-    timeout = 0.1
+    timeout = 0.01
     match = r'Cannot connect to {}:{} within {} seconds$'.format(
         constants.HOSTNAME, constants.PORT, timeout)
     t0 = perf_counter()
     with pytest.raises(TimeoutError, match=match):
         connect(disable_tls=True, timeout=timeout)
-    assert abs(timeout - (perf_counter() - t0)) < 0.2
+    assert abs(timeout - (perf_counter() - t0)) < 0.1
 
 
 def test_no_manager_no_timeout_localhost():
