@@ -198,20 +198,23 @@ class ConnectionsTable(Database):
                      (now, peer.ip_address, peer.domain, peer.port, message))
         self.connection.commit()
 
-    def connections(self, *, timestamp1=None, timestamp2=None):
-        """Returns all the connection records.
+    def connections(self, *, start=None, end=None):
+        """Return the information of the devices that have connected to the
+        Network :class:`~msl.network.manager.Manager.
 
-        .. versionchanged::
+        .. versionchanged:: 0.6
            Use ``T`` as the separator between the date and time.
+           Renamed `timestamp1` to `start`.
+           Renamed `timestamp2` to `end`.
 
         Parameters
         ----------
-        timestamp1 : :class:`datetime.datetime` or :class:`str`, optional
-            Include all records that have a timestamp :math:`\\gt` `timestamp1`.
+        start : :class:`datetime.datetime` or :class:`str`, optional
+            Include all records that have a timestamp :math:`\\ge` `start`.
             If a :class:`str` then in the ``yyyy-mm-dd`` or
             ``yyyy-mm-ddTHH:MM:SS`` format.
-        timestamp2 : :class:`datetime.datetime` or :class:`str`, optional
-            Include all records that have a timestamp :math:`\\lt` `timestamp2`.
+        end : :class:`datetime.datetime` or :class:`str`, optional
+            Include all records that have a timestamp :math:`\\le` `end`.
             If a :class:`str` then in the ``yyyy-mm-dd`` or
             ``yyyy-mm-ddTHH:MM:SS`` format.
 
@@ -220,17 +223,16 @@ class ConnectionsTable(Database):
         :class:`list` of :class:`tuple`
             The connection records.
         """
-        if timestamp1 is None and timestamp2 is None:
-            self.execute('SELECT * FROM {};'.format(self.NAME))
-        elif timestamp1 is not None and timestamp2 is None:
-            self.execute('SELECT * FROM {} WHERE timestamp > ?;'.format(self.NAME),
-                         (timestamp1,))
-        elif timestamp1 is None and timestamp2 is not None:
-            self.execute('SELECT * FROM {} WHERE timestamp < ?;'.format(self.NAME),
-                         (timestamp2,))
+        pre = 'SELECT * FROM {}'.format(self.NAME)
+        if start is None and end is None:
+            self.execute('{};'.format(pre))
+        elif start is not None and end is None:
+            self.execute('{} WHERE timestamp >= ?;'.format(pre), (start,))
+        elif start is None and end is not None:
+            self.execute('{} WHERE timestamp <= ?;'.format(self.NAME), (end,))
         else:
-            self.execute('SELECT * FROM {} WHERE timestamp > ? AND timestamp < ?;'.format(self.NAME),
-                         (timestamp1, timestamp2))
+            self.execute('{} WHERE timestamp >= ? AND timestamp <= ?;'.format(pre),
+                         (start, end))
         return self.cursor.fetchall()
 
 

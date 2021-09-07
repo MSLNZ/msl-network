@@ -37,6 +37,10 @@ Version 0.6.0.dev0 (in development)
   * renamed the command line arguments ``--certfile`` to ``--cert-file``,
     ``--keyfile`` to ``--key-file``, ``--keyfile-password`` to ``--key-file-password``,
     and ``--logfile`` to ``--log-file`` for the `start` command
+  * use ``T`` as the separator between the date and time in a
+   :class:`~msl.network.database.ConnectionsTable`
+  * rename the keyword arguments ``timestamp1`` to ``start`` and ``timestamp2``
+    to ``end`` in :meth:`~msl.network.database.ConnectionsTable.connections`
 
 - Fixed
 
