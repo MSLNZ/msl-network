@@ -77,7 +77,12 @@ class Database(object):
         if self._connection is not None:
             self._connection.close()
             self._connection = None
-            logger.debug('closed {}'.format(self._path))
+            try:
+                logger.debug('closed {}'.format(self._path))
+            except NameError:
+                # This error could occur when Python is exiting
+                #   NameError: name 'open' is not defined
+                pass
 
     def execute(self, sql, parameters=None):
         """Wrapper around :meth:`sqlite3.Cursor.execute`.
