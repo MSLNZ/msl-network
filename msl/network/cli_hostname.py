@@ -84,26 +84,28 @@ def execute(args):
     db = HostnamesTable(database=database)
 
     if args.action == 'list':
-        print('Trusted devices in ' + db.path)
+        print('Trusted devices in {}'.format(db.path))
         print('\nHostnames:')
-        for hostname in sorted(db.hostnames()):
+        for hostname in db.hostnames():
             print('  ' + hostname)
     elif args.action in ['insert', 'add']:
         if not args.names:
             print('No hostnames were ' + args.action + 'ed')
-        else:
-            for name in args.names:
-                db.insert(name)
-                print(args.action.title() + 'ed ' + name)
+            return
+        for name in args.names:
+            db.insert(name)
+            print(args.action.title() + 'ed ' + name)
     elif args.action in ['remove', 'delete']:
         if not args.names:
             print('No hostnames were ' + args.action + 'd')
-        else:
-            for name in args.names:
-                try:
-                    db.delete(name)
-                    print(args.action.title() + 'd ' + name)
-                except ValueError as e:
-                    print(e)
+            return
+        for name in args.names:
+            try:
+                db.delete(name)
+            except ValueError:
+                print('Cannot {} {!r}. This hostname is not in the table.'
+                      .format(args.action, name))
+            else:
+                print(args.action.title() + 'd ' + name)
     else:
-        assert False, 'No action "' + args.action + '" is implemented'
+        assert False, 'No action {!r} is implemented'.format(args.action)
