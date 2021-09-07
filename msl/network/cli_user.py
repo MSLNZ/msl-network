@@ -97,7 +97,7 @@ def add_parser_user(parser):
              'in the terminal (i.e., you do not want the password to\n'
              'appear in your command history). Whatever is written on\n'
              'the first line in the file will be used for the password.\n'
-             'WARNING: If you enter a path that does not exist then the\n'
+             'WARNING: If you specify a path that does not exist then the\n'
              'path itself will be used as the password.'
     )
     p.set_defaults(func=execute)
@@ -127,35 +127,36 @@ def execute(args):
         return
 
     if args.username is None:
-        print('ValueError: You must enter a username to ' + args.action)
+        print('ValueError: You must specify a username to ' + args.action)
         return
 
     password = None if args.password is None else ' '.join(args.password)
     if password is not None and os.path.isfile(password):
         print('Reading the password from the file')
-        with open(password, 'r') as fp:
+        with open(password, mode='rt') as fp:
             password = fp.readline().strip()
 
     if args.action in ['insert', 'add']:
-        if args.password is None:
-            print('ValueError: You must enter a password for ' + args.username)
-            return
         try:
             db.insert(args.username, password, args.admin)
-            print(args.username + ' has been ' + args.action + 'ed')
         except ValueError as e:
-            print('ValueError: ' + str(e))
+            print('ValueError: {}'.format(e))
+        else:
+            print(args.username + ' has been ' + args.action + 'ed')
     elif args.action in ['remove', 'delete']:
         try:
             db.delete(args.username)
+        except ValueError:
+            print('ValueError: Cannot {} {!r}. This user is not in '
+                  'the table.'.format(args.action, args.username))
+        else:
             print(args.username + ' has been ' + args.action + 'd')
-        except ValueError as e:
-            print('ValueError: ' + str(e))
     elif args.action == 'update':
         try:
             db.update(args.username, password=password, is_admin=args.admin)
-            print('Updated ' + args.username)
         except ValueError as e:
-            print('ValueError: ' + str(e))
+            print('ValueError: {}'.format(e))
+        else:
+            print('Updated ' + args.username)
     else:
         assert False, 'No action {!r} is implemented'.format(args.action)
