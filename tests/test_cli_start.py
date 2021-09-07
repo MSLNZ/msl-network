@@ -8,9 +8,10 @@ from msl.network import cli
 from msl.network.database import UsersTable
 
 
-def get_args(command):
+def process(command):
     parser = cli.configure_parser()
-    return parser.parse_args(command.split())
+    args = parser.parse_args(command.split())
+    args.func(args)
 
 
 @pytest.mark.parametrize(
@@ -20,16 +21,14 @@ def get_args(command):
      '--auth-login --auth-password h e l l o']
 )
 def test_multiple_auth_methods(flag, capsys):
-    args = get_args('start ' + flag)
-    args.func(args)
+    process('start ' + flag)
     _, err = capsys.readouterr()
     assert err.rstrip().endswith('ValueError: Cannot specify multiple authentication methods')
 
 
 @pytest.mark.parametrize('port', [-1, '1234x'])
 def test_invalid_port(port, capsys):
-    args = get_args('start --port {}'.format(port))
-    args.func(args)
+    process('start --port {}'.format(port))
     _, err = capsys.readouterr()
     assert err.rstrip().endswith('ValueError: The port must be a positive integer')
 
@@ -42,8 +41,7 @@ def test_cannot_use_auth_login_with_empty_table(capsys):
         pass
 
     table = UsersTable(database=db)
-    args = get_args('start --auth-login --database ' + db)
-    args.func(args)
+    process('start --auth-login --database ' + db)
     table.close()
     out, err = capsys.readouterr()
     out_lines = out.splitlines()
