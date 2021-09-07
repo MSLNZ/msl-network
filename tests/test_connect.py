@@ -32,7 +32,7 @@ def test_no_manager_no_certificate_remotehost():
 
 
 def test_no_manager_timeout_asyncio():
-    timeout = 0.5
+    timeout = 0.1
     match = r'Cannot connect to {}:{} within {} seconds$'.format(
         constants.HOSTNAME, constants.PORT, timeout)
     t0 = perf_counter()
