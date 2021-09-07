@@ -174,9 +174,9 @@ class ConnectionsTable(Database):
             kwargs['detect_types'] = sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
 
         super(ConnectionsTable, self).__init__(database, **kwargs)
-        self.execute('CREATE TABLE IF NOT EXISTS %{} ('
+        self.execute('CREATE TABLE IF NOT EXISTS {} ('
                      'pid INTEGER PRIMARY KEY AUTOINCREMENT, '
-                     'timestamp TIMESTAMP NOT NULL, '
+                     'datetime DATETIME NOT NULL, '
                      'ip_address TEXT NOT NULL, '
                      'domain TEXT NOT NULL, '
                      'port INTEGER NOT NULL, '
@@ -543,3 +543,39 @@ class UsersTable(Database):
                 'Cannot {} "{}". '
                 'This user is not in the table.'.format(action, username)
             )
+
+
+def convert_datetime(value):
+    """Convert a date and time to a :class:`~datetime.datetime` object.
+
+    Parameters
+    ----------
+    value : :class:`bytes`
+        The datetime value from an SQLite database.
+
+    Returns
+    -------
+    :class:`datetime.datetime`
+        The `value` as a datetime object.
+    """
+    try:
+        # datetime.fromisoformat is available in Python 3.7+
+        return datetime.fromisoformat(value.decode())
+    except AttributeError:
+        # mimics the sqlite3.dbapi2.convert_timestamp function
+        datepart, timepart = value[:10], value[11:]
+        year, month, day = map(int, datepart.split(b'-'))
+        timepart_full = timepart.split(b'.')
+        hours, minutes, seconds = map(int, timepart_full[0].split(b':'))
+        if len(timepart_full) == 2:
+            microseconds = int('{:0<6.6}'.format(timepart_full[1].decode()))
+        else:
+            microseconds = 0
+        return datetime(year, month, day, hours, minutes, seconds, microseconds)
+
+
+# Do not use the builtin TIMESTAMP converter since it does not support
+# the T separator between the date and time. Also, according to
+# https://www.sqlite.org/lang_datefunc.html the name DATETIME seems
+# to be more logical than TIMESTAMP as a field name.
+sqlite3.register_converter('DATETIME', convert_datetime)
