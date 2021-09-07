@@ -48,6 +48,12 @@ class Database(object):
         self._connection = sqlite3.connect(self._path, **kwargs)
         self._cursor = self._connection.cursor()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     @property
     def path(self):
         """:class:`str`: The path to the database file."""
