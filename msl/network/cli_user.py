@@ -112,6 +112,10 @@ def execute(args):
 
     if args.action == 'list':
         users = db.users()
+        if not users:
+            print('There are no users in the database')
+            return
+
         width = len('Username')
         for name, _ in users:
             width = max(width, len(name))
@@ -154,4 +158,4 @@ def execute(args):
         except ValueError as e:
             print('ValueError: ' + str(e))
     else:
-        assert False, 'No action "' + args.action + '" is implemented'
+        assert False, 'No action {!r} is implemented'.format(args.action)
