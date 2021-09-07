@@ -11,7 +11,7 @@ import os
 from . import cryptography
 from .constants import DEFAULT_YEARS_VALID
 
-HELP = 'Generates a self-signed PEM certificate.'
+HELP = 'Generate a self-signed PEM certificate.'
 
 DESCRIPTION = HELP + """
 
@@ -117,15 +117,19 @@ def execute(args):
         with open(key_file_password, mode='rt') as fp:
             key_file_password = fp.readline().strip()
 
-    path = cryptography.generate_certificate(
-        path=args.out,
-        key_path=args.key_file,
-        key_password=key_file_password,
-        algorithm=args.algorithm,
-        years_valid=years
-    )
+    try:
+        path = cryptography.generate_certificate(
+            path=args.out,
+            key_path=args.key_file,
+            key_password=key_file_password,
+            algorithm=args.algorithm,
+            years_valid=years
+        )
+    except Exception as e:
+        print('{}: {}'.format(e.__class__.__name__, e))
+        return
 
-    print('Created the self-signed certificate ' + path)
+    print('Created the self-signed certificate {!r}'.format(path))
     if args.show:
         print('')
         print(cryptography.get_metadata(cryptography.load_certificate(path)))
