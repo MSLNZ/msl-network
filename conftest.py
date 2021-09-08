@@ -154,6 +154,7 @@ class Manager(object):
             if time.time() - start_time > 30:
                 raise RuntimeError(message)
             time.sleep(0.1)
+        time.sleep(1)
 
     @staticmethod
     def wait_shutdown(port, message):
