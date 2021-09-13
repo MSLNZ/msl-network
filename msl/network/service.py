@@ -104,7 +104,7 @@ class Service(Network, asyncio.Protocol):
         return self._port
 
     def emit_notification(self, *args, **kwargs):
-        """Emit a notification to all :class:`~msl.network.client.Client`\'s that are
+        """Emit a notification to all :class:`~msl.network.client.Client`\\s that are
         :class:`~msl.network.client.Link`\\ed with this :class:`Service`.
 
         .. versionadded:: 0.5
