@@ -559,8 +559,9 @@ class Manager(Network):
                 logger.info('linked {!r} with {!r}'.format(writer_name, service))
                 self.send_reply(writer, identity, requester=writer_name, uuid=uuid)
             else:
-                msg = 'The maximum number of Clients are already linked with {!r}. ' \
-                      'The linked Clients are {}'.format(service, self.service_links[service])
+                join = '\n  '.join(self.service_links[service])
+                msg = 'The maximum number of Clients are already linked with {!r}\n' \
+                      'The linked Clients are:\n  {}'.format(service, join)
                 logger.info(msg)
                 self.send_error(writer, PermissionError(msg), writer_name, uuid=uuid)
 
