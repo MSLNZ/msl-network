@@ -53,7 +53,8 @@ class Service(Network, asyncio.Protocol):
         name : :class:`str`, optional
             The name of the Service as it will appear on the Network
             :class:`~msl.network.manager.Manager`. If not specified
-            then the class name is used.
+            then the class name is used. You can also specify the `name`
+            in the :meth:`.start` method.
         max_clients : :class:`int`, optional
             The maximum number of :class:`~msl.network.client.Client`\\s
             that can be linked with this :class:`Service`. A value :math:`\\leq` 0
