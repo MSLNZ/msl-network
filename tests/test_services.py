@@ -382,7 +382,7 @@ def test_ignore_attributes():
     manager = conftest.Manager(MyArray, ignore_attributes=['linspace'])
     cxn = connect(**manager.kwargs)
 
-    # 'linspace' is not a publicly know attribute
+    # 'linspace' is not a publicly known attribute
     identity = cxn.manager()['services']['MyArray']
     assert 'linspace' not in identity['attributes']
     assert 'scalar_multiply' in identity['attributes']
