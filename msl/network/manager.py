@@ -444,7 +444,8 @@ class Manager(Network):
                     try:
                         data['requester'] = writer_name
                         self.send_data(self.service_writers[data['service']], data)
-                        logger.info('{!r} sent a request to {!r}'.format(writer_name, data['service']))
+                        logger.info('{!r} requested {!r} from {!r}'.format(
+                            writer_name, data['attribute'], data['service']))
                     except KeyError:
                         msg = 'the {!r} Service is not connected to the Network Manager at {!r}'.format(
                             data['service'], self._network_name)
