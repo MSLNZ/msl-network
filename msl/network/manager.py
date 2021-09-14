@@ -324,7 +324,7 @@ class Manager(Network):
         except:
             # however, if connecting via a terminal, e.g. openssl s_client,  then it is convenient
             # to not manually type the JSON format and let the Manager parse the raw input
-            return data.rstrip()
+            return data
 
     async def handler(self, reader, writer):
         """Handles requests from the connected :class:`~msl.network.client.Client`\\s and
