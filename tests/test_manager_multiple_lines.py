@@ -24,7 +24,7 @@ def test_from_service():
             service_connected.append(True)
 
             # receive the "username" request
-            request = json.loads(sock.recv(1024))
+            request = json.loads(sock.recv(1024).decode())
             assert request['attribute'] == 'username'
             sock.sendall(json.dumps({
                 'error': False,
@@ -34,7 +34,7 @@ def test_from_service():
             }).encode() + TERMINATION)
 
             # receive the "password" request
-            request = json.loads(sock.recv(1024))
+            request = json.loads(sock.recv(1024).decode())
             assert request['attribute'] == 'password'
             sock.sendall(json.dumps({
                 'error': False,
@@ -44,7 +44,7 @@ def test_from_service():
             }).encode() + TERMINATION)
 
             # receive the "identity" request
-            request = json.loads(sock.recv(1024))
+            request = json.loads(sock.recv(1024).decode())
             assert request['attribute'] == 'identity'
             sock.sendall(json.dumps({
                 'error': False,
@@ -58,7 +58,7 @@ def test_from_service():
             }).encode() + TERMINATION)
 
             # receive the request from the Client
-            request = json.loads(sock.recv(1024))
+            request = json.loads(sock.recv(1024).decode())
             response = json.dumps({
                 'error': False,
                 'result': 'the request was a success!',
@@ -116,23 +116,23 @@ def test_from_client():
         # send all data as though the Client is connected via a terminal
 
         # receive the "username" request
-        request = json.loads(sock.recv(1024))
+        request = json.loads(sock.recv(1024).decode())
         assert request['attribute'] == 'username'
         sock.sendall(manager.admin_username.encode() + TERMINATION)
 
         # receive the "password" request
-        request = json.loads(sock.recv(1024))
+        request = json.loads(sock.recv(1024).decode())
         assert request['attribute'] == 'password'
         sock.sendall(manager.admin_password.encode() + TERMINATION)
 
         # receive the "identity" request
-        request = json.loads(sock.recv(1024))
+        request = json.loads(sock.recv(1024).decode())
         assert request['attribute'] == 'identity'
         sock.sendall(b'client' + TERMINATION)
 
         # link with Echo
         sock.sendall(b'link Echo' + TERMINATION)
-        reply = json.loads(sock.recv(1024))
+        reply = json.loads(sock.recv(1024).decode())
         assert 'echo' in reply['result']['attributes']
 
         # send multiple lines to the Manager
@@ -140,9 +140,9 @@ def test_from_client():
                      b'Echo echo 1 2' + TERMINATION +
                      b'Echo echo x=3' + TERMINATION)
 
-        reply1 = json.loads(sock.recv(1024))
-        reply2 = json.loads(sock.recv(1024))
-        reply3 = json.loads(sock.recv(1024))
+        reply1 = json.loads(sock.recv(1024).decode())
+        reply2 = json.loads(sock.recv(1024).decode())
+        reply3 = json.loads(sock.recv(1024).decode())
         assert reply1['result'] == [[1], {}]
         assert reply2['result'] == [[1, 2], {}]
         assert reply3['result'] == [[], {'x': 3}]
