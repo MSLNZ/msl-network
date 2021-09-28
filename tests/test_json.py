@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
 import os
 import sys
 
 from msl.network import json
-from msl.network.constants import (
-    TERMINATION,
-    ENCODING,
-)
 
 import pytest
 try:
@@ -14,21 +9,6 @@ try:
 except ImportError:  # 32-bit wheels for orjson are not available on PyPI
     orjson = None
 
-reply = {
-    'result': [None, True, 0, 1.2, 'µ', 'text\n{"x":1}\r\ntext',
-               '\r', '\n', '{"x":1}\r\n'],
-    'requester': 'Client[hostname:55202]',
-    'uuid': 'd77540ba-e439-438c-a731-86cc1f105eca',
-    'error': False,
-}
-
-notification = {
-    'result': [[1, 2, 3, '\r', '{"x":1}\n', '7\r\n'],
-               {'CR': '\r', 'LF': '\n', 'CRLF': '{"x":1}\r\n'}],
-    'service': 'Test',
-    'uuid': 'notification',
-    'error': False,
-}
 
 initial_backend = json.backend.enum
 
@@ -124,59 +104,12 @@ def test_use_orjson(backend):
     'backend',
     ['builtin', 'ujson', 'rapid', 'simple', 'orjson']
 )
-def test_serialize_deserialize(backend):
-    if backend == 'orjson' and orjson is None:
-        with pytest.raises(ImportError):
-            json.use(backend)
-        return
-
-    json.use(backend)
-
-    t = TERMINATION.decode(ENCODING)
-    r = json.serialize(reply)
-    n = json.serialize(notification)
-
-    assert json.deserialize(r)[0] == reply
-    assert json.deserialize(n)[0] == notification
-
-    assert json.deserialize(r+t)[0] == reply
-    assert json.deserialize(n+t)[0] == notification
-
-    assert json.deserialize(r+t+t+t)[0] == reply
-    assert json.deserialize(n+t+t+t)[0] == notification
-
-    assert json.deserialize(r+t+r) == [reply, reply]
-    assert json.deserialize(r+t+r+t) == [reply, reply]
-    assert json.deserialize(r+t+r+t+r) == [reply, reply, reply]
-    assert json.deserialize(r+t+r+t+r+t) == [reply, reply, reply]
-
-    assert json.deserialize(n+t+n) == [notification, notification]
-    assert json.deserialize(n+t+n+t) == [notification, notification]
-    assert json.deserialize(n+t+n+t+n) == [notification, notification, notification]
-    assert json.deserialize(n+t+n+t+n+t) == [notification, notification, notification]
-
-    s = r+t+n+t+r+t+r+t+n+t+n+t+t+t+r+t
-    assert json.deserialize(s) == [reply, notification, reply, reply, notification, notification, reply]
-
-    bad = '{"x":1'
-    with pytest.raises(ValueError):
-        json.deserialize(s + bad)
-    with pytest.raises(ValueError):
-        json.deserialize(s + t + bad)
-    with pytest.raises(ValueError):
-        json.deserialize(s + t + bad + t)
-
-
-@pytest.mark.parametrize(
-    'backend',
-    ['builtin', 'ujson', 'rapid', 'simple', 'orjson']
-)
 def test_deserialize_types(backend):
     if backend == 'orjson' and orjson is None:
         with pytest.raises(ImportError):
             json.use(backend)
     else:
         json.use(backend)
-        assert json.deserialize('{"x":1}')[0] == {'x': 1}
-        assert json.deserialize(b'{"x":1}')[0] == {'x': 1}
-        assert json.deserialize(bytearray(b'{"x":1}'))[0] == {'x': 1}
+        assert json.deserialize('{"x":1}') == {'x': 1}
+        assert json.deserialize(b'{"x":1}') == {'x': 1}
+        assert json.deserialize(bytearray(b'{"x":1}')) == {'x': 1}

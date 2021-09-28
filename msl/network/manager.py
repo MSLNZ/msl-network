@@ -320,7 +320,7 @@ class Manager(Network):
         try:
             # ideally the response from the connected device will be in
             # the required JSON format
-            return deserialize(data)[0]['result']
+            return deserialize(data)['result']
         except:
             # however, if connecting via a terminal, e.g. openssl s_client,  then it is convenient
             # to not manually type the JSON format and let the Manager parse the raw input
@@ -357,100 +357,98 @@ class Manager(Network):
                 return
 
             try:
-                datas = deserialize(line)
+                data = deserialize(line)
             except Exception as e:
                 data = parse_terminal_input(line.decode(Network.encoding))
                 if not data:
                     self.send_error(writer, e, reader_name)
                     continue
-                datas = [data]
 
-            for data in datas:
-                if 'result' in data:
-                    # then data is a reply or notification from a Service so send it to the Client(s)
-                    if data['uuid'] == NOTIFICATION_UUID:
-                        # emit the notification from the Service to all linked Clients
-                        logger.info('{!r} emitted a notification'.format(data['service']))
-                        for client_address in self.service_links[data['service']]:
-                            try:
-                                self.send_line(self.client_writers[client_address], line)
-                            except:
-                                logger.info('{!r} is no longer available to send the '
-                                            'notification to'.format(client_address))
-                    elif data['requester'] is None:
-                        logger.info('{!r} was not able to deserialize the bytes'.format(reader_name))
-                    else:
+            if 'result' in data:
+                # then data is a reply or notification from a Service so send it to the Client(s)
+                if data['uuid'] == NOTIFICATION_UUID:
+                    # emit the notification from the Service to all linked Clients
+                    logger.info('{!r} emitted a notification'.format(data['service']))
+                    for client_address in self.service_links[data['service']]:
                         try:
-                            self.send_line(self.client_writers[data['requester']], line)
+                            self.send_line(self.client_writers[client_address], line)
                         except:
-                            logger.info('{!r} is no longer available to send the reply to'.format(data['requester']))
-                elif data['service'] == 'Manager':
-                    # then the Client is requesting something from the Manager
-                    if data['attribute'] == 'identity':
-                        self.send_reply(writer, self.identity(), requester=reader_name, uuid=data['uuid'])
-                    elif data['attribute'] == 'link':
-                        try:
-                            self.link(writer, data.get('uuid', ''), data['args'][0])
-                        except Exception as e:
-                            logger.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
-                            self.send_error(writer, e, reader_name, uuid=data.get('uuid', ''))
-                    elif data['attribute'] == 'unlink':
-                        try:
-                            self.unlink(writer, data.get('uuid', ''), data['args'][0])
-                        except Exception as e:
-                            logger.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
-                            self.send_error(writer, e, reader_name, uuid=data.get('uuid', ''))
-                    else:
-                        # the peer needs administrative rights to send any other request to the Manager
-                        logger.info('received an admin request {!r} from {!r}'.format(data['attribute'], reader_name))
-                        if not reader.peer.is_admin:
-                            await self.check_user(reader, writer)
-                            if not reader.peer.is_admin:
-                                self.send_error(
-                                    writer,
-                                    ValueError('You must be an administrator to send this request to the Manager'),
-                                    reader_name
-                                )
-                                continue
-                        # the peer is an administrator, so execute the request
-                        if data['attribute'] == SHUTDOWN_MANAGER:
-                            self._loop.stop()
-                            return
-                        try:
-                            # check for multiple dots "." in the name of the attribute
-                            attrib = self
-                            for item in data['attribute'].split('.'):
-                                attrib = getattr(attrib, item)
-                        except AttributeError as e:
-                            logger.error('{!r} AttributeError: {}'.format(self._network_name, e))
-                            self.send_error(writer, e, reader_name)
-                            continue
-                        try:
-                            # send the reply back to the Client
-                            if callable(attrib):
-                                reply = attrib(*data['args'], **data['kwargs'])
-                            else:
-                                reply = attrib
-                            # do not include the uuid in the reply
-                            self.send_reply(writer, reply, requester=reader_name)
-                        except Exception as e:
-                            logger.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
-                            self.send_error(writer, e, reader_name)
-                elif data['attribute'] == DISCONNECT_REQUEST:
-                    # then the device requested to disconnect
-                    return
+                            logger.info('{!r} is no longer available to send the '
+                                        'notification to'.format(client_address))
+                elif data['requester'] is None:
+                    logger.info('{!r} was not able to deserialize the bytes'.format(reader_name))
                 else:
-                    # send the request to the appropriate Service
                     try:
-                        data['requester'] = writer_name
-                        self.send_data(self.service_writers[data['service']], data)
-                        logger.info('{!r} requested {!r} from {!r}'.format(
-                            writer_name, data['attribute'], data['service']))
-                    except KeyError:
-                        msg = 'the {!r} Service is not connected to the Network Manager at {!r}'.format(
-                            data['service'], self._network_name)
-                        logger.info('{!r} KeyError: {}'.format(self._network_name, msg))
-                        self.send_error(writer, KeyError(msg), reader_name)
+                        self.send_line(self.client_writers[data['requester']], line)
+                    except:
+                        logger.info('{!r} is no longer available to send the reply to'.format(data['requester']))
+            elif data['service'] == 'Manager':
+                # then the Client is requesting something from the Manager
+                if data['attribute'] == 'identity':
+                    self.send_reply(writer, self.identity(), requester=reader_name, uuid=data['uuid'])
+                elif data['attribute'] == 'link':
+                    try:
+                        self.link(writer, data.get('uuid', ''), data['args'][0])
+                    except Exception as e:
+                        logger.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
+                        self.send_error(writer, e, reader_name, uuid=data.get('uuid', ''))
+                elif data['attribute'] == 'unlink':
+                    try:
+                        self.unlink(writer, data.get('uuid', ''), data['args'][0])
+                    except Exception as e:
+                        logger.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
+                        self.send_error(writer, e, reader_name, uuid=data.get('uuid', ''))
+                else:
+                    # the peer needs administrative rights to send any other request to the Manager
+                    logger.info('received an admin request {!r} from {!r}'.format(data['attribute'], reader_name))
+                    if not reader.peer.is_admin:
+                        await self.check_user(reader, writer)
+                        if not reader.peer.is_admin:
+                            self.send_error(
+                                writer,
+                                ValueError('You must be an administrator to send this request to the Manager'),
+                                reader_name
+                            )
+                            continue
+                    # the peer is an administrator, so execute the request
+                    if data['attribute'] == SHUTDOWN_MANAGER:
+                        self._loop.stop()
+                        return
+                    try:
+                        # check for multiple dots "." in the name of the attribute
+                        attrib = self
+                        for item in data['attribute'].split('.'):
+                            attrib = getattr(attrib, item)
+                    except AttributeError as e:
+                        logger.error('{!r} AttributeError: {}'.format(self._network_name, e))
+                        self.send_error(writer, e, reader_name)
+                        continue
+                    try:
+                        # send the reply back to the Client
+                        if callable(attrib):
+                            reply = attrib(*data['args'], **data['kwargs'])
+                        else:
+                            reply = attrib
+                        # do not include the uuid in the reply
+                        self.send_reply(writer, reply, requester=reader_name)
+                    except Exception as e:
+                        logger.error('{!r} {}: {}'.format(self._network_name, e.__class__.__name__, e))
+                        self.send_error(writer, e, reader_name)
+            elif data['attribute'] == DISCONNECT_REQUEST:
+                # then the device requested to disconnect
+                return
+            else:
+                # send the request to the appropriate Service
+                try:
+                    data['requester'] = writer_name
+                    self.send_data(self.service_writers[data['service']], data)
+                    logger.info('{!r} requested {!r} from {!r}'.format(
+                        writer_name, data['attribute'], data['service']))
+                except KeyError:
+                    msg = 'the {!r} Service is not connected to the Network Manager at {!r}'.format(
+                        data['service'], self._network_name)
+                    logger.info('{!r} KeyError: {}'.format(self._network_name, msg))
+                    self.send_error(writer, KeyError(msg), reader_name)
 
     def remove_peer(self, id_type, writer):
         """Remove this peer from the registry of connected peers.

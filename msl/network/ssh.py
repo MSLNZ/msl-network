@@ -48,7 +48,7 @@ def parse_console_script_kwargs():
     except ValueError:
         return {}
     else:
-        return deserialize(sys.argv[index + 1])[0]
+        return deserialize(sys.argv[index + 1])
 
 
 def start_manager(host, console_script_path, *, ssh_username=None, ssh_password=None,

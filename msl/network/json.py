@@ -89,11 +89,12 @@ def serialize(obj):
     Returns
     -------
     :class:`str`
-        A JSON-formatted string.
+        The JSON-formatted string.
     """
     t0 = perf_counter()
     out = backend.dumps(obj, **backend.kwargs_dumps)
-    logger.debug('{}.dumps took {:.3g} seconds'.format(backend.name, perf_counter() - t0))
+    logger.debug('{}.dumps took {:.3g} seconds'.format(
+        backend.name, perf_counter() - t0))
     if isinstance(out, bytes):
         return out.decode(ENCODING)
     return out
@@ -102,10 +103,6 @@ def serialize(obj):
 def deserialize(s):
     """Deserialize a JSON-formatted string to Python objects.
 
-    .. versionchanged:: 0.6
-       Return a :class:`list` of calls to ``loads`` instead of a
-       single call to ``loads``.
-
     Parameters
     ----------
     s : :class:`str`, :class:`bytes` or :class:`bytearray`
@@ -113,27 +110,15 @@ def deserialize(s):
 
     Returns
     -------
-    :class:`list`
-        A list of deserialized Python objects. A :class:`list` is returned
-        to handle multiple requests/replies contained within the same
-        network packet.
+    :class:`dict`
+        The deserialized Python object.
     """
+    t0 = perf_counter()
     if isinstance(s, (bytes, bytearray)):
         s = s.decode(ENCODING)
-
-    t0 = perf_counter()
-
-    try:
-        # most of the time a single request/reply is received, so assume
-        # this will work before splitting by the termination character
-        obj = [backend.loads(s, **backend.kwargs_loads)]
-    except ValueError:
-        obj = [backend.loads(item, **backend.kwargs_loads)
-               for item in s.split(backend.term) if item]
-
+    obj = backend.loads(s, **backend.kwargs_loads)
     logger.debug('{}.loads took {:.3g} seconds'.format(
         backend.name, perf_counter() - t0))
-
     return obj
 
 

@@ -20,28 +20,19 @@ def test_from_service():
     def create_socket_service():
         name = 'ManualService'
         with socket.socket() as sock:
+            sock.settimeout(5)
             sock.connect(('localhost', manager.port))
             service_connected.append(True)
 
             # receive the "username" request
             request = json.loads(sock.recv(1024).decode())
             assert request['attribute'] == 'username'
-            sock.sendall(json.dumps({
-                'error': False,
-                'result': manager.admin_username,
-                'requester': request['requester'],
-                'uuid': request['uuid'],
-            }).encode() + TERMINATION)
+            sock.sendall(manager.admin_username.encode() + TERMINATION)
 
             # receive the "password" request
             request = json.loads(sock.recv(1024).decode())
             assert request['attribute'] == 'password'
-            sock.sendall(json.dumps({
-                'error': False,
-                'result': manager.admin_password,
-                'requester': request['requester'],
-                'uuid': request['uuid'],
-            }).encode() + TERMINATION)
+            sock.sendall(manager.admin_password.encode() + TERMINATION)
 
             # receive the "identity" request
             request = json.loads(sock.recv(1024).decode())
@@ -111,6 +102,7 @@ def test_from_client():
     manager = conftest.Manager(Echo, disable_tls=True)
 
     with socket.socket() as sock:
+        sock.settimeout(5)
         sock.connect(('localhost', manager.port))
 
         # send all data as though the Client is connected via a terminal

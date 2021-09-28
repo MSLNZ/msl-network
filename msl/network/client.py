@@ -12,7 +12,7 @@ from time import (
     sleep,
 )
 
-from .network import Network
+from .network import Device
 from .json import deserialize
 from .exceptions import MSLNetworkError
 from .service import filter_service_start_kwargs
@@ -129,7 +129,7 @@ def filter_client_connect_kwargs(**kwargs):
     return filter_service_start_kwargs(**kwargs)
 
 
-class Client(Network, asyncio.Protocol):
+class Client(Device, asyncio.Protocol):
 
     def __init__(self, name):
         """Base class for all Clients.
@@ -138,31 +138,22 @@ class Client(Network, asyncio.Protocol):
             Do not instantiate directly. Use :meth:`connect` to connect to
             a Network :class:`~msl.network.manager.Manager`.
         """
-        Network.__init__(self)
+        Device.__init__(self, name)
         asyncio.Protocol.__init__(self)
-        self._name = name
-        self._port = None
         self._disable_tls = False
-        self._username = None
-        self._password = None
         self._host_manager = None
         self._port_manager = None
-        self._address_manager = None
         self._password_manager = None
-        self._transport = None
         self._certificate = None
         self._identity = {
             'type': 'client',
-            'name': name,
+            'name': self._name,
             'language': 'Python ' + platform.python_version(),
             'os': '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
         }
         self._latest_error = ''
-        self._buffer = bytearray()
         self._timeout = None
-        self._t0 = None  # used for profiling sections of the code
         self._requests = dict()
-        self._futures = dict()
         self._pending_requests_sent = False
         self._assert_hostname = True
         self._links = []
@@ -247,7 +238,7 @@ class Client(Network, asyncio.Protocol):
         """Clear all :class:`~asyncio.Future`\\'s and all requests
         that have been sent to the :class:`~msl.network.manager.Manager`.
 
-        .. versionadded:: 0.6.0
+        .. versionadded:: 0.6
         """
         self._futures.clear()
         self._requests.clear()
@@ -515,60 +506,57 @@ class Client(Network, asyncio.Protocol):
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self.name, self._port)
         if self._debug:
-            logger.debug(str(self) + ' connection made')
+            logger.debug('{} connection made'.format(self))
 
-    def data_received(self, reply):
+    def data_received(self, data):
         """
         .. attention::
            Do not call this method. It is called automatically when data is
            received from the Network :class:`~msl.network.manager.Manager`.
         """
-        if not self._buffer:
-            self._t0 = perf_counter()
-
-        # there is a chunk-size limit of 2**14 for each reply
-        # keep reading data on the stream until the TERMINATION bytes are received
-        self._buffer.extend(reply)
-        if not reply.endswith(Network.termination):
+        message = self._parse_buffer(data)
+        if not message:
             return
 
         dt = perf_counter() - self._t0
-        buffer_bytes = bytes(self._buffer)
-        self._buffer.clear()
 
         if self._debug:
-            n = len(buffer_bytes)
+            n = len(message)
             if dt > 0:
                 logger.debug('{!r} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
                     self._network_name, n, dt, n*1e-6/dt))
             else:
                 logger.debug('{!r} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
-            if len(buffer_bytes) > self._max_print_size:
-                logger.debug(buffer_bytes[:self._max_print_size//2] + b' ... ' + buffer_bytes[-self._max_print_size//2:])
+            if len(message) > self._max_print_size:
+                logger.debug(message[:self._max_print_size//2] + b' ... ' + message[-self._max_print_size//2:])
             else:
-                logger.debug(buffer_bytes)
+                logger.debug(message)
 
-        for data in deserialize(buffer_bytes):
-            if data['error']:
-                self._latest_error = '\n'.join(['\n'] + data['traceback'] + [data['message']])
-                for future in self._futures.values():
-                    future.cancel()
-            elif not self._identity_successful:
-                self.send_reply(self._transport, getattr(self, data['attribute'])(*data['args'], **data['kwargs']))
-                self._identity_successful = data['attribute'] == 'identity'
-            elif data['uuid']:
-                if data['uuid'] == NOTIFICATION_UUID:
-                    for link in self._links:
-                        if link.service_name == data['service']:
-                            args, kwargs = data['result']
-                            link.notification_handler(*args, **kwargs)
-                else:
-                    self._futures[data['uuid']].set_result(data['result'])
+        reply = deserialize(message)
+        if reply['error']:
+            self._latest_error = '\n'.join(['\n'] + reply['traceback'] + [reply['message']])
+            for future in self._futures.values():
+                future.cancel()
+        elif not self._identity_successful:
+            attr = getattr(self, reply['attribute'])
+            self.send_reply(self._transport, attr(*reply['args'], **reply['kwargs']))
+            self._identity_successful = reply['attribute'] == 'identity'
+        elif reply['uuid']:
+            if reply['uuid'] == NOTIFICATION_UUID:
+                for link in self._links:
+                    if link.service_name == reply['service']:
+                        args, kwargs = reply['result']
+                        link.notification_handler(*args, **kwargs)
             else:
-                # performing an admin_request
-                assert len(self._futures) == 1, 'uuid not defined and {} futures are available'.format(len(self._futures))
-                uid = list(self._futures.keys())[0]
-                self._futures[uid].set_result(data)
+                self._futures[reply['uuid']].set_result(reply['result'])
+        else:
+            # performing an admin_request
+            n = len(self._futures)
+            assert n == 1, 'uuid not defined and {} futures are available'.format(n)
+            uid = next(iter(self._futures))
+            self._futures[uid].set_result(reply)
+
+        self._check_buffer_for_message()
 
     def password(self, name):
         """

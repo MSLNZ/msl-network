@@ -12,7 +12,7 @@ from time import (
 )
 from concurrent.futures import ThreadPoolExecutor
 
-from .network import Network
+from .network import Device
 from .utils import (
     logger,
     localhost_aliases,
@@ -34,10 +34,10 @@ _ignore_attribs = [
     'port', 'address_manager', 'username', 'start', 'password',
     'set_debug', 'max_clients', 'ignore_attributes', 'emit_notification'
 ]
-_ignore_attribs += list(a for a in dir(Network) + dir(asyncio.Protocol) if not a.startswith('_'))
+_ignore_attribs += list(a for a in dir(Device) + dir(asyncio.Protocol) if not a.startswith('_'))
 
 
-class Service(Network, asyncio.Protocol):
+class Service(Device, asyncio.Protocol):
 
     def __init__(self, *, name=None, max_clients=None, ignore_attributes=None):
         """Base class for all Services.
@@ -64,22 +64,12 @@ class Service(Network, asyncio.Protocol):
             :obj:`~msl.network.network.Network.identity` of the :class:`Service`.
             See :meth:`.ignore_attributes` for more details.
         """
-        Network.__init__(self)
+        Device.__init__(self, name)
         asyncio.Protocol.__init__(self)
-        self._username = None
-        self._password = None
-        self._transport = None
-        self._identity = dict()
-        self._port = None
-        self._address_manager = None
-        self._name = self.__class__.__name__ if name is None else name
         if max_clients is None or max_clients <= 0:
             self._max_clients = -1
         else:
             self._max_clients = int(max_clients)
-        self._buffer = bytearray()
-        self._t0 = None  # used for profiling sections of the code
-        self._futures = dict()
         self._ignore_attribs = _ignore_attribs.copy()
         if ignore_attributes:
             self.ignore_attributes(ignore_attributes)
@@ -244,92 +234,90 @@ class Service(Network, asyncio.Protocol):
            :class:`Service` will execute a request in a
            :class:`~concurrent.futures.ThreadPoolExecutor`.
         """
-        if not self._buffer:
-            self._t0 = perf_counter()
-
-        # there is a chunk-size limit of 2**14 for each reply
-        # keep reading data on the stream until the TERMINATION bytes are received
-        self._buffer.extend(data)
-        if not data.endswith(Network.termination):
+        message = self._parse_buffer(data)
+        if not message:
             return
 
         dt = perf_counter() - self._t0
-        buffer_bytes = bytes(self._buffer)
-        self._buffer.clear()
 
         if self._debug:
-            n = len(buffer_bytes)
+            n = len(message)
             if dt > 0:
                 logger.debug('{} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
                     self._network_name, n, dt, n*1e-6/dt))
             else:
                 logger.debug('{} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
-            if len(buffer_bytes) > self._max_print_size:
-                logger.debug(buffer_bytes[:self._max_print_size//2] + b' ... ' + buffer_bytes[-self._max_print_size//2:])
+            if len(message) > self._max_print_size:
+                logger.debug(message[:self._max_print_size//2] + b' ... ' + message[-self._max_print_size//2:])
             else:
-                logger.debug(buffer_bytes)
+                logger.debug(message)
 
         try:
-            datas = deserialize(buffer_bytes)
+            request = deserialize(message)
         except Exception as e:
             logger.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
             self.send_error(self._transport, e, None)
+            self._check_buffer_for_message()
             return
 
-        for data in datas:
-            if data.get('error', False):
-                # Then log the error message and don't send a reply back to the Manager.
-                # Ideally, the Manager is the only device that would send an error to the
-                # Service, which could happen during the handshake if the password or identity
-                # that the Service provided was invalid.
-                msg = 'Error: Unfortunately, no error message has been provided'
-                try:
-                    if data['traceback']:
-                        msg = '\n'.join(data['traceback'])  # traceback should be a list of strings
-                    else:  # in case the 'traceback' key exists but it is an empty list
-                        msg = data['message']
-                except (TypeError, KeyError):  # in case there is no 'traceback' key
-                    try:
-                        msg = data['message']
-                    except KeyError:
-                        pass
-                logger.error(self._network_name + ' ' + msg)
-                continue
-
-            attribute = data['attribute']
-            # do not allow access to private attributes from the Service
-            if attribute.startswith('_'):
-                self.send_error(
-                    self._transport,
-                    AttributeError('Cannot request a private attribute from {!r}'.format(self._name)),
-                    requester=data['requester'],
-                    uuid=data['uuid']
-                )
-                continue
-
+        if request.get('error', False):
+            # Then log the error message and don't send a reply back to the Manager.
+            # Ideally, the Manager is the only device that would send an error to the
+            # Service, which could happen during the handshake if the password or identity
+            # that the Service provided was invalid.
+            msg = 'Error: Unfortunately, no error message has been provided'
             try:
-                attrib = getattr(self, attribute)
-            except Exception as e:
-                logger.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
-                self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
-                continue
+                if request['traceback']:
+                    msg = '\n'.join(request['traceback'])  # traceback should be a list of strings
+                else:  # in case the 'traceback' key exists but it is an empty list
+                    msg = request['message']
+            except (TypeError, KeyError):  # in case there is no 'traceback' key
+                try:
+                    msg = request['message']
+                except KeyError:
+                    pass
+            logger.error(self._network_name + ' ' + msg)
+            self._check_buffer_for_message()
+            return
 
-            if attribute == SHUTDOWN_SERVICE:
-                reply = attrib(*data['args'], **data['kwargs'])
-                self.send_reply(self._transport, reply, requester=data['requester'], uuid=data['uuid'])
-                for future in self._futures.values():
-                    while not (future.done() or future.cancelled()):
-                        sleep(0.01)
-                self.send_data(self._transport, {'service': self._network_name, 'attribute': DISCONNECT_REQUEST})
-            elif callable(attrib):
-                uid = os.urandom(16)
-                executor = ThreadPoolExecutor(max_workers=1)
-                self._futures[uid] = self._loop.run_in_executor(executor, self._function, attrib, data, uid)
-            else:
-                self.send_reply(self._transport, attrib, requester=data['requester'], uuid=data['uuid'])
+        attribute = request['attribute']
+        # do not allow access to private attributes from the Service
+        if attribute.startswith('_'):
+            self.send_error(
+                self._transport,
+                AttributeError('Cannot request a private attribute from {!r}'.format(self._name)),
+                requester=request['requester'],
+                uuid=request['uuid']
+            )
+            self._check_buffer_for_message()
+            return
 
-            logger.info('{!r} requested {!r} [{} executing]'.format(
-                data['requester'], data['attribute'], len(self._futures)))
+        try:
+            attrib = getattr(self, attribute)
+        except Exception as e:
+            logger.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
+            self.send_error(self._transport, e, requester=request['requester'], uuid=request['uuid'])
+            self._check_buffer_for_message()
+            return
+
+        if attribute == SHUTDOWN_SERVICE:
+            reply = attrib(*request['args'], **request['kwargs'])
+            self.send_reply(self._transport, reply, requester=request['requester'], uuid=request['uuid'])
+            for future in self._futures.values():
+                while not (future.done() or future.cancelled()):
+                    sleep(0.01)
+            self.send_data(self._transport, {'service': self._network_name, 'attribute': DISCONNECT_REQUEST})
+        elif callable(attrib):
+            uid = os.urandom(16)
+            executor = ThreadPoolExecutor(max_workers=1)
+            self._futures[uid] = self._loop.run_in_executor(executor, self._function, attrib, request, uid)
+        else:
+            self.send_reply(self._transport, attrib, requester=request['requester'], uuid=request['uuid'])
+
+        logger.info('{!r} requested {!r} [{} executing]'.format(
+            request['requester'], request['attribute'], len(self._futures)))
+
+        self._check_buffer_for_message()
 
     def identity(self):
         """
@@ -419,7 +407,8 @@ class Service(Network, asyncio.Protocol):
         except Exception as e:
             logger.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
             self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
-        self._futures.pop(uid, None)
+        finally:
+            self._futures.pop(uid, None)
 
 
 def filter_service_start_kwargs(**kwargs):

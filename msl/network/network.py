@@ -29,16 +29,13 @@ class Network(object):
     """:class:`str`: The encoding to use to convert :class:`str` to :class:`bytes`."""
 
     def __init__(self):
-        """
-        Base class for the Network :class:`~msl.network.manager.Manager`,
+        """Base class for the Network :class:`~msl.network.manager.Manager`,
         :class:`~msl.network.service.Service` and :class:`~msl.network.client.Client`.
         """
         self._loop = None
         self._debug = False
-        self._network_name = None  # helpful for debugging who is sending what to where
-        self._max_print_size = 256  # the maximum number of characters to display when debugging
-        self._connection_successful = False
-        self._identity_successful = False
+        self._network_name = None
+        self._max_print_size = 256
 
     def identity(self):
         """The identity of a device on the network.
@@ -269,8 +266,40 @@ class Network(object):
         """
         self.send_data(writer, {'result': reply, 'requester': requester, 'uuid': uuid, 'error': False})
 
+
+class Device(Network):
+
+    def __init__(self, name=None):
+        """Base class for a :class:`~msl.network.service.Service` and
+        :class:`~msl.network.client.Client`.
+
+        .. versionadded:: 0.6
+
+        Parameters
+        ----------
+        name : :class:`str`, optional
+            The name of the device as it will appear on the Network
+            :class:`~msl.network.manager.Manager`. If not specified
+            then the class name is used.
+        """
+        super(Network, self).__init__()
+        self._address_manager = None
+        self._buffer = bytearray()
+        self._buffer_offset = 0
+        self._connection_successful = False
+        self._futures = dict()
+        self._identity = dict()
+        self._identity_successful = False
+        self._len_term = len(TERMINATION)
+        self._name = self.__class__.__name__ if name is None else name
+        self._password = None
+        self._port = None
+        self._t0 = 0  # used for profiling sections of the code
+        self._transport = None
+        self._username = None
+
     def _create_connection(self, **kwargs):
-        # common to both Client and Service to connect to the Manager
+        # Connect to a Manager
         context = None
         is_localhost = kwargs['host'] in localhost_aliases()
         if not kwargs['disable_tls']:
@@ -364,16 +393,48 @@ class Network(object):
             return True
 
     def _run_forever(self):
-        # common to both Client and Service to connect to the Manager
         try:
             self._loop.run_forever()
         except KeyboardInterrupt:
             logger.debug('CTRL+C keyboard interrupt received')
-            self._transport.close()
         except SystemExit:
             logger.debug('SystemExit was raised')
-            self._transport.close()
         finally:
+            if self._transport is not None:
+                self._transport.close()
             logger.info('{!r} disconnected'.format(self._network_name))
             self._loop.close()
             logger.info('{!r} closed the event loop'.format(self._network_name))
+
+    def _parse_buffer(self, data):
+        # Called in the data_received method of a Client/Service to determine
+        # if the TERMINATION characters are located in the buffer
+        if self._buffer_offset == 0:
+            self._t0 = perf_counter()
+
+        if data is not None:
+            self._buffer += data
+
+        len_buffer = len(self._buffer)
+        if len_buffer - self._buffer_offset < self._len_term:
+            return
+
+        index = self._buffer.find(TERMINATION, self._buffer_offset)
+        if index == -1:
+            # Edge case when the TERMINATION byte sequence is received in
+            # two sequential network packets. For example, if
+            # TERMINATION=b'MSLNZ' and the first packet received ends with
+            # '12345MS' and then the next packet starts with 'LNZ6789'
+            self._buffer_offset = len_buffer - self._len_term + 1
+            return
+
+        end = index + self._len_term
+        chunk = self._buffer[:end]
+        del self._buffer[:end]
+        self._buffer_offset = 0
+        return bytes(chunk)
+
+    def _check_buffer_for_message(self):
+        # Check if another message is still in the buffer.
+        # Call the asyncio.Protocol.data_received method
+        self.data_received(None)
