@@ -203,6 +203,7 @@ class Service(Device, asyncio.Protocol):
            Do not override this method. It is called automatically when the connection
            to the Network :class:`~msl.network.manager.Manager` has been closed.
         """
+        self.shutdown_handler(exc)
         logger.info('{!r} connection lost'.format(self._network_name))
         for future in self._futures.values():
             future.cancel()

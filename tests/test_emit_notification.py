@@ -51,14 +51,12 @@ def test_client_linkedclient_handlers():
     lc_hb.notification_handler = handler2
     time.sleep(5)
 
-    assert len(values1)
-    assert len(values2)
-    assert len(values3) == 0  # the Echo Service does not emit notifications
-    assert len(values4) == 0  # the Echo Service does not emit notifications
     assert len(values1) > 15
     assert len(values2) > 7
-    assert values1.count(3.0) == 2  # the value 3 should appear twice since reset() was called twice
-    assert values2.count(3.0) == 1
+    assert len(values3) == 0  # the Echo Service does not emit notifications
+    assert len(values4) == 0  # the Echo Service does not emit notifications
+    assert values1.count(3) == 2  # the value 3 should appear twice since reset() was called twice
+    assert values2.count(3) == 1
 
     assert link_echo.echo(foo='bar') == [[], {'foo': 'bar'}]
     assert lc_echo.echo() == [[], {}]

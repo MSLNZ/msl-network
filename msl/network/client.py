@@ -485,6 +485,7 @@ class Client(Device, asyncio.Protocol):
            to the Network :class:`~msl.network.manager.Manager` has been closed.
            Call :meth:`disconnect` to close the connection.
         """
+        self.shutdown_handler(exc)
         if self._debug:
             logger.debug(str(self) + ' connection lost')
         for future in self._futures.values():

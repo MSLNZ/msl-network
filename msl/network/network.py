@@ -1,5 +1,5 @@
 """
-Base class for a :class:`~msl.network.manager.Manager`,
+Base classes for a :class:`~msl.network.manager.Manager`,
 :class:`~msl.network.service.Service` and :class:`~msl.network.client.Client`.
 """
 import socket
@@ -297,6 +297,23 @@ class Device(Network):
         self._t0 = 0  # used for profiling sections of the code
         self._transport = None
         self._username = None
+
+    def shutdown_handler(self, exc):
+        """Called when the connection to the Network
+        :class:`~msl.network.manager.Manager` has been lost.
+
+        Override this method to do any necessary cleanup.
+
+        .. versionadded:: 0.6
+
+        Parameters
+        ----------
+        exc
+            The argument is either an exception object or :data:`None`.
+            The latter means a regular EOF is received, or the connection was
+            aborted or closed by this side of the connection.
+        """
+        pass
 
     def _create_connection(self, **kwargs):
         # Connect to a Manager
