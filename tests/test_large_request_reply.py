@@ -3,7 +3,7 @@ import asyncio
 import conftest
 
 from msl.network import connect
-from msl.examples.network import Echo, MyArray
+from msl.examples.network import Echo
 
 
 def test_synchronous():
@@ -24,24 +24,19 @@ def test_synchronous():
 
 
 def test_asynchronous():
-    manager = conftest.Manager(Echo, MyArray)
+    manager = conftest.Manager(Echo)
 
     cxn = connect(**manager.kwargs)
     echo = cxn.link('Echo')
-    array = cxn.link('MyArray')
 
     # send a request that is ~110 MB
     args = ['a' * int(1e6), 'b' * int(5e6), 'c' * int(1e7)]
     kwargs = {'1e6': 'x' * int(1e6), '5e6': 'y' * int(5e6),
               'array': list(range(int(1e7)))}
-    future1 = echo.echo(*args, asynchronous=True, **kwargs)
-    assert isinstance(future1, asyncio.Future)
-
-    # and a small request
-    future2 = array.linspace(0, 1, n=2, asynchronous=True)
+    future = echo.echo(*args, asynchronous=True, **kwargs)
+    assert isinstance(future, asyncio.Future)
 
     cxn.send_pending_requests()
-    assert future1.result() == [args, kwargs]
-    assert future2.result() == [0.0, 1.0]
+    assert future.result() == [args, kwargs]
 
     manager.shutdown(connection=cxn)
