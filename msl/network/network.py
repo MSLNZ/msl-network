@@ -282,7 +282,7 @@ class Device(Network):
             :class:`~msl.network.manager.Manager`. If not specified
             then the class name is used.
         """
-        super(Network, self).__init__()
+        super(Device, self).__init__()
         self._address_manager = None
         self._buffer = bytearray()
         self._buffer_offset = 0
