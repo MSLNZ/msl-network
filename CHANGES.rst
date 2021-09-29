@@ -49,8 +49,7 @@ Version 0.6.0.dev0 (in development)
 
   * an ``AttributeError`` could be raised when requesting the identity of a
     :class:`~msl.network.service.Service`
-  * :func:`msl.network.json.deserialize` can now handle multiple requests/replies
-    contained within the same network packet
+  * can now handle multiple requests/replies contained within the same network packet
 
 - Removed
 
