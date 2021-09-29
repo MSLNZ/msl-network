@@ -132,11 +132,12 @@ def test_from_client():
                      b'Echo echo 1 2' + TERMINATION +
                      b'Echo echo x=3' + TERMINATION)
 
-        reply1 = json.loads(sock.recv(1024).decode())
-        reply2 = json.loads(sock.recv(1024).decode())
-        reply3 = json.loads(sock.recv(1024).decode())
-        assert reply1['result'] == [[1], {}]
-        assert reply2['result'] == [[1, 2], {}]
-        assert reply3['result'] == [[], {'x': 3}]
+        replies = []
+        while len(replies) < 3:
+            received = sock.recv(1024).split(TERMINATION)
+            replies.extend([json.loads(r.decode()) for r in received if r])
+        assert replies[0]['result'] == [[1], {}]
+        assert replies[1]['result'] == [[1, 2], {}]
+        assert replies[2]['result'] == [[], {'x': 3}]
 
     manager.shutdown()
