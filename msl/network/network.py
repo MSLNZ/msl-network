@@ -430,6 +430,8 @@ class Device(Network):
             self._t0 = perf_counter()
 
         if data is not None:
+            # a value of None is passed in indirectly via
+            # self._check_buffer_for_message
             self._buffer += data
 
         len_buffer = len(self._buffer)
