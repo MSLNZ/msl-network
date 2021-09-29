@@ -3,7 +3,7 @@ import asyncio
 import conftest
 
 from msl.network import connect
-from msl.examples.network import Echo
+from msl.examples.network import Echo, MyArray
 
 
 def test_synchronous():
@@ -24,14 +24,11 @@ def test_synchronous():
 
 
 def test_asynchronous():
-    # would randomly get the following error when TLS was enabled
-    # (on Windows, not sure what happens on POSIX)
-    #   ssl.SSLError: [SSL: DECRYPTION_FAILED_OR_BAD_RECORD_MAC] decryption failed or bad record mac
-    # and don't want to test the ssl module here
-    manager = conftest.Manager(Echo, disable_tls=True)
+    manager = conftest.Manager(Echo, MyArray)
 
     cxn = connect(**manager.kwargs)
     echo = cxn.link('Echo')
+    array = cxn.link('MyArray')
 
     # send a request that is ~110 MB
     args = ['a' * int(1e6), 'b' * int(5e6), 'c' * int(1e7)]
@@ -40,17 +37,11 @@ def test_asynchronous():
     future1 = echo.echo(*args, asynchronous=True, **kwargs)
     assert isinstance(future1, asyncio.Future)
 
-    # and a few small requests
-    future2 = echo.echo('a', asynchronous=True)
-    future3 = echo.echo('b', asynchronous=True)
-
-    # and a medium request
-    future4 = echo.echo('c', d='d'*int(1e6), asynchronous=True)
+    # and a small request
+    future2 = array.linspace(0, 1, n=2, asynchronous=True)
 
     cxn.send_pending_requests()
     assert future1.result() == [args, kwargs]
-    assert future2.result() == [['a'], {}]
-    assert future3.result() == [['b'], {}]
-    assert future4.result() == [['c'], {'d': 'd'*int(1e6)}]
+    assert future2.result() == [0.0, 1.0]
 
     manager.shutdown(connection=cxn)
