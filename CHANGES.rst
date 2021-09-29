@@ -7,6 +7,7 @@ Version 0.6.0.dev0 (in development)
 
 - Added
 
+  * the :class:`~msl.network.network.Device` class
   * ability to use all :class:`~msl.network.database.Database` classes as a
     context manager (i.e., using a ``with`` statement)
   * support for Python 3.9
