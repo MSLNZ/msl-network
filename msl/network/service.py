@@ -304,7 +304,7 @@ class Service(Device, asyncio.Protocol):
         else:
             self.send_reply(self._transport, attrib, requester=request['requester'], uuid=request['uuid'])
 
-        logger.info('%r requested %r [%d executing]',
+        logger.info('%s requested %r [%d executing]',
                     request['requester'], request['attribute'], len(self._futures))
 
         self._check_buffer_for_message()
