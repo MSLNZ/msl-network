@@ -25,7 +25,7 @@ def test_client_linkedclient_handlers():
     def handler4(*args, **kwargs):
         values4.append(1)
 
-    manager = conftest.Manager(Heartbeat, Echo)
+    manager = conftest.Manager(Echo, Heartbeat)
     cxn = connect(**manager.kwargs)
     link_hb = cxn.link('Heartbeat')
     lc_hb = LinkedClient('Heartbeat', **manager.kwargs)
