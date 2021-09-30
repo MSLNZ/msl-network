@@ -287,7 +287,7 @@ class Client(Device, asyncio.Protocol):
             than `timeout` seconds.
         """
         if self._debug:
-            logger.debug('preparing to link with {!r}'.format(service))
+            logger.debug('preparing to link with %r', service)
         identity = self._send_request_for_manager('link', service, timeout=timeout)
         link = Link(self, service, identity)
         self._links.append(link)
@@ -404,7 +404,7 @@ class Client(Device, asyncio.Protocol):
         """
         for request in self._requests.values():
             if self._debug:
-                logger.debug('sending request to {}.{}'.format(request['service'], request['attribute']))
+                logger.debug('sending request to %(service)s.%(attribute)s', request)
             try:
                 self.send_data(self._transport, request)
             except Exception:
@@ -456,7 +456,7 @@ class Client(Device, asyncio.Protocol):
         if not isinstance(link, Link):
             raise TypeError('Must pass in a Link object')
         if self._debug:
-            logger.debug('preparing to unlink {!r}'.format(link))
+            logger.debug('preparing to unlink %r', link)
         success = self._send_request_for_manager('unlink', link.service_name, timeout=timeout)
         if success:
             self._links.remove(link)  # ideally this will never raise a ValueError
@@ -487,7 +487,7 @@ class Client(Device, asyncio.Protocol):
         """
         self.shutdown_handler(exc)
         if self._debug:
-            logger.debug(str(self) + ' connection lost')
+            logger.debug('%s connection lost', self)
         for future in self._futures.values():
             future.cancel()
         self._transport = None
@@ -505,9 +505,9 @@ class Client(Device, asyncio.Protocol):
         """
         self._transport = transport
         self._port = int(transport.get_extra_info('sockname')[1])
-        self._network_name = '{}[{}]'.format(self.name, self._port)
+        self._network_name = '{}[{}]'.format(self._name, self._port)
         if self._debug:
-            logger.debug('{} connection made'.format(self))
+            logger.debug('%s connection made', self)
 
     def data_received(self, data):
         """
@@ -519,21 +519,10 @@ class Client(Device, asyncio.Protocol):
         if not message:
             return
 
-        dt = perf_counter() - self._t0
-
         if self._debug:
-            n = len(message)
-            if dt > 0:
-                logger.debug('{!r} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
-                    self._network_name, n, dt, n*1e-6/dt))
-            else:
-                logger.debug('{!r} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
-            if len(message) > self._max_print_size:
-                logger.debug(message[:self._max_print_size//2] + b' ... ' + message[-self._max_print_size//2:])
-            else:
-                logger.debug(message)
+            self._log_data_received(message)
 
-        reply = deserialize(message)
+        reply = deserialize(message, debug=self._debug)
         if reply['error']:
             self._latest_error = '\n'.join(['\n'] + reply['traceback'] + [reply['message']])
             for future in self._futures.values():
@@ -630,7 +619,7 @@ class Client(Device, asyncio.Protocol):
                 return all(fut.done() for fut in self._futures.values())
 
         if self._debug:
-            logger.debug('waiting for futures...')
+            logger.debug('waiting for futures ...')
 
         t0 = perf_counter()
         while not done():
@@ -662,13 +651,13 @@ class Client(Device, asyncio.Protocol):
         uid = str(uuid.uuid4())
         self._futures[uid] = self._loop.create_future()
         if self._debug:
-            logger.debug('created future[{}]'.format(uid))
+            logger.debug('created future[%s]', uid)
         return uid
 
     def _remove_future(self, uid):
         del self._futures[uid]
         if self._debug:
-            logger.debug('removed future[{}]; {} pending'.format(uid, len(self._futures)))
+            logger.debug('removed future[%s]; %d pending', uid, len(self._futures))
         try:
             # In general, we want to delete the request when the future is deleted.
             # However, the admin_request() method does not create a new self._request[uid]
@@ -690,13 +679,14 @@ class Client(Device, asyncio.Protocol):
             'error': False,
         }
         if self._debug:
-            logger.debug('created request {}.{} [{} pending]'.format(service, attribute, len(self._requests)))
+            logger.debug('created request %s.%s [%d pending]',
+                         service, attribute, len(self._requests))
         return uid
 
     def _send_request_for_manager(self, attribute, *args, **kwargs):
         # the request is for the Manager to handle, not for a Service
         if self._debug:
-            logger.debug('sending request to Manager.' + attribute)
+            logger.debug('sending request to Manager.%s', attribute)
         timeout = kwargs.pop('timeout', None)
         uid = self._create_request('Manager', attribute, *args, **kwargs)
         self.send_data(self._transport, self._requests[uid])
@@ -754,7 +744,7 @@ class Link(object):
         self._service_name = service
         self._service_identity = identity
         if client._debug:
-            logger.debug("linked with '{}[{}]'".format(service, identity['address']))
+            logger.debug("linked with '%s[%s]'", service, identity['address'])
 
     @property
     def service_address(self):

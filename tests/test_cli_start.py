@@ -23,7 +23,7 @@ def process(command):
 def test_multiple_auth_methods(flag, capsys):
     process('start ' + flag)
     _, err = capsys.readouterr()
-    assert err.rstrip().endswith('ValueError: Cannot specify multiple authentication methods')
+    assert err.rstrip().endswith('Cannot specify multiple authentication methods')
 
 
 @pytest.mark.parametrize('port', [-1, '1234x'])
@@ -49,5 +49,5 @@ def test_cannot_use_auth_login_with_empty_table(capsys):
     for i in [1, 2, 3]:
         assert db in os.path.normpath(out_lines[i])
     assert len(err_lines) == 2
-    assert err_lines[0] == 'ValueError: The Users table is empty. No one could log in.'
+    assert err_lines[0] == 'The \'auth_users\' table is empty, no one could log in'
     os.remove(db)

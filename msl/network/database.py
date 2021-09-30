@@ -39,9 +39,9 @@ class Database(object):
         if self._path == ':memory:':
             logger.debug('creating a database in RAM')
         elif not os.path.isfile(self._path):
-            logger.debug('creating a new database {}'.format(self._path))
+            logger.debug('creating a new database %s', self._path)
         else:
-            logger.debug('opening {}'.format(self._path))
+            logger.debug('opening %s', self._path)
 
         kwargs.setdefault('timeout', 60.0)
 
@@ -78,7 +78,7 @@ class Database(object):
             self._connection.close()
             self._connection = None
             try:
-                logger.debug('closed {}'.format(self._path))
+                logger.debug('closed %s', self._path)
             except NameError:
                 # This error could occur when Python is exiting
                 #   NameError: name 'open' is not defined
@@ -98,7 +98,7 @@ class Database(object):
             logger.debug(sql)
             self._cursor.execute(sql)
         else:
-            logger.debug('{} {}'.format(sql, parameters))
+            logger.debug('%s %s', sql, parameters)
             self._cursor.execute(sql, parameters)
 
     def tables(self):

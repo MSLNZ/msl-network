@@ -17,6 +17,7 @@ from .cryptography import get_ssl_context
 from .utils import (
     logger,
     localhost_aliases,
+    si_seconds,
 )
 
 
@@ -34,8 +35,11 @@ class Network(object):
         """
         self._loop = None
         self._debug = False
-        self._network_name = None
+        self._network_name = '<UNKNOWN>'
         self._max_print_size = 256
+
+    def __str__(self):
+        return self._network_name
 
     def identity(self):
         """The identity of a device on the network.
@@ -183,9 +187,10 @@ class Network(object):
         n = len(line)
 
         if self._debug:
-            logger.debug(self._network_name + ' is sending {} bytes...'.format(n))
+            logger.debug('%s is sending %d bytes ...', self._network_name, n)
             if n > self._max_print_size:
-                logger.debug(line[:self._max_print_size//2] + b' ... ' + line[-self._max_print_size//2:])
+                half = self._max_print_size//2
+                logger.debug(line[:half] + b' ... ' + line[-half:])
             else:
                 logger.debug(line)
 
@@ -194,11 +199,14 @@ class Network(object):
 
         if self._debug:
             dt = perf_counter() - t0
+            rate = n * 1e-6 / dt
+            seconds = si_seconds(dt)
             if dt > 0:
-                logger.debug('{} sent {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
-                    self._network_name, n, dt, n*1e-6/dt))
+                logger.debug('%s sent %d bytes in %s [%.3f MB/s]',
+                             self._network_name, n, seconds, rate)
             else:
-                logger.debug('{} sent {} bytes in {:.3f} useconds'.format(self._network_name, n, dt*1e6))
+                logger.debug('%s sent %d bytes in %s',
+                             self._network_name, n, seconds)
 
     def send_data(self, writer, data):
         """Serialize `data` as a JSON_ string then send.
@@ -213,7 +221,7 @@ class Network(object):
             Any object that can be serialized into a JSON_ string.
         """
         try:
-            self.send_line(writer, serialize(data).encode(ENCODING) + TERMINATION)
+            self.send_line(writer, serialize(data, debug=self._debug).encode(ENCODING) + TERMINATION)
         except Exception as e:
             try:
                 self.send_error(writer, e, data['requester'])
@@ -340,7 +348,7 @@ class Device(Network):
 
             kwargs['cert_file'] = cert_file
             context.check_hostname = kwargs['assert_hostname']
-            logger.debug('Loaded {}'.format(cert_file))
+            logger.debug('loaded %s', cert_file)
 
         try:
             self._loop.run_until_complete(
@@ -419,9 +427,9 @@ class Device(Network):
         finally:
             if self._transport is not None:
                 self._transport.close()
-            logger.info('{!r} disconnected'.format(self._network_name))
+            logger.info('%s disconnected', self._network_name)
             self._loop.close()
-            logger.info('{!r} closed the event loop'.format(self._network_name))
+            logger.info('%s closed the event loop', self._network_name)
 
     def _parse_buffer(self, data):
         # Called in the data_received method of a Client/Service to determine
@@ -457,3 +465,22 @@ class Device(Network):
         # Check if another message is still in the buffer.
         # Call the asyncio.Protocol.data_received method
         self.data_received(None)
+
+    def _log_data_received(self, message):
+        dt = perf_counter() - self._t0
+        n = len(message)
+        rate = n * 1e-6 / dt
+        seconds = si_seconds(dt)
+
+        if dt > 0:
+            logger.debug('%s received %d bytes in %s [%.3f MB/s] ...',
+                         self, n, seconds, rate)
+        else:
+            logger.debug('%s received %d bytes in %s ...',
+                         self, n, seconds)
+
+        if n > self._max_print_size:
+            half = self._max_print_size // 2
+            logger.debug(message[:half] + b' ... ' + message[-half:])
+        else:
+            logger.debug(message)

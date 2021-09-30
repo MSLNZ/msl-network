@@ -7,7 +7,10 @@ import os
 from enum import Enum
 from time import perf_counter
 
-from .utils import logger
+from .utils import (
+    logger,
+    si_seconds,
+)
 from .constants import (
     TERMINATION,
     ENCODING,
@@ -78,47 +81,61 @@ def use(value):
     backend.use(value)
 
 
-def serialize(obj):
+def serialize(obj, debug=False):
     """Serialize an object as a JSON-formatted string.
+
+    .. versionadded:: 0.6
+       The `debug` keyword argument.
 
     Parameters
     ----------
     obj
         A JSON-serializable object.
+    debug : :class:`bool`, optional
+        Whether to execute the :ref:`DEBUG <levels>` logging message.
 
     Returns
     -------
     :class:`str`
         The JSON-formatted string.
     """
-    t0 = perf_counter()
+    if debug:
+        t0 = perf_counter()
     out = backend.dumps(obj, **backend.kwargs_dumps)
-    logger.debug('{}.dumps took {:.3g} seconds'.format(
-        backend.name, perf_counter() - t0))
+    if debug:
+        dt = perf_counter() - t0
+        logger.debug('%s.dumps took %s', backend.name, si_seconds(dt))
     if isinstance(out, bytes):
         return out.decode(ENCODING)
     return out
 
 
-def deserialize(s):
+def deserialize(s, debug=False):
     """Deserialize a JSON-formatted string to Python objects.
+
+    .. versionadded:: 0.6
+       The `debug` keyword argument.
 
     Parameters
     ----------
     s : :class:`str`, :class:`bytes` or :class:`bytearray`
         A JSON-formatted string.
+    debug : :class:`bool`, optional
+        Whether to execute the :ref:`DEBUG <levels>` logging message.
 
     Returns
     -------
     :class:`dict`
         The deserialized Python object.
     """
-    t0 = perf_counter()
     if isinstance(s, (bytes, bytearray)):
         s = s.decode(ENCODING)
+    if debug:
+        t0 = perf_counter()
     obj = backend.loads(s, **backend.kwargs_loads)
-    logger.debug('{}.loads took {:.3g} seconds'.format(
-        backend.name, perf_counter() - t0))
+    if debug:
+        dt = perf_counter() - t0
+        logger.debug('%s.loads took %s', backend.name, si_seconds(dt))
     return obj
 
 

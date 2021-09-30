@@ -100,7 +100,7 @@ def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve=
             encryption_algorithm=encryption
         ))
 
-    logger.debug('create private {} key {}'.format(algorithm_u, path))
+    logger.debug('create private %s key %s', algorithm_u, path)
     return path
 
 
@@ -122,7 +122,7 @@ def load_key(path, *, password=None):
     with open(path, mode='rb') as f:
         data = f.read()
     pw = None if password is None else password.encode()
-    logger.debug('load private key ' + path)
+    logger.debug('load private key %s', path)
     return serialization.load_pem_private_key(data=data, password=pw)
 
 
@@ -209,7 +209,7 @@ def generate_certificate(*, path=None, key_path=None, key_password=None,
     with open(path, mode='wb') as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
-    logger.debug('create self-signed certificate ' + path)
+    logger.debug('create self-signed certificate %s', path)
     return path
 
 
@@ -235,7 +235,7 @@ def load_certificate(cert):
     if isinstance(cert, str):
         with open(cert, mode='rb') as f:
             data = f.read()
-        logger.debug('load certificate ' + cert)
+        logger.debug('load certificate %s', cert)
     elif isinstance(cert, bytes):
         data = cert
     else:

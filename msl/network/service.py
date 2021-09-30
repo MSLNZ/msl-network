@@ -5,11 +5,9 @@ import os
 import asyncio
 import inspect
 import getpass
+import logging
 import platform
-from time import (
-    perf_counter,
-    sleep,
-)
+from time import sleep
 from concurrent.futures import ThreadPoolExecutor
 
 from .network import Device
@@ -151,9 +149,10 @@ class Service(Device, asyncio.Protocol):
         Parameters
         ----------
         boolean : :class:`bool`
-            Whether to enable or disable :py:ref:`DEBUG <levels>` logging messages.
+            Whether to enable or disable :ref:`DEBUG <levels>` logging messages.
         """
         self._debug = bool(boolean)
+        logger.setLevel(logging.DEBUG if self._debug else logging.INFO)
 
     def start(self, *, name=None, host='localhost', port=PORT, timeout=10,
               username=None, password=None, password_manager=None,
@@ -172,8 +171,9 @@ class Service(Device, asyncio.Protocol):
         if host in localhost_aliases():
             kwargs['host'] = HOSTNAME
 
+        self.set_debug(debug)
+
         self._address_manager = '{host}:{port}'.format(**kwargs)
-        self._debug = bool(debug)
         self._username = username
 
         if password and password_manager:
@@ -204,7 +204,7 @@ class Service(Device, asyncio.Protocol):
            to the Network :class:`~msl.network.manager.Manager` has been closed.
         """
         self.shutdown_handler(exc)
-        logger.info('{!r} connection lost'.format(self._network_name))
+        logger.info('%s connection lost', self)
         for future in self._futures.values():
             future.cancel()
         self._futures.clear()
@@ -225,7 +225,7 @@ class Service(Device, asyncio.Protocol):
         self._transport = transport
         self._port = int(transport.get_extra_info('sockname')[1])
         self._network_name = '{}[{}]'.format(self._name, self._port)
-        logger.info('{!r} connection made'.format(self._network_name))
+        logger.info('%s connection made', self)
 
     def data_received(self, data):
         """
@@ -239,24 +239,13 @@ class Service(Device, asyncio.Protocol):
         if not message:
             return
 
-        dt = perf_counter() - self._t0
-
         if self._debug:
-            n = len(message)
-            if dt > 0:
-                logger.debug('{} received {} bytes in {:.3g} seconds [{:.3f} MB/s]'.format(
-                    self._network_name, n, dt, n*1e-6/dt))
-            else:
-                logger.debug('{} received {} bytes in {:.3g} seconds'.format(self._network_name, n, dt))
-            if len(message) > self._max_print_size:
-                logger.debug(message[:self._max_print_size//2] + b' ... ' + message[-self._max_print_size//2:])
-            else:
-                logger.debug(message)
+            self._log_data_received(message)
 
         try:
-            request = deserialize(message)
+            request = deserialize(message, debug=self._debug)
         except Exception as e:
-            logger.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
+            logger.error('%s %s: %s', self, e.__class__.__name__, e)
             self.send_error(self._transport, e, None)
             self._check_buffer_for_message()
             return
@@ -277,7 +266,7 @@ class Service(Device, asyncio.Protocol):
                     msg = request['message']
                 except KeyError:
                     pass
-            logger.error(self._network_name + ' ' + msg)
+            logger.error('%s %s', self, msg)
             self._check_buffer_for_message()
             return
 
@@ -296,7 +285,7 @@ class Service(Device, asyncio.Protocol):
         try:
             attrib = getattr(self, attribute)
         except Exception as e:
-            logger.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
+            logger.error('%s %s: %s', self, e.__class__.__name__, e)
             self.send_error(self._transport, e, requester=request['requester'], uuid=request['uuid'])
             self._check_buffer_for_message()
             return
@@ -315,8 +304,8 @@ class Service(Device, asyncio.Protocol):
         else:
             self.send_reply(self._transport, attrib, requester=request['requester'], uuid=request['uuid'])
 
-        logger.info('{!r} requested {!r} [{} executing]'.format(
-            request['requester'], request['attribute'], len(self._futures)))
+        logger.info('%r requested %r [%d executing]',
+                    request['requester'], request['attribute'], len(self._futures))
 
         self._check_buffer_for_message()
 
@@ -347,7 +336,7 @@ class Service(Device, asyncio.Protocol):
                     # and defines fget=None or if the getattr() function
                     # executes code, like PiCamera.frame does, which raises
                     # a custom exception if the camera is not running.
-                    logger.warning('{} [attribute={!r}]'.format(err, item))
+                    logger.warning('%s [attribute=%r]', err, item)
                     continue
                 try:
                     value = str(inspect.signature(attrib))
@@ -360,9 +349,9 @@ class Service(Device, asyncio.Protocol):
                     logger.warning(err)
                     continue
                 try:
-                    serialize(value)
+                    serialize(value, debug=self._debug)
                 except:
-                    logger.warning('The attribute {!r} is not JSON serializable'.format(item))
+                    logger.warning('The attribute %r is not JSON serializable', item)
                     continue
                 self._identity['attributes'][item] = value
         self._identity_successful = True
@@ -406,7 +395,7 @@ class Service(Device, asyncio.Protocol):
             reply = attrib(*data['args'], **data['kwargs'])
             self.send_reply(self._transport, reply, requester=data['requester'], uuid=data['uuid'])
         except Exception as e:
-            logger.error(self._network_name + ' ' + e.__class__.__name__ + ': ' + str(e))
+            logger.error('%s %s: %s', self, e.__class__.__name__, e)
             self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
         finally:
             self._futures.pop(uid, None)
