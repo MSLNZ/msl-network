@@ -182,16 +182,20 @@ def test_is_manager_regex():
     assert search('name') is None
     assert search('name:') is None
     assert search('name1') is None
-    assert search('name:1') is not None
+    assert search('name:1') is None
     assert search('name12') is None
-    assert search('name:12') is not None
-    assert search('name123') is None
-    assert search('name:123') is not None
-    assert search('name1234') is None
-    assert search('name:1234') is not None
-    assert search('name12345') is None
-    assert search('name:12345') is not None
-    assert search('name:123:45') is not None
+    assert search('Manager') is None
+    assert search('Manager:') is None
+    assert search('Manager[name') is None
+    assert search('Manager[name:') is None
+    assert search('Manager[name:1875') is None
+    assert search('Manager[name:1]') is not None
+    assert search('Manager[name:12]') is not None
+    assert search('Manager[name:12345]') is not None
+    assert search('Manager[n.a.m.e:12345]') is not None
+    assert search('Manager[192.168.1.100:12345]') is not None
+    assert search('manager[name:12]') is None
+    assert search('Manager[name:1875] ') is None
 
 
 def test_ipv4_regex():

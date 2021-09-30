@@ -13,7 +13,7 @@ from .constants import DATABASE
 from .utils import (
     logger,
     localhost_aliases,
-    _is_manager_regex,
+    _is_username_invalid_regex,
 )
 
 
@@ -370,7 +370,7 @@ class UsersTable(Database):
         ValueError
             If the `username` is invalid or if `password` is empty.
         """
-        if _is_manager_regex.search(username) is not None:
+        if _is_username_invalid_regex.search(username) is not None:
             raise ValueError('A username cannot end with ":<integer>"')
         if not password:
             raise ValueError('You must specify a password for {!r}'.format(username))

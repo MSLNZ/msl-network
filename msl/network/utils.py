@@ -15,12 +15,13 @@ _args_regex = re.compile(r'[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
 
 _kwargs_regex = re.compile(r'(\w+)[\s]*=[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
 
-_is_manager_regex = re.compile(r':\d+$')
+_is_manager_regex = re.compile(r'^Manager\[\S+:\d+]$')
 
 _ipv4_regex = re.compile(r'\d+\.\d+\.\d+\.\d+')
 
 _oid_regex = re.compile(r'oid=(.+), name=(.+)\)')
 
+_is_username_invalid_regex = re.compile(r':\d+$')
 
 logger = logging.getLogger(__package__)
 

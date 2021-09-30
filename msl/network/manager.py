@@ -56,7 +56,7 @@ class Manager(Network):
         """
         super(Manager, self).__init__()
         self._debug = debug  # bool
-        self._network_name = '{}:{}'.format(HOSTNAME, port)
+        self._network_name = 'Manager[{}:{}]'.format(HOSTNAME, port)
         self._loop = loop  # asyncio.AbstractEventLoop
         self.port = port  # int
         self.password = password  # string or None
