@@ -57,7 +57,6 @@ class Manager(object):
         self.port = self.get_available_port()
         self.auth_hostname = auth_hostname
         self.auth_login = auth_login
-        self.debug = False
         self.disable_tls = disable_tls
         self._manager_proc = None
 
