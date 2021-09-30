@@ -120,9 +120,10 @@ class Manager(object):
                         in_use = self.is_port_in_use(service.port)
                         self.shutdown(cxn)
                         raise RuntimeError(
-                            'Cannot start {} service.\n'
-                            'Is Service port in use? {}\n'
-                            'Services: {}'.format(name, in_use, services)
+                            'Cannot start {0} service.\n'
+                            'Is Service port in use? {1}\n'
+                            '{0}.start kwargs: {2}\n'
+                            'Services: {3}'.format(name, in_use, self.kwargs, services)
                         )
                 self._service_threads[service] = thread
             cxn.disconnect()
