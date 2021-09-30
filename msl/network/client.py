@@ -625,7 +625,8 @@ class Client(Device, asyncio.Protocol):
         while not done():
             sleep(0.01)
             if timeout and perf_counter() - t0 > timeout:
-                err = 'The following requests are still pending: '
+                err = 'The following requests are still pending ' \
+                      'after {:.1f} seconds: '.format(timeout)
                 requests = []
                 for uid, future in self._futures.items():
                     if not future.done():
