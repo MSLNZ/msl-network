@@ -20,7 +20,6 @@ from .service import (
 )
 from .constants import (
     HOSTNAME,
-    IS_WINDOWS,
     PORT,
     HOME_DIR,
     DATABASE,
@@ -46,7 +45,7 @@ from .utils import (
 class Manager(Network):
 
     def __init__(self, port, password, login, hostnames, connections_table,
-                 users_table, hostnames_table, debug, loop):
+                 users_table, hostnames_table, loop):
         """The Network :class:`Manager`.
 
         .. attention::
@@ -55,8 +54,7 @@ class Manager(Network):
             for more information.
         """
         super(Manager, self).__init__()
-        self._debug = debug  # bool
-        self._network_name = 'Manager[{}:{}]'.format(HOSTNAME, port)
+        self._network_name = f'Manager[{HOSTNAME}:{port}]'
         self._loop = loop  # asyncio.AbstractEventLoop
         self.port = port  # int
         self.password = password  # string or None
@@ -670,8 +668,8 @@ class Peer(object):
 
 def run_forever(
         *, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
-        database=None, debug=False, disable_tls=False, cert_file=None, key_file=None,
-        key_file_password=None, log_file=None):
+        database=None, disable_tls=False, cert_file=None, key_file=None,
+        key_file_password=None, log_level='INFO', log_file=None):
     """Start the event loop for the Network :class:`.Manager`.
 
     This is a blocking call and it will not return until the event loop of
@@ -679,11 +677,13 @@ def run_forever(
 
     .. versionadded:: 0.4
 
-    .. versionchanged:: 0.6
+    .. versionchanged:: 1.0
        Renamed `certfile` to `cert_file`.
        Renamed `keyfile` to `key_file`.
        Renamed `keyfile_password` to `key_file_password`.
        Renamed `logfile` to `log_file`.
+       Removed the `debug` keyword argument.
+       Added the `log_level` keyword argument.
 
     Parameters
     ----------
@@ -713,13 +713,8 @@ def run_forever(
         The path to the sqlite3 database that contains the records for the
         following tables -- :class:`.ConnectionsTable`, :class:`.HostnamesTable`,
         :class:`.UsersTable`. If :data:`None` then loads the default database.
-    debug : :class:`bool`, optional
-        Whether :ref:`DEBUG <levels>` logging messages are displayed. On
-        Windows, enabling debug mode also allows for the ``CTRL+C`` interrupt
-        to stop the event loop. The interrupt signal did not work properly in
-        Python <3.8.
     disable_tls : :class:`bool`, optional
-        Whether to disable using TLS for the protocol.
+        Whether to use TLS for the communication protocol.
     cert_file : :class:`str`, optional
         The path to the TLS certificate file. See
         :meth:`~ssl.SSLContext.load_cert_chain`
@@ -728,19 +723,22 @@ def run_forever(
         The path to the TLS key file. See
         :meth:`~ssl.SSLContext.load_cert_chain` for more details.
     key_file_password : :class:`str`, optional
-        The password to decrypt key. See :meth:`~ssl.SSLContext.load_cert_chain`
+        The password to decrypt the `key_file`. See :meth:`~ssl.SSLContext.load_cert_chain`
         for more details. Can be a path to a file that contains the password on
         the first line in the file (**WARNING!!** if the path does not exist
         then the value of the path becomes the password).
+    log_level : :class:`str` or :class:`int`, optional
+        The :ref:`logging level <levels>` to initially use. Can also be changed
+        via an :meth:`~msl.network.client.Client.admin_request`.
     log_file : :class:`str`, optional
         The file path to write logging messages to. If :data:`None` then uses
         the default file path.
     """
     output = _create_manager_and_loop(
         port=port, auth_hostname=auth_hostname, auth_login=auth_login,
-        auth_password=auth_password, database=database, debug=debug,
+        auth_password=auth_password, database=database,
         disable_tls=disable_tls, cert_file=cert_file, key_file=key_file,
-        key_file_password=key_file_password, log_file=log_file
+        key_file_password=key_file_password, log_level=log_level, log_file=log_file
     )
 
     if not output:
@@ -897,13 +895,13 @@ def filter_run_forever_kwargs(**kwargs):
 
 def _create_manager_and_loop(
         *, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
-        database=None, debug=False, disable_tls=False, cert_file=None, key_file=None,
-        key_file_password=None, log_file=None):
+        database=None, disable_tls=False, cert_file=None, key_file=None,
+        key_file_password=None, log_level='INFO', log_file=None):
 
     # set up logging -- FileHandler and StreamHandler
     if log_file is None:
         now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        log_file = os.path.join(HOME_DIR, 'logs', 'manager-{}.log'.format(now))
+        log_file = os.path.join(HOME_DIR, 'logs', f'manager-{now}.log')
     ensure_root_path(log_file)
 
     # set the root logger level to DEBUG and make sure that it has no handlers
@@ -911,7 +909,9 @@ def _create_manager_and_loop(
     root_logger.handlers.clear()
     root_logger.setLevel(logging.DEBUG)
 
-    # add a FileHandler and it will always log at the debug level
+    logging.getLogger('asyncio').setLevel(logging.WARNING)
+
+    # add a FileHandler
     fh = logging.FileHandler(log_file, mode='wt')
     fh.setLevel(logging.DEBUG)
     ff = logging.Formatter('%(asctime)s [%(levelname)-8s] %(name)s - %(message)s')
@@ -921,7 +921,7 @@ def _create_manager_and_loop(
 
     # add a StreamHandler and its log level can be decided from the command line
     sh = logging.StreamHandler(sys.stdout)
-    sh.setLevel(logging.DEBUG if debug else logging.INFO)
+    sh.setLevel(logging.DEBUG)
     sf = logging.Formatter('%(asctime)s [%(levelname)-5s] %(name)s - %(message)s')
     sf.default_msec_format = '%s.%03d'
     sh.setFormatter(sf)
@@ -1040,7 +1040,7 @@ def _create_manager_and_loop(
 
     # create the network manager
     manager = Manager(port, password, login, hostnames, conn_table,
-                      users_table, hostnames_table, debug, loop)
+                      users_table, hostnames_table, loop)
 
     try:
         server = loop.run_until_complete(
@@ -1054,14 +1054,6 @@ def _create_manager_and_loop(
         logger.error(err)
         print(err, file=sys.stderr)
         return
-
-    # enable this hack only in DEBUG mode and only on Windows when the
-    # SelectorEventLoop is being used. See: https://bugs.python.org/issue23057
-    if debug and IS_WINDOWS and isinstance(loop, asyncio.SelectorEventLoop):
-        async def wakeup():
-            while True:
-                await asyncio.sleep(1)
-        loop.create_task(wakeup())
 
     state = 'ENABLED' if context else 'DISABLED'
     logger.info('%s %s:%d (TLS %s)', NETWORK_MANAGER_RUNNING_PREFIX, HOSTNAME, port, state)

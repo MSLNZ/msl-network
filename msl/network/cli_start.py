@@ -96,13 +96,6 @@ def add_parser_start(parser):
              'omitted then the default database is used.'
     )
     p.add_argument(
-        '--debug',
-        action='store_true',
-        default=False,
-        help='Enable DEBUG logging messages. On Windows, enabling debug mode\n'
-             'also allows for the CTRL+C interrupt to stop the event loop.'
-    )
-    p.add_argument(
         '--disable-tls',
         action='store_true',
         default=False,
@@ -133,6 +126,11 @@ def add_parser_start(parser):
         default=PORT,
         help='The port number to use for the Network Manager.\n'
              'Default is %(default)s.'
+    )
+    p.add_argument(
+        '-G', '--log-level',
+        default='INFO',
+        help='The logging level to use. Default is INFO.'
     )
     p.add_argument(
         '-l', '--log-file',
