@@ -10,7 +10,7 @@ from .constants import DATABASE
 from .utils import ensure_root_path
 from .database import HostnamesTable
 
-HELP = 'Add/remove hostname(s) into/from an auth_hostnames table in a database.'
+HELP = 'Add/remove hostname(s) into/from the table in the database.'
 
 DESCRIPTION = HELP + """
 
@@ -18,11 +18,11 @@ The Network Manager can be started with the option to use trusted devices
 (based on the hostname of the connecting device) as the authorisation check
 for a Client or Service to be able to connect to the Network Manager.
 
-Each hostname in the auth_hostnames table is considered as a trusted device 
-and therefore the device can connect to the Network Manager.
+Each hostname in the table is considered as a trusted device and therefore
+the device can connect to the Network Manager.
 
 To use trusted hostnames as the authentication check, start the Network
-Manager with the --auth-hostname flag::
+Manager with the ``--auth-hostname`` flag::
 
   msl-network start --auth-hostname
 
@@ -31,16 +31,16 @@ Manager with the --auth-hostname flag::
 EPILOG = """
 Examples::
   
-  # add 'TheHostname' to the list of trusted devices
+  # add 'TheHostname' as a trusted device in the default database
   msl-network hostname add TheHostname
 
-  # add 'TheHostname' and 'OtherHostname' to the list of trusted devices  
+  # add 'TheHostname' and 'OtherHostname' as trusted devices  
   msl-network hostname add TheHostname OtherHostname
 
-  # remove 'OtherHostname' from the list of trusted devices
+  # remove 'OtherHostname' from the database of trusted devices
   msl-network hostname remove OtherHostname
 
-  # add 'TheHostname' to the auth_hostnames table in a specific database 
+  # add 'TheHostname' to a specific database 
   msl-network hostname add TheHostname --database /path/to/database.db 
   
   # list all trusted hostnames

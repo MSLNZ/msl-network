@@ -12,7 +12,7 @@ from .constants import DATABASE
 from .database import UsersTable
 from .utils import ensure_root_path
 
-HELP = 'Add/remove a user into/from the auth_users table in a database.'
+HELP = 'Add/remove a user into/from a database.'
 
 DESCRIPTION = HELP + """
 
@@ -21,7 +21,7 @@ credentials as the authorisation check for a Client or Service to be able
 to connect to the Network Manager.
 
 To use the login credentials as the authentication check, start the Network
-Manager with the --auth-login flag::
+Manager with the ``--auth-login`` flag::
 
   msl-network start --auth-login
   
@@ -30,10 +30,10 @@ Manager with the --auth-login flag::
 EPILOG = """
 Examples::
 
-  # add 'j.doe' to the auth_users table  
+  # add 'j.doe' to the default database  
   msl-network user add j.doe --password a good password
 
-  # add 'a.smith' as an administrator to the auth_users table  
+  # add 'a.smith' as an administrator to the database  
   msl-network user add a.smith --password !PaSsWoRd* --admin
 
   # update 'j.doe' to be an administrator  
@@ -45,13 +45,13 @@ Examples::
   # update the password for 'j.doe' using a password in a file 
   msl-network user update j.doe --password /path/to/my/password.txt
 
-  # remove 'j.doe' from the auth_users table
+  # remove 'j.doe' from the default database
   msl-network user remove j.doe
 
-  # add 'j.doe' to the auth_users table in a specific database 
+  # add 'j.doe' to a specific database 
   msl-network user add j.doe --password The Password To Use --database /path/to/database.db 
 
-  # list all users in the auth_users table
+  # list all users in the database
   msl-network user list
 
 """

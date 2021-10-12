@@ -1,5 +1,5 @@
 """
-Main entry point to **MSL-Network** via the command-line interface (CLI).
+Main entry point to MSL-Network via the command-line interface (CLI).
 """
 import sys
 
@@ -64,7 +64,7 @@ def configure_parser():
 
 def main(*args):
     """
-    Main entry point to **MSL-Network** via the command-line interface (CLI).
+    Main entry point to MSL-Network via the command-line interface (CLI).
     """
     if not args:
         args = sys.argv[1:]

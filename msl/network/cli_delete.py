@@ -1,7 +1,7 @@
 """
 Command line interface for the ``delete`` command.
 
-.. versionadded:: 0.6
+.. versionadded:: 1.0
 
 To see the help documentation, run the following command in a terminal::
 
