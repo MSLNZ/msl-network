@@ -140,9 +140,9 @@ class Manager(object):
         connection.admin_request('shutdown_manager')
         self._manager_proc.communicate(timeout=5)
 
-        self.wait_shutdown(connection.port, '{} will not shutdown'.format(connection))
-        for service, thread in self._service_threads.items():
-            self.wait_shutdown(service.port, '{} will not shutdown'.format(service))
+        # self.wait_shutdown(connection.port, '{} will not shutdown'.format(connection))
+        # for service, thread in self._service_threads.items():
+        #     self.wait_shutdown(service.port, '{} will not shutdown'.format(service))
 
         self.remove_files()
 
