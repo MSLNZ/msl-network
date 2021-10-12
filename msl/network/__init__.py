@@ -13,7 +13,6 @@ from .service import (
     Service,
     filter_service_start_kwargs,
 )
-from .exceptions import MSLNetworkError
 from .database import (
     ConnectionsTable,
     HostnamesTable,
