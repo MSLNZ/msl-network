@@ -7,39 +7,55 @@ Version 1.0.0.dev0 (in development)
 
 - Added
 
-  * the :class:`~msl.network.network.Device` class
+  * support for Python 3.9 and 3.10
+  * :func:`~msl.network.network.Network.set_logging_level` to be able to set the
+    logging level at runtime
+  * ability to add tasks to the event loop via the
+    :meth:`~msl.network.network.Device.add_tasks` method
+  * the :meth:`~msl.network.network.Device.shutdown_handler` method is called
+    after the connection to the :class:`~msl.network.manager.Manager` is lost
+    but before the event loop stops
   * ability to use all :class:`~msl.network.database.Database` classes as a
-    context manager (i.e., using a ``with`` statement)
-  * support for Python 3.9
-  * the :meth:`~msl.network.client.Client.clear_futures_and_requests` method
+    context manager (i.e., using a `with` statement)
+  * the ``--log-level`` flag to the ``start`` command
   * the ``delete`` command-line argument to delete files that are created by MSL-Network
   * `orjson <https://pypi.org/project/orjson/>`_ as a JSON backend to
     :class:`~msl.network.json.Package`
   * ``JSON``, ``UJSON``, ``RAPIDJSON`` and ``SIMPLEJSON`` are aliases
     for the JSON backends in :class:`~msl.network.json.Package`
-  * :attr:`~msl.network.constants.TERMINATION` and :attr:`~msl.network.constants.ENCODING`
-    attributes
-  * the ``auto_save`` keyword argument to :meth:`~msl.network.client.connect`
+  * the ``read_limit`` keyword arguments to
+    :func:`~msl.network.client.connect` and
+    :meth:`~msl.network.service.Service.start`
+  * the ``auto_save`` keyword argument to :func:`~msl.network.client.connect`
     and :func:`~msl.network.cryptography.get_ssl_context`
   * the ``digest_size`` keyword argument to
-    :meth:`~msl.network.cryptography.generate_certificate` and
-    :meth:`~msl.network.cryptography.get_fingerprint`
+    :func:`~msl.network.cryptography.generate_certificate` and
+    :func:`~msl.network.cryptography.get_fingerprint`
   * the ``name`` keyword argument to
-    :meth:`~msl.network.cryptography.generate_certificate`,
-  * the ``algorithm`` keyword argument in :meth:`~msl.network.cryptography.get_fingerprint`
+    :func:`~msl.network.cryptography.generate_certificate`,
+  * the ``algorithm`` keyword argument in
+    :func:`~msl.network.cryptography.get_fingerprint`
     can now also be of type :class:`str`
 
 - Changed
 
-  * renamed ``certfile`` to ``cert_file`` in :meth:`~msl.network.client.connect`
+  * making an asynchronous request now returns a :class:`concurrent.futures.Future` instance
+    instead of an :class:`asyncio.Future` instance
+  * :class:`~msl.network.client.Client` and :class:`~msl.network.service.Service`
+    are subclasses of :class:`~msl.network.network.Device`
+  * move the ``utils.localhost_aliases`` function to be defined as
+    :attr:`~msl.network.constants.LOCALHOST_ALIASES`
+  * renamed the ``Client.manager`` method to :meth:`~msl.network.client.Client.identities`
+  * renamed ``certfile`` to ``cert_file`` in :func:`~msl.network.client.connect`,
+    :meth:`~msl.network.service.Service.start`
     and :func:`~msl.network.cryptography.get_ssl_context`
   * can now change which JSON backend to use during runtime by calling the
-    :func:`msl.network.json.use` function
+    :func:`~msl.network.json.use` function
   * moved the ``msl.network.constants.JSONPackage`` class to
     :class:`msl.network.json.Package`
   * renamed the command line arguments ``--certfile`` to ``--cert-file``,
     ``--keyfile`` to ``--key-file``, ``--keyfile-password`` to ``--key-file-password``,
-    and ``--logfile`` to ``--log-file`` for the `start` command
+    and ``--logfile`` to ``--log-file`` for the ``start`` command
   * use ``T`` as the separator between the date and time in
     a :class:`~msl.network.database.ConnectionsTable`
   * rename the keyword arguments ``timestamp1`` to ``start`` and ``timestamp2``
@@ -47,17 +63,26 @@ Version 1.0.0.dev0 (in development)
 
 - Fixed
 
-  * an ``AttributeError`` could be raised when requesting the identity of a
+  * an ``AttributeError`` could be raised when generating the identity of a
     :class:`~msl.network.service.Service`
-  * can now handle multiple requests/replies contained within the same network packet
+  * can now handle multiple requests/replies contained within the same network
+    packet
 
 - Removed
 
+  * Support for Python 3.5
+  * the ``MSLNetworkError`` exception class (a :exc:`RuntimeError` is raised instead)
+  * the ``Service.set_debug`` method
+  * the ``termination`` and ``encoding`` class attributes of
+    :class:`~msl.network.network.Network`
+  * the ``send_pending_requests``, ``raise_latest_error`` and ``wait``
+    methods of a :class:`~msl.network.client.Client`
+  * the ``--debug`` flag from the ``start`` command
   * the ``utils.new_selector_event_loop`` function
   * the ``constants.JSON`` attribute
   * `YAJL <https://pypi.org/project/yajl/>`_ as a JSON backend option
 
-Version 0.5.0 (2020.03.18)
+Version 0.5.0 (2020-03-18)
 ==========================
 
 - Added
@@ -85,7 +110,7 @@ Version 0.5.0 (2020.03.18)
   * the `Service._shutdown` method since it is no longer necessary to call this method
     from the `Service` subclass because shutting down happens automatically behind the scenes
 
-Version 0.4.1 (2019.07.23)
+Version 0.4.1 (2019-07-23)
 ==========================
 
 - Added
@@ -104,7 +129,7 @@ Version 0.4.1 (2019.07.23)
     `Service` (this fixes a race condition when starting a `Service` on a remote
     computer and then trying to link to the same `Service`)
 
-Version 0.4.0 (2019.04.16)
+Version 0.4.0 (2019-04-16)
 ==========================
 
 - Added
@@ -156,7 +181,7 @@ Version 0.4.0 (2019.04.16)
   * the `name` class attribute for a `Service`
   * the `send_request` method for a `Client` (must link with a `Service`)
 
-Version 0.3.0 (2019.01.06)
+Version 0.3.0 (2019-01-06)
 ==========================
 
 - Added
@@ -181,7 +206,7 @@ Version 0.3.0 (2019.01.06)
 
   * the `__repr__` method for a `Service`
 
-Version 0.2.0 (2018.08.24)
+Version 0.2.0 (2018-08-24)
 ==========================
 
 - Added
@@ -198,6 +223,6 @@ Version 0.2.0 (2018.08.24)
   * rename 'async' kwarg to be 'asynchronous' (for Python 3.7 support)
   * the termination bytes were changed from ``\n`` to ``\r\n``
 
-Version 0.1.0 (2017.12.14)
+Version 0.1.0 (2017-12-14)
 ==========================
 - Initial release
