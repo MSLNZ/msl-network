@@ -1,41 +1,24 @@
 """
 Base class for all Services.
 """
-import os
-import asyncio
 import inspect
-import getpass
-import logging
 import platform
-from time import sleep
-from concurrent.futures import ThreadPoolExecutor
 
-from .network import Device
-from .utils import (
-    logger,
-    localhost_aliases,
-)
 from .json import (
     deserialize,
-    serialize,
+    serialize
 )
 from .constants import (
     PORT,
-    HOSTNAME,
-    IS_WINDOWS,
+    SHUTDOWN_SERVICE,
     DISCONNECT_REQUEST,
     NOTIFICATION_UUID,
-    SHUTDOWN_SERVICE,
 )
-
-_ignore_attribs = [
-    'port', 'address_manager', 'username', 'start', 'password',
-    'set_debug', 'max_clients', 'ignore_attributes', 'emit_notification'
-]
-_ignore_attribs += list(a for a in dir(Device) + dir(asyncio.Protocol) if not a.startswith('_'))
+from .utils import logger
+from .network import Device
 
 
-class Service(Device, asyncio.Protocol):
+class Service(Device):
 
     def __init__(self, *, name=None, max_clients=None, ignore_attributes=None):
         """Base class for all Services.
@@ -55,45 +38,45 @@ class Service(Device, asyncio.Protocol):
             in the :meth:`.start` method.
         max_clients : :class:`int`, optional
             The maximum number of :class:`~msl.network.client.Client`\\s
-            that can be linked with this :class:`Service`. A value :math:`\\leq` 0
+            that can be linked with this Service. A value :math:`\\leq` 0
             or :data:`None` means that there is no limit.
-        ignore_attributes : :class:`list` of :class:`str`, optional
+        ignore_attributes : :class:`str` or :class:`list` of :class:`str`, optional
             The names of the attributes to not include in the
-            :obj:`~msl.network.network.Network.identity` of the :class:`Service`.
+            :obj:`~msl.network.network.Network.identity` of the Service.
             See :meth:`.ignore_attributes` for more details.
         """
-        Device.__init__(self, name)
-        asyncio.Protocol.__init__(self)
+        super(Service, self).__init__(name=name)
+        self._futures = []
+
         if max_clients is None or max_clients <= 0:
             self._max_clients = -1
         else:
             self._max_clients = int(max_clients)
-        self._ignore_attribs = _ignore_attribs.copy()
-        if ignore_attributes:
-            self.ignore_attributes(ignore_attributes)
 
-    @property
-    def address_manager(self):
-        """:class:`str`: The address of the Network :class:`~msl.network.manager.Manager`
-        that this :class:`Service` is connected to."""
-        return self._address_manager
+        self._ignore_attributes = [
+            'add_tasks', 'address_manager', 'emit_notification', 'identity',
+            'ignore_attributes', 'max_clients', 'name', 'port',
+            'shutdown_handler', 'start',
+        ]
+
+        if ignore_attributes is not None:
+            if isinstance(ignore_attributes, str):
+                self.ignore_attributes(ignore_attributes)
+            else:
+                self.ignore_attributes(*ignore_attributes)
+
+        self._identity = self._generate_identity()
 
     @property
     def max_clients(self):
         """:class:`int`: The maximum number of :class:`~msl.network.client.Client`\\s
         that can be linked with this :class:`Service`. A value :math:`\\leq` 0 means an
-        infinite number of :class:`~msl.network.client.Client`\\s can be linked."""
+        unlimited number of :class:`~msl.network.client.Client`\\s can be linked."""
         return self._max_clients
 
-    @property
-    def port(self):
-        """:class:`int`: The port number on ``localhost`` that is being used for the
-        connection to the Network :class:`~msl.network.manager.Manager`."""
-        return self._port
-
     def emit_notification(self, *args, **kwargs):
-        """Emit a notification to all :class:`~msl.network.client.Client`\\s that are
-        :class:`~msl.network.client.Link`\\ed with this :class:`Service`.
+        """Emit a notification to all :class:`~msl.network.client.Client`\\s that
+        are :class:`~msl.network.client.Link`\\ed with this :class:`Service`.
 
         .. versionadded:: 0.5
 
@@ -108,56 +91,48 @@ class Service(Device, asyncio.Protocol):
         --------
         :meth:`~msl.network.client.Link.notification_handler`
         """
-        # the Network.send_line method also checks if the `writer` is None, but,
-        # there is no need to json-serialize [args, kwargs] if self._transport is None
-        if self._transport is None:
-            return
-        self.send_data(self._transport, {'result': [args, kwargs], 'service': self._name,
-                                         'uuid': NOTIFICATION_UUID, 'error': False})
+        notification = {
+            'error': False,
+            'result': [args, kwargs],
+            'service': self._name,
+            'uuid': NOTIFICATION_UUID
+        }
+        self._queue.put_nowait((NOTIFICATION_UUID, notification))
 
-    def ignore_attributes(self, names):
-        """Ignore attributes from being added to the :obj:`~msl.network.network.Network.identity`
-        of the :class:`Service`.
+    def ignore_attributes(self, *names):
+        """Ignore attributes from being added to the
+        :obj:`~msl.network.network.Network.identity` of the :class:`Service`.
 
         The are a few reasons why you may want to call this method:
 
-        * If you see warnings that an object is not JSON serializable or that the signature
-          of an attribute cannot be found when starting the :class:`Service` and you
-          prefer not to see the warnings.
-        * If you do not want an attribute to be made publicly known that it exists. However,
-          a :class:`~msl.network.client.Client` can still access the ignored attributes.
+        * If you see warnings that an object is not JSON serializable or that
+          the signature of an attribute cannot be found when starting the
+          :class:`Service` and you prefer not to see the warnings.
+        * If you do not want an attribute to be made publicly known that it
+          exists. However, a :class:`~msl.network.client.Client` can still
+          access the ignored attributes.
 
-        Private attributes (i.e., attributes that start with an underscore) are automatically
-        ignored and cannot be accessed from a :class:`~msl.network.client.Client` on the network.
+        Private attributes (i.e., attributes that start with an underscore)
+        are automatically ignored and cannot be accessed from a
+        :class:`~msl.network.client.Client` on the network.
 
-        If you want to ignore any attributes then you must call :meth:`.ignore_attributes`
-        before calling :meth:`.start`.
+        If you want to ignore any attributes then you must call
+        :meth:`.ignore_attributes` before calling :meth:`.start`.
 
         .. versionadded:: 0.5
 
         Parameters
         ----------
-        names : :class:`list` of :class:`str`
+        names
             The names of the attributes to not include in the
             :obj:`~msl.network.network.Network.identity` of the :class:`Service`.
         """
-        self._ignore_attribs.extend(names)
-
-    def set_debug(self, boolean):
-        """Set the debug mode of the :class:`Service`.
-
-        Parameters
-        ----------
-        boolean : :class:`bool`
-            Whether to enable or disable :ref:`DEBUG <levels>` logging messages.
-        """
-        self._debug = bool(boolean)
-        logger.setLevel(logging.DEBUG if self._debug else logging.INFO)
+        self._ignore_attributes.extend(names)
 
     def start(self, *, name=None, host='localhost', port=PORT, timeout=10,
               username=None, password=None, password_manager=None,
-              cert_file=None, disable_tls=False, assert_hostname=True,
-              debug=False, auto_save=False):
+              read_limit=None, disable_tls=False, cert_file=None,
+              assert_hostname=True, auto_save=False, ):
         """Start the :class:`Service`.
 
         See :func:`~msl.network.client.connect` for the description
@@ -168,263 +143,222 @@ class Service(Device, asyncio.Protocol):
         if name is not None:
             self._name = name
 
-        if host in localhost_aliases():
-            kwargs['host'] = HOSTNAME
-
-        self.set_debug(debug)
-
-        self._address_manager = '{host}:{port}'.format(**kwargs)
-        self._username = username
-
-        if password and password_manager:
+        if kwargs['password'] and kwargs['password_manager']:
             raise ValueError(
                 'Specify either "password" or "password_manager" but not both.\n'
                 'A Manager cannot be started using multiple authentication methods.'
             )
-        self._password = password or password_manager
 
-        self._loop = asyncio.new_event_loop()
-        if not self._create_connection(**kwargs):
+        self._loop = self._create_connection(**kwargs)
+        if self._loop is None:
+            # then the user chose to not accept the SSL certificate
             return
 
-        # enable this hack only in DEBUG mode and only on Windows when
-        # the SelectorEventLoop is used. See: https://bugs.python.org/issue23057
-        if self._debug and IS_WINDOWS and isinstance(self._loop, asyncio.SelectorEventLoop):
-            async def wakeup():
-                while True:
-                    await asyncio.sleep(1)
-            self._loop.create_task(wakeup())
+        self._tasks.append(self._handle_requests())
+        self._tasks.append(self._send_responses())
+        self._run_until_complete()
 
-        self._run_forever()
-
-    def connection_lost(self, exc):
-        """
-        .. attention::
-           Do not override this method. It is called automatically when the connection
-           to the Network :class:`~msl.network.manager.Manager` has been closed.
-        """
-        self.shutdown_handler(exc)
-        logger.info('%s connection lost', self)
-        for future in self._futures.values():
-            future.cancel()
-        self._futures.clear()
-        self._transport = None
-        self._port = None
-        self._address_manager = None
-        self._loop.stop()
-        if exc:
-            logger.error(exc)
-            raise exc
-
-    def connection_made(self, transport):
-        """
-        .. attention::
-           Do not override this method. It is called automatically when the connection
-           to the Network :class:`~msl.network.manager.Manager` has been established.
-        """
-        self._transport = transport
-        self._port = int(transport.get_extra_info('sockname')[1])
-        self._network_name = '{}[{}]'.format(self._name, self._port)
-        logger.info('%s connection made', self)
-
-    def data_received(self, data):
-        """
-        .. attention::
-           Do not override this method. It is called automatically when data is
-           received from the Network :class:`~msl.network.manager.Manager`. A
-           :class:`Service` will execute a request in a
-           :class:`~concurrent.futures.ThreadPoolExecutor`.
-        """
-        message = self._parse_buffer(data)
-        if not message:
-            return
-
-        if self._debug:
-            self._log_data_received(message)
-
+    def _execute_request(self, attr, request):
+        # Executes a request in a separate thread
         try:
-            request = deserialize(message, debug=self._debug)
+            response = attr(*request['args'], **request['kwargs'])
         except Exception as e:
-            logger.error('%s %s: %s', self, e.__class__.__name__, e)
-            self.send_error(self._transport, e, None)
-            self._check_buffer_for_message()
-            return
+            logger.error('%s: %s', e.__class__.__name__, e)
+            response = e
+        self._loop.call_soon_threadsafe(self._queue.put_nowait, (request, response))
 
-        if request.get('error', False):
-            # Then log the error message and don't send a reply back to the Manager.
-            # Ideally, the Manager is the only device that would send an error to the
-            # Service, which could happen during the handshake if the password or identity
-            # that the Service provided was invalid.
-            msg = 'Error: Unfortunately, no error message has been provided'
+    def _generate_identity(self):
+        # Generate the identity dict of this Service
+        attributes = dict()
+        for name in dir(self):
+            if name.startswith('_') or name in self._ignore_attributes:
+                continue
+
             try:
-                if request['traceback']:
-                    msg = '\n'.join(request['traceback'])  # traceback should be a list of strings
-                else:  # in case the 'traceback' key exists but it is an empty list
-                    msg = request['message']
-            except (TypeError, KeyError):  # in case there is no 'traceback' key
+                attrib = getattr(self, name)
+            except Exception as e:
+                # This can happen if the Service is also a subclass of
+                # another class (e.g., the PiCamera class) and the other
+                # class defines some of its attributes using the builtin
+                # property function, e.g., property(fget, fset, fdel, doc),
+                # and defines fget=None or if the getattr() function
+                # executes code, like PiCamera.frame does, which raises
+                # a custom exception if the camera is not running.
+                logger.warning('%s [attribute=%r]', e, name)
+                continue
+
+            try:
+                value = str(inspect.signature(attrib))
+            except TypeError:
+                # Then the attribute is not a callable object
+                value = attrib
+            except ValueError as e:
+                # Cannot get the signature of the callable object.
+                # This can happen if the Service is also a subclass of
+                # some other object, for example a Qt class.
+                logger.warning('%s [attribute=%r]', e, name)
+                continue
+
+            try:
+                # This object must be JSON serializable
+                serialize(value)
+            except TypeError as e:
+                logger.warning('%s [attribute=%r]', e, name)
+                continue
+
+            attributes[name] = value
+
+        return {
+            'type': 'service',
+            'name': self._name,
+            'attributes': attributes,
+            'max_clients': self._max_clients,
+            'language': f'Python {platform.python_version()}',
+            'os': f'{platform.system()} {platform.release()} {platform.machine()}'
+        }
+
+    def _remove_future(self, future):
+        self._futures.remove(future)
+
+    async def _handle_requests(self):
+        # Handle requests until EOF
+        logger.debug('start requests loop (producer)')
+        num_requests = 0
+        while True:
+            try:
+                line = await self._reader.readline()
+            except Exception as e:
+                logger.error('%s: %s', e.__class__.__name__, e)
+                continue
+
+            if not line:
+                logger.debug('received EOF')
+                self._queue.put_nowait((None, None))
+                self.shutdown_handler()
+                break
+
+            num_requests += 1
+
+            if len(line) > self._max_debug_length:
+                half = self._max_debug_length // 2
+                logger.debug('request: %s ... %s', line[:half], line[-half:])
+            else:
+                logger.debug('request: %s', line)
+
+            try:
+                request = deserialize(line)
+            except ValueError as e:
+                # The Manager should be the only device sending requests
+                # to this Service so this error should never occur
+                self._queue.put_nowait(({}, e))
+                logger.critical('%s: %s', e.__class__.__name__, e)
+                continue
+
+            if request.pop('error', False):
+                # Not sure who would send an error, but we'll just log it
+                default = 'UnknownError: No error message has been provided'
+                msg = '\n'.join(request['traceback'])
+                if not msg:
+                    msg = request['message'] or default
+                logger.error('%s sent an error: %s', request['requester'], msg)
+                continue
+
+            attribute = request['attribute']
+            if attribute.startswith('_'):
+                error = PermissionError('Cannot request a private attribute')
+                self._queue.put_nowait((request, error))
+                logger.warning('%s requested private attribute %r',
+                               request['requester'], attribute)
+                continue
+
+            try:
+                attr = getattr(self, attribute)
+            except AttributeError as e:
+                self._queue.put_nowait((request, e))
+                logger.error('%s: %s', e.__class__.__name__, e)
+                continue
+
+            if attribute == SHUTDOWN_SERVICE:
+                response = attr(*request['args'], **request['kwargs'])
+                self._queue.put_nowait((request, response))
+                await self._queue.join()
+                # Notify the Manager and let it shut down the Service
+                # since the Manager also needs to notify all Clients that
+                # are linked with the Service
+                await self._write({
+                    'service': self._network_name,
+                    'attribute': DISCONNECT_REQUEST
+                })
+                continue
+
+            if callable(attr):
+                # execute the request in a separate thread
+                future = self._loop.run_in_executor(
+                    None, self._execute_request, attr, request)
+                self._futures.append(future)
+                future.add_done_callback(self._remove_future)
+            else:
+                self._queue.put_nowait((request, attr))
+
+            logger.info('%s requested %r [%d running, %d total]',
+                        request['requester'], request['attribute'],
+                        len(self._futures), num_requests)
+
+        logger.debug('finish requests loop (producer)')
+
+    async def _send_responses(self):
+        # FIFO queue to send responses to a Manager
+        logger.debug('start responses loop (consumer)')
+        notification = NOTIFICATION_UUID
+        while True:
+            request, response = await self._queue.get()
+            if request is None:
+                self._queue.task_done()
+                break
+            try:
+                if isinstance(response, Exception):
+                    await self._write_error(response, **request)
+                elif request == notification:
+                    await self._write(response)
+                else:
+                    await self._write_result(response, **request)
+            except Exception as e:
+                logger.error('%s: %s', e.__class__.__name__, e)
                 try:
-                    msg = request['message']
-                except KeyError:
-                    pass
-            logger.error('%s %s', self, msg)
-            self._check_buffer_for_message()
-            return
-
-        attribute = request['attribute']
-        # do not allow access to private attributes from the Service
-        if attribute.startswith('_'):
-            self.send_error(
-                self._transport,
-                AttributeError('Cannot request a private attribute from {!r}'.format(self._name)),
-                requester=request['requester'],
-                uuid=request['uuid']
-            )
-            self._check_buffer_for_message()
-            return
-
-        try:
-            attrib = getattr(self, attribute)
-        except Exception as e:
-            logger.error('%s %s: %s', self, e.__class__.__name__, e)
-            self.send_error(self._transport, e, requester=request['requester'], uuid=request['uuid'])
-            self._check_buffer_for_message()
-            return
-
-        if attribute == SHUTDOWN_SERVICE:
-            reply = attrib(*request['args'], **request['kwargs'])
-            self.send_reply(self._transport, reply, requester=request['requester'], uuid=request['uuid'])
-            for future in self._futures.values():
-                while not (future.done() or future.cancelled()):
-                    sleep(0.01)
-            self.send_data(self._transport, {'service': self._network_name, 'attribute': DISCONNECT_REQUEST})
-        elif callable(attrib):
-            uid = os.urandom(16)
-            executor = ThreadPoolExecutor(max_workers=1)
-            self._futures[uid] = self._loop.run_in_executor(executor, self._function, attrib, request, uid)
-        else:
-            self.send_reply(self._transport, attrib, requester=request['requester'], uuid=request['uuid'])
-
-        logger.info('%s requested %r [%d executing]',
-                    request['requester'], request['attribute'], len(self._futures))
-
-        self._check_buffer_for_message()
-
-    def identity(self):
-        """
-        .. attention::
-           Do not override this method. It is called automatically when the Network
-           :class:`~msl.network.manager.Manager` requests the
-           :obj:`~msl.network.network.Network.identity` of the :class:`Service`
-        """
-        if not self._identity:
-            self._identity['type'] = 'service'
-            self._identity['name'] = self._name
-            self._identity['language'] = 'Python ' + platform.python_version()
-            self._identity['os'] = '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
-            self._identity['max_clients'] = self._max_clients
-            self._identity['attributes'] = dict()
-            for item in dir(self):
-                if item.startswith('_') or item in self._ignore_attribs:
-                    continue
-                try:
-                    attrib = getattr(self, item)
-                except Exception as err:
-                    # This can happen if the Service is also a subclass of
-                    # another class, for example, the PiCamera class and the other
-                    # class defines some of its attributes using the builtin
-                    # property function, e.g., property(fget, fset, fdel, doc),
-                    # and defines fget=None or if the getattr() function
-                    # executes code, like PiCamera.frame does, which raises
-                    # a custom exception if the camera is not running.
-                    logger.warning('%s [attribute=%r]', err, item)
-                    continue
-                try:
-                    value = str(inspect.signature(attrib))
-                except TypeError:  # then the attribute is not a callable object
-                    value = attrib
-                except ValueError as err:
-                    # Cannot get the signature of the callable object.
-                    # This can happen if the Service is also a subclass of
-                    # some other object, for example a Qt class.
-                    logger.warning(err)
-                    continue
-                try:
-                    serialize(value, debug=self._debug)
-                except:
-                    logger.warning('The attribute %r is not JSON serializable', item)
-                    continue
-                self._identity['attributes'][item] = value
-        self._identity_successful = True
-        return self._identity
-
-    def password(self, name):
-        """
-        .. attention::
-           Do not override this method. It is called automatically when the Network
-           :class:`~msl.network.manager.Manager` requests a password.
-        """
-        if self._identity:
-            # once the Service sends its identity to the Manager any subsequent password requests
-            # can only be from a Client that is linked with the Service and therefore something
-            # peculiar is happening because a Client never needs to know a password from a Service.
-            # Without this self._identity check a Client could potentially retrieve the password
-            # of a user in plain-text format. Also, if the getpass function is called it is a
-            # blocking function and therefore the Service blocks all other requests until getpass returns
-            return 'You do not have permission to receive the password'
-        self._connection_successful = True
-        if self._password is not None:
-            return self._password
-        return getpass.getpass('Enter the password for ' + name + ' > ')
-
-    def username(self, name):
-        """
-        .. attention::
-           Do not override this method. It is called automatically when the Network
-           :class:`~msl.network.manager.Manager` requests the name of the user.
-        """
-        if self._identity:
-            # see the comment in the password() method why we do this self._identity check
-            return 'You do not have permission to receive the username'
-        self._connection_successful = True
-        if self._username is None:
-            return input('Enter a username for ' + name + ' > ')
-        return self._username
-
-    def _function(self, attrib, data, uid):
-        try:
-            reply = attrib(*data['args'], **data['kwargs'])
-            self.send_reply(self._transport, reply, requester=data['requester'], uuid=data['uuid'])
-        except Exception as e:
-            logger.error('%s %s: %s', self, e.__class__.__name__, e)
-            self.send_error(self._transport, e, requester=data['requester'], uuid=data['uuid'])
-        finally:
-            self._futures.pop(uid, None)
+                    await self._write_error(e, **request)
+                except Exception as e:
+                    logger.exception(e)
+            finally:
+                self._queue.task_done()
+        logger.debug('finish responses loop (consumer)')
 
 
 def filter_service_start_kwargs(**kwargs):
-    """From the specified keyword arguments only return those that are valid for
-    :meth:`~msl.network.service.Service.start`.
+    """From the specified keyword arguments only return those that are valid
+    for :meth:`~msl.network.service.Service.start`.
 
     .. versionadded:: 0.4
 
     Parameters
     ----------
     kwargs
-        Keyword arguments. All keyword arguments that are not part of the method
-        signature for :meth:`~msl.network.service.Service.start` are silently ignored.
+        All keyword arguments that are not part of the method signature for
+        :meth:`~msl.network.service.Service.start` are silently ignored and
+        are not included in the output.
 
     Returns
     -------
     :class:`dict`
-        Valid keyword arguments that can be passed to :meth:`~msl.network.service.Service.start`.
+        Valid keyword arguments that can be passed to
+        :meth:`~msl.network.service.Service.start`.
     """
     kws = {}
     for item in inspect.getfullargspec(Service.start).kwonlyargs:
         if item in kwargs:
             kws[item] = kwargs[item]
 
-    # the manager uses an `auth_password` kwarg but a service uses a `password_manager` kwarg
-    # however, these kwargs represent the same thing
+    # the manager uses an `auth_password` kwarg but a service uses a
+    # `password_manager` kwarg, however, these kwargs represent the same thing
     if 'auth_password' in kwargs and 'password_manager' not in kws:
         kws['password_manager'] = kwargs['auth_password']
 

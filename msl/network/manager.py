@@ -76,8 +76,8 @@ class Manager(Network):
                 'identity': '() -> dict',
                 'link': '(service: str) -> bool',
             },
-            'language': 'Python ' + platform.python_version(),
-            'os': '{} {} {}'.format(platform.system(), platform.release(), platform.machine()),
+            'language': f'Python {platform.python_version()}',
+            'os': f'{platform.system()} {platform.release()} {platform.machine()}',
             'clients': self.clients,
             'services': self.services,
         }
@@ -115,8 +115,10 @@ class Manager(Network):
             if peer.hostname not in self.hostnames:
                 logger.info('%r is not a trusted hostname, closing connection', peer.hostname)
                 self.connections_table.insert(peer, 'rejected: untrusted hostname')
-                self.send_error(
-                    writer, ValueError('{!r} is not a trusted hostname'.format(peer.hostname)), self._network_name
+                await self._write_error(
+                    ValueError(f'{peer.hostname!r} is not a trusted hostname'),
+                    requester=self._network_name,
+                    writer=writer
                 )
                 await self.close_writer(writer)
                 return
@@ -138,7 +140,7 @@ class Manager(Network):
 
         # disconnect the device from the Manager
         await self.close_writer(writer)
-        self.remove_peer(id_type, writer)
+        await self.remove_peer(id_type, writer)
 
     async def check_user(self, reader, writer):
         """Check the login credentials of a user.
@@ -157,7 +159,7 @@ class Manager(Network):
         """
         logger.info('%s verifying login credentials from %s', self, writer.peer.address)
         logger.debug('%s verifying login username from %s', self, writer.peer.address)
-        self.send_request(writer, 'username', self._network_name)
+        await self.write_request(writer, 'username', self._network_name)
         username = await self.get_handshake_data(reader)
         if not username:  # then the connection closed prematurely
             logger.info('%s connection closed before receiving the username', reader.peer.address)
@@ -167,13 +169,13 @@ class Manager(Network):
         user = self.users_table.is_user_registered(username)
         if not user:
             logger.error('%s sent an unregistered username, closing connection', reader.peer.address)
-            self.connections_table.insert(reader.peer, 'rejected: unregistered username')
-            self.send_error(writer, ValueError('Unregistered username'), self._network_name)
+            self.connections_table.insert(reader.peer, 'rejected: unregistered user')
+            await self._write_error(ValueError('Unregistered user'), requester=self._network_name, writer=writer)
             await self.close_writer(writer)
             return False
 
         logger.debug('%s verifying login password from %s', self, writer.peer.address)
-        self.send_request(writer, 'password', username)
+        await self.write_request(writer, 'password', username)
         password = await self.get_handshake_data(reader)
 
         if not password:  # then the connection closed prematurely
@@ -189,7 +191,7 @@ class Manager(Network):
 
         logger.info('%s sent the wrong login password, closing connection', reader.peer.address)
         self.connections_table.insert(reader.peer, 'rejected: wrong login password')
-        self.send_error(writer, ValueError('Wrong login password'), self._network_name)
+        await self._write_error(ValueError('Wrong login password'), requester=self._network_name, writer=writer)
         await self.close_writer(writer)
         return False
 
@@ -209,7 +211,7 @@ class Manager(Network):
             Whether the correct password was received.
         """
         logger.info('%s requesting password from %s', self, writer.peer.address)
-        self.send_request(writer, 'password', self._network_name)
+        await self.write_request(writer, 'password', self._network_name)
         password = await self.get_handshake_data(reader)
         if not password:  # then the connection closed prematurely
             logger.info('%s connection closed before receiving the password', reader.peer.address)
@@ -222,7 +224,8 @@ class Manager(Network):
 
         logger.info('%s sent the wrong Manager password, closing connection', reader.peer.address)
         self.connections_table.insert(reader.peer, 'rejected: wrong Manager password')
-        self.send_error(writer, ValueError('Wrong Manager password'), self._network_name)
+        await self._write_error(ValueError('Wrong Manager password'),
+                                requester=self._network_name, writer=writer)
         await self.close_writer(writer)
         return False
 
@@ -243,7 +246,7 @@ class Manager(Network):
             either ``'client'`` or ``'service'``, otherwise returns :data:`None`.
         """
         logger.info('%s requesting identity from %s', self, writer.peer.address)
-        self.send_request(writer, 'identity')
+        await self.write_request(writer, 'identity')
         identity = await self.get_handshake_data(reader)
 
         if identity is None:  # then the connection closed prematurely (a certificate request?)
@@ -255,7 +258,7 @@ class Manager(Network):
 
         try:
             # writer.peer.network_name points to the same location in memory so its value also gets updated
-            reader.peer.network_name = '{}[{}]'.format(identity['name'], reader.peer.address)
+            reader.peer.network_name = f'{identity["name"]}[{reader.peer.address}]'
 
             typ = identity['type'].lower()
             if typ == 'client':
@@ -269,7 +272,7 @@ class Manager(Network):
                 logger.info('%s is a new Client connection', reader.peer.network_name)
             elif typ == 'service':
                 if identity['name'] in self.services:
-                    raise NameError('A {!r} service is already running on the Manager'.format(identity['name']))
+                    raise NameError(f'A {identity["name"]!r} service is already running on the Manager')
                 self.services[identity['name']] = {
                     'attributes': identity['attributes'],
                     'address': reader.peer.address,
@@ -281,15 +284,15 @@ class Manager(Network):
                 self.service_links[identity['name']] = set()
                 logger.info('%s is a new Service connection', reader.peer.network_name)
             else:
-                raise TypeError('Unknown connection type {!r}. Must be "client" or "service"'.format(typ))
+                raise TypeError(f'Unknown connection type {typ!r}. Must be "client" or "service"')
 
-            self.connections_table.insert(reader.peer, 'connected as a ' + typ)
+            self.connections_table.insert(reader.peer, f'connected as a {typ}')
             return typ
 
         except (TypeError, KeyError, NameError) as e:
             logger.info('%s sent an invalid identity, closing connection', reader.peer.address)
             self.connections_table.insert(reader.peer, 'rejected: invalid identity')
-            self.send_error(writer, e, self._network_name)
+            await self._write_error(e, requester=self._network_name, writer=writer)
             await self.close_writer(writer)
             return None
 
@@ -307,7 +310,7 @@ class Manager(Network):
             The data.
         """
         try:
-            data = (await reader.readline()).decode(Network.encoding).rstrip()
+            data = (await reader.readline()).decode().rstrip()
         except (ConnectionError, UnicodeDecodeError):
             # then most likely the connection was for a certificate request, or,
             # the connection is trying to use a certificate and the Manage has TLS disabled
@@ -318,7 +321,7 @@ class Manager(Network):
         try:
             # ideally the response from the connected device will be in
             # the required JSON format
-            return deserialize(data, debug=self._debug)['result']
+            return deserialize(data)['result']
         except:
             # however, if connecting via a terminal, e.g. openssl s_client, then it is convenient
             # to not manually type the JSON format and let the Manager parse the raw input
@@ -338,29 +341,27 @@ class Manager(Network):
         reader_name = reader.peer.network_name
         writer_name = writer.peer.network_name
         while True:
-
             try:
                 line = await reader.readline()
             except ConnectionResetError:
                 return  # then the device disconnected abruptly
 
-            if self._debug:
-                logger.debug('%s sent %d bytes', reader_name, len(line))
-                if len(line) > self._max_print_size:
-                    half = self._max_print_size//2
-                    logger.debug(line[:half] + b' ... ' + line[-half:])
-                else:
-                    logger.debug(line)
-
             if not line:
                 return
 
+            logger.debug('%s sent %d bytes', reader_name, len(line))
+            if len(line) > self._max_debug_length:
+                half = self._max_debug_length//2
+                logger.debug('%s ... %s', line[:half], line[-half:])
+            else:
+                logger.debug(line)
+
             try:
-                data = deserialize(line, debug=self._debug)
+                data = deserialize(line)
             except Exception as e:
-                data = parse_terminal_input(line.decode(Network.encoding))
+                data = parse_terminal_input(line.decode())
                 if not data:
-                    self.send_error(writer, e, reader_name)
+                    await self._write_error(e, requester=reader_name, writer=writer)
                     continue
 
             if 'result' in data:
@@ -370,7 +371,8 @@ class Manager(Network):
                     logger.info('%r emitted a notification', data['service'])
                     for client_address in self.service_links[data['service']]:
                         try:
-                            self.send_line(self.client_writers[client_address], line)
+                            self.client_writers[client_address].write(line)
+                            await self.client_writers[client_address].drain()
                         except:
                             logger.info('%s is no longer available to send the notification to',
                                         client_address)
@@ -378,35 +380,36 @@ class Manager(Network):
                     logger.info('%s is not able to deserialize the bytes', reader_name)
                 else:
                     try:
-                        self.send_line(self.client_writers[data['requester']], line)
+                        self.client_writers[data['requester']].write(line)
+                        await self.client_writers[data['requester']].drain()
                     except:
                         logger.info('%s is no longer available to send the reply to', data['requester'])
             elif data['service'] == 'Manager':
                 # then the Client is requesting something from the Manager
                 if data['attribute'] == 'identity':
-                    self.send_reply(writer, self.identity(), requester=reader_name, uuid=data['uuid'])
+                    await self._write_result(self.identity(), requester=reader_name, uuid=data['uuid'], writer=writer)
                 elif data['attribute'] == 'link':
                     try:
-                        self.link(writer, data.get('uuid', ''), data['args'][0])
+                        await self.link(writer, data.get('uuid', ''), data['args'][0])
                     except Exception as e:
-                        logger.error('%s %s: %s', self, e.__class__.__name__, e)
-                        self.send_error(writer, e, reader_name, uuid=data.get('uuid', ''))
+                        logger.error('%s: %s', e.__class__.__name__, e)
+                        await self._write_error(e, requester=reader_name, uuid=data.get('uuid', ''), writer=writer)
                 elif data['attribute'] == 'unlink':
                     try:
-                        self.unlink(writer, data.get('uuid', ''), data['args'][0])
+                        await self.unlink(writer, data.get('uuid', ''), data['args'][0])
                     except Exception as e:
-                        logger.error('%s %s: %s', self, e.__class__.__name__, e)
-                        self.send_error(writer, e, reader_name, uuid=data.get('uuid', ''))
+                        logger.error('%s: %s', e.__class__.__name__, e)
+                        await self._write_error(e, requester=reader_name, uuid=data.get('uuid', ''), writer=writer)
                 else:
                     # the peer needs administrative rights to send any other request to the Manager
                     logger.info('received an admin request %r from %s', data['attribute'], reader_name)
                     if not reader.peer.is_admin:
                         await self.check_user(reader, writer)
                         if not reader.peer.is_admin:
-                            self.send_error(
-                                writer,
+                            await self._write_error(
                                 ValueError('You must be an administrator to send this request to the Manager'),
-                                reader_name
+                                requester=reader_name,
+                                writer=writer
                             )
                             continue
                     # the peer is an administrator, so execute the request
@@ -419,8 +422,8 @@ class Manager(Network):
                         for item in data['attribute'].split('.'):
                             attrib = getattr(attrib, item)
                     except AttributeError as e:
-                        logger.error('%s AttributeError: %s', self, e)
-                        self.send_error(writer, e, reader_name)
+                        logger.error('AttributeError: %s', e)
+                        await self._write_error(e, requester=reader_name, writer=writer)
                         continue
                     try:
                         # send the reply back to the Client
@@ -429,10 +432,10 @@ class Manager(Network):
                         else:
                             reply = attrib
                         # do not include the uuid in the reply
-                        self.send_reply(writer, reply, requester=reader_name)
+                        await self._write_result(reply, requester=reader_name, writer=writer)
                     except Exception as e:
-                        logger.error('%s %s: %s', self, e.__class__.__name__, e)
-                        self.send_error(writer, e, reader_name)
+                        logger.error('%s: %s', e.__class__.__name__, e)
+                        await self._write_error(e, requester=reader_name, writer=writer)
             elif data['attribute'] == DISCONNECT_REQUEST:
                 # then the device requested to disconnect
                 return
@@ -440,16 +443,15 @@ class Manager(Network):
                 # send the request to the appropriate Service
                 try:
                     data['requester'] = writer_name
-                    self.send_data(self.service_writers[data['service']], data)
+                    await self._write(data, writer=self.service_writers[data['service']])
                     logger.info('%s requested %r from %r',
                                 writer_name, data['attribute'], data['service'])
                 except KeyError:
-                    msg = 'the {!r} Service is not connected to {}'.format(
-                        data['service'], self)
+                    msg = f'the {data["service"]!r} Service is not connected to {self}'
                     logger.info('%s KeyError: %s', self, msg)
-                    self.send_error(writer, KeyError(msg), reader_name)
+                    await self._write_error(KeyError(msg), requester=reader_name, writer=writer)
 
-    def remove_peer(self, id_type, writer):
+    async def remove_peer(self, id_type, writer):
         """Remove this peer from the registry of connected peers.
 
         Parameters
@@ -471,7 +473,10 @@ class Manager(Network):
             # remove this Client from all Services that it was linked with
             for service_name, client_addresses in self.service_links.items():
                 if name in client_addresses:
-                    self.unlink(writer, '', service_name)
+                    try:
+                        await self.unlink(writer, '', service_name)
+                    except:
+                        pass
         else:
             for service in self.services:
                 if self.services[service]['address'] == writer.peer.address:
@@ -515,17 +520,17 @@ class Manager(Network):
         # convert the dict_values to a list since we are modifying the dictionary in remove_peer()
         for writer in list(self.client_writers.values()):
             await self.close_writer(writer)
-            self.remove_peer('client', writer)
+            await self.remove_peer('client', writer)
         for writer in list(self.service_writers.values()):
             await self.close_writer(writer)
-            self.remove_peer('service', writer)
+            await self.remove_peer('service', writer)
 
     def identity(self):
         """:class:`dict`: The :obj:`~msl.network.network.Network.identity` of
         the Network :class:`Manager`."""
         return self._identity
 
-    def link(self, writer, uuid, service):
+    async def link(self, writer, uuid, service):
         """A request from a :class:`~msl.network.client.Client` to link it
         with a :class:`~msl.network.service.Service`.
 
@@ -543,26 +548,26 @@ class Manager(Network):
         try:
             identity = self.services[service]
         except KeyError:
-            msg = 'the {!r} service does not exist, cannot link with {}'.format(service, writer_name)
+            msg = f'the {service!r} service does not exist, cannot link with {writer_name}'
             logger.info(msg)
-            self.send_error(writer, KeyError(msg), writer_name, uuid=uuid)
+            await self._write_error(KeyError(msg), requester=writer_name, uuid=uuid, writer=writer)
         else:
             if writer_name in self.service_links[service]:
                 # a Client wants to re-link with the same Service
                 logger.info('re-linked %s with %r', writer_name, service)
-                self.send_reply(writer, identity, requester=writer_name, uuid=uuid)
+                await self._write_result(identity, requester=writer_name, uuid=uuid, writer=writer)
             elif identity['max_clients'] <= 0 or len(self.service_links[service]) < identity['max_clients']:
                 self.service_links[service].add(writer_name)
                 logger.info('linked %s with %r', writer_name, service)
-                self.send_reply(writer, identity, requester=writer_name, uuid=uuid)
+                await self._write_result(identity, requester=writer_name, uuid=uuid, writer=writer)
             else:
                 join = '\n  '.join(self.service_links[service])
-                msg = 'The maximum number of Clients are already linked with {!r}\n' \
-                      'The linked Clients are:\n  {}'.format(service, join)
+                msg = f'The maximum number of Clients are already linked with {service!r}\n' \
+                      f'The linked Clients are:\n  {join}'
                 logger.info(msg)
-                self.send_error(writer, PermissionError(msg), writer_name, uuid=uuid)
+                await self._write_error(PermissionError(msg), requester=writer_name, uuid=uuid, writer=writer)
 
-    def unlink(self, writer, uuid, service):
+    async def unlink(self, writer, uuid, service):
         """A request from a :class:`~msl.network.client.Client` to unlink it
         from a :class:`~msl.network.service.Service`.
 
@@ -582,22 +587,22 @@ class Manager(Network):
         try:
             network_names = self.service_links[service]
         except KeyError:
-            msg = '{!r} service does not exist, cannot unlink {} from it'.format(service, writer_name)
+            msg = f'{service!r} service does not exist, cannot unlink {writer_name} from it'
             logger.info(msg)
-            self.send_error(writer, KeyError(msg), writer_name, uuid=uuid)
+            await self._write_error(KeyError(msg), requester=writer_name, uuid=uuid, writer=writer)
         else:
             try:
                 network_names.remove(writer_name)
             except KeyError:
-                msg = 'cannot unlink {}, it was not linked with {!r}'.format(writer_name, service)
+                msg = f'cannot unlink {writer_name}, it was not linked with {service!r}'
                 logger.info(msg)
-                self.send_error(writer, KeyError(msg), writer_name, uuid=uuid)
+                await self._write_error(KeyError(msg), requester=writer_name, uuid=uuid, writer=writer)
             else:
                 logger.info('unlinked %s from %r', writer_name, service)
-                self.send_reply(writer, True, requester=writer_name, uuid=uuid)
+                await self._write_result(True, requester=writer_name, uuid=uuid, writer=writer)
 
-    def send_request(self, writer, attribute, *args, **kwargs):
-        """Send a request to a :class:`~msl.network.client.Client` or to a
+    async def write_request(self, writer, attribute, *args, **kwargs):
+        """Write a request to a :class:`~msl.network.client.Client` or to a
         :class:`~msl.network.service.Service`.
 
         Parameters
@@ -606,32 +611,23 @@ class Manager(Network):
             The stream writer of the :class:`~msl.network.client.Client` or
             :class:`~msl.network.service.Service`.
         attribute : :class:`str`
-            The name of the method to call from the :class:`~msl.network.client.Client`
-            or :class:`~msl.network.service.Service`.
+            The name of the attribute to request.
         args
-            The arguments that the `attribute` method requires.
+            The arguments that `attribute` requires.
         kwargs
-            The key-value pairs that the `attribute` method requires.
+            The key-value pairs that `attribute` requires.
         """
-        self.send_data(writer, {
-            'attribute': attribute,
-            'args': args,
-            'kwargs': kwargs,
-            'requester': self._network_name,
-            'uuid': '',
-            'error': False,
-        })
-
-    def set_debug(self, boolean):
-        """Set the :ref:`DEBUG <levels>` mode of the Network :class:`Manager`.
-
-        Parameters
-        ----------
-        boolean : :class:`bool`
-            Whether to enable or disable :ref:`DEBUG <levels>` logging messages.
-        """
-        self._debug = bool(boolean)
-        logger.setLevel(logging.DEBUG if self._debug else logging.INFO)
+        await self._write(
+            {
+                'args': args,
+                'attribute': attribute,
+                'error': False,
+                'kwargs': kwargs,
+                'requester': self._network_name,
+                'uuid': '',
+            },
+            writer=writer
+        )
 
 
 class Peer(object):
@@ -657,13 +653,13 @@ class Peer(object):
         else:
             self.hostname = self.domain.split('.')[0]
 
-        if self.hostname in localhost_aliases():
-            self.address = '{}:{}'.format(HOSTNAME, self.port)
+        if self.hostname in LOCALHOST_ALIASES:
+            self.address = f'{HOSTNAME}:{self.port}'
         else:
-            self.address = '{}:{}'.format(self.hostname, self.port)
+            self.address = f'{self.hostname}:{self.port}'
 
         # this value will be updated when the identity is requested
-        self.network_name = '<Unknown>[{}]'.format(self.address)
+        self.network_name = f'<Unknown>[{self.address}]'
 
 
 def run_forever(
@@ -801,7 +797,8 @@ def run_services(*services, **kwargs):
 
             def shutdown_service(self, *args, **kwargs):
                 # do whatever you need to do before the AddService shuts down
-                return None
+                # return whatever you want
+                return True
 
         class SubtractService(Service):
 
@@ -810,7 +807,8 @@ def run_services(*services, **kwargs):
 
             def shutdown_service(self, *args, **kwargs):
                 # do whatever you need to do before the SubtractService shuts down
-                return None
+                # return whatever you want
+                return 'Success!'
 
         run_services(AddService(), SubtractService())
 
@@ -840,7 +838,7 @@ def run_services(*services, **kwargs):
 
     for service in services:
         if not isinstance(service, Service):
-            raise TypeError('All services must be of type {}'.format(Service))
+            raise TypeError(f'All services must be of type {Service}')
 
     manager_kwargs = filter_run_forever_kwargs(**kwargs)
     service_kwargs = filter_service_start_kwargs(**kwargs)
@@ -852,10 +850,13 @@ def run_services(*services, **kwargs):
     async def start_service(s):
         await output['loop'].run_in_executor(None, lambda: s.start(**service_kwargs))
 
+    async def gather():
+        await asyncio.gather(*tasks)
+
     tasks = [start_service(service) for service in services]
 
     try:
-        output['loop'].run_until_complete(asyncio.gather(*tasks))
+        output['loop'].run_until_complete(gather())
     except KeyboardInterrupt:
         logger.info('CTRL+C keyboard interrupt received')
     finally:
@@ -871,8 +872,9 @@ def filter_run_forever_kwargs(**kwargs):
     Parameters
     ----------
     kwargs
-        Keyword arguments. All keyword arguments that are not part of the function
-        signature for :func:`~msl.network.manager.run_forever` are silently ignored.
+        All keyword arguments that are not part of the function signature for
+        :func:`~msl.network.manager.run_forever` are silently ignored and are
+        not included in the output.
 
     Returns
     -------
@@ -926,6 +928,12 @@ def _create_manager_and_loop(
     sf.default_msec_format = '%s.%03d'
     sh.setFormatter(sf)
     root_logger.addHandler(sh)
+
+    if not Manager.set_logging_level(log_level):
+        msg = f'ValueError: Cannot set logging level to {log_level!r}'
+        logger.error(msg)
+        print(msg, file=sys.stderr)
+        return
 
     # get the port number
     try:
@@ -1011,9 +1019,10 @@ def _create_manager_and_loop(
             users_table.close()
             conn_table.close()
             hostnames_table.close()
-            msg = 'The {0!r} table is empty, no one could log in\n' \
-                  'To add a user to the {0!r} table run the ' \
-                  '"msl-network user" command'.format(users_table.NAME)
+            name = users_table.NAME
+            msg = f'The {name!r} table is empty, no one could log in\n' \
+                  f'To add a user to the {name!r} table run the ' \
+                  f'"msl-network user" command'
             logger.error(msg)
             print(msg, file=sys.stderr)
             return
@@ -1087,7 +1096,10 @@ def _cleanup(manager, loop, server, db_tables):
     server.close()
     loop.run_until_complete(server.wait_closed())
     logger.info('closing the event loop')
-    loop.close()
+    try:
+        loop.close()
+    except RuntimeError:
+        pass
 
     # close the database tables
     for table in db_tables:

@@ -2,17 +2,13 @@
 Base classes for a :class:`~msl.network.manager.Manager`,
 :class:`~msl.network.service.Service` and :class:`~msl.network.client.Client`.
 """
-import socket
 import asyncio
+import getpass
+import socket
+import sys
 import traceback
-from time import perf_counter
+from typing import Union
 
-from .json import serialize
-from .constants import (
-    HOSTNAME,
-    TERMINATION,
-    ENCODING,
-)
 from .cryptography import get_ssl_context
 from .utils import (
     logger,
@@ -30,65 +26,67 @@ from .constants import (
 
 class Network(object):
 
-    termination = TERMINATION
-    """:class:`bytes`: The sequence of bytes that signify the end of the data being sent."""
-
-    encoding = ENCODING
-    """:class:`str`: The encoding to use to convert :class:`str` to :class:`bytes`."""
-
     def __init__(self):
-        """Base class for the Network :class:`~msl.network.manager.Manager`,
-        :class:`~msl.network.service.Service` and :class:`~msl.network.client.Client`.
+        """Base class for the :class:`~msl.network.manager.Manager`,
+        :class:`~msl.network.service.Service` and
+        :class:`~msl.network.client.Client`.
         """
         self._loop = None
-        self._debug = False
-        self._network_name = '<UNKNOWN>'
-        self._max_print_size = 256
+        self._reader = None
+        self._writer = None
+        self._identity = None
+        self._network_name = '<UNKNOWN>'  # name[host:port]
+        self._max_debug_length = 256
 
     def __str__(self):
         return self._network_name
 
-    def identity(self):
+    def identity(self) -> dict:
         """The identity of a device on the network.
 
         All devices on the network must be able to identify themselves to any
-        other device that is connected to the network. There are 3 possible types
-        of network devices -- a :class:`~msl.network.manager.Manager`,
-        a :class:`~msl.network.service.Service` and a :class:`~msl.network.client.Client`.
-        The member names and JSON_ datatype for each network device is described below.
+        other device that is connected to the network. There are 3 possible
+        types of network devices -- a :class:`~msl.network.manager.Manager`,
+        a :class:`~msl.network.service.Service` and a
+        :class:`~msl.network.client.Client`. The member names and JSON_ datatype
+        for each network device is described below.
 
         .. _JSON: https://www.json.org/
 
         * :class:`~msl.network.manager.Manager`
 
             hostname: string
-                The name of the device that the Network :class:`~msl.network.manager.Manager`
-                is running on.
+                The name of the computer that the Network
+                :class:`~msl.network.manager.Manager` is running on.
 
             port: integer
-                The port number that the Network :class:`~msl.network.manager.Manager`
-                is running on.
+                The port number that the Network
+                :class:`~msl.network.manager.Manager` is running on.
 
             attributes: object
-                An object (a Python :class:`dict`) of public attributes that the Network
-                :class:`~msl.network.manager.Manager` provides. Users who are an administrator of
-                the Network :class:`~msl.network.manager.Manager` can access private attributes.
+                An object (a Python :class:`dict`) of public attributes that the
+                Network :class:`~msl.network.manager.Manager` provides. Users
+                who are an administrator of the Network
+                :class:`~msl.network.manager.Manager` can request private
+                attributes, see :meth:`~msl.network.client.Client.admin_request`.
 
             language: string
-                The programming language that the Network :class:`~msl.network.manager.Manager`
-                is running on.
+                The programming language that the Network
+                :class:`~msl.network.manager.Manager` is running on.
 
             os: string
-                The name of the operating system that the :class:`~msl.network.manager.Manager`
-                is running on.
+                The name of the operating system that the Network
+                :class:`~msl.network.manager.Manager` is running on.
 
             clients: object
-                An object (a Python :class:`dict`) of all :class:`~msl.network.client.Client` devices
-                that are currently connected to the Network :class:`~msl.network.manager.Manager`.
+                An object (a Python :class:`dict`) of all
+                :class:`~msl.network.client.Client` devices that are currently
+                connected to the Network :class:`~msl.network.manager.Manager`.
 
             services: object
-                An object (a Python :class:`dict`) of all :class:`~msl.network.service.Service` devices
-                that are currently connected to the Network :class:`~msl.network.manager.Manager`.
+                An object (a Python :class:`dict`) of all
+                :class:`~msl.network.service.Service` devices that are currently
+                connected to the Network :class:`~msl.network.manager.Manager`.
 
         * :class:`~msl.network.service.Service`
 
@@ -96,13 +94,13 @@ class Network(object):
                 This must be equal to ``'service'`` (case-insensitive).
 
             name: string
-                The name to associate with the :class:`~msl.network.service.Service`
-                (can contain spaces).
+                The name to associate with the
+                :class:`~msl.network.service.Service` (can contain spaces).
 
             attributes: object
                 An object (a Python :class:`dict`) of the attributes that the
                 :class:`~msl.network.service.Service` provides. The keys are
-                the function names and the values are the function signatures
+                the method names and the values are the method signatures
                 (expressed as a string).
 
                 The `attributes` get populated automatically when subclassing
@@ -111,45 +109,46 @@ class Network(object):
                 following as an example for how to define an `attributes` object::
 
                     {
-                        'pi': '() -> float'
-                        'add_integers': '(x:int, y:int) -> int'
-                        'scalar_multiply': '(a:float, data:*float) -> *float'
+                      "pi": "() -> float",
+                      "add_integers": "(x:int, y:int) -> int",
+                      "scalar_multiply": "(a:float, data:List[floats]) -> List[floats]"
                     }
 
-                This `Service` would provide a function named ``pi`` that takes no
-                inputs and returns a floating-point number, a function named
-                ``add_integers`` that takes parameters named ``x`` and ``y`` as integer
-                inputs and returns an integer, and a function named ``scalar_multiply``
-                that takes parameters named ``a`` as a floating-point number and ``data``
-                as an array of floating-point numbers as inputs and returns an array of
-                floating-point numbers.
+                This `Service` would provide a method named ``pi`` that takes
+                no inputs and returns a floating-point number, a method named
+                ``add_integers`` that takes parameters named ``x`` and ``y`` as
+                integer inputs and returns an integer, and a method named
+                ``scalar_multiply`` that takes parameters named ``a`` as a
+                floating-point number and ``data`` as an array of floating-point
+                numbers as inputs and returns an array of floating-point numbers.
 
-                The key **must** be equal to the name of the function that the
-                `Service` provides, however, the value (the function signature) is only
-                used as a helpful guide to let a :class:`~msl.network.client.Client` know
-                what the function takes as inputs and what the function returns. How you
-                express the function signature is up to you. The above example could
-                also be expressed as::
+                The key **must** be equal to the name of the method that the
+                `Service` provides; however, the value (the method signature)
+                is only used as a helpful guide to let a
+                :class:`~msl.network.client.Client` know what the method takes
+                as inputs and what the method returns. How you express the
+                method signature is up to you. The above example could also
+                be expressed as::
 
                     {
-                        'pi': '() -> 3.1415926...'
-                        'add_integers': '(x:int32, y:int32) -> x+y'
-                        'scalar_multiply': '(a:float, data:array of floats) -> array of floats'
+                      "pi": "() -> 3.1415926...",
+                      "add_integers": "(int32 x, int32 y) -> x+y",
+                      "scalar_multiply": "(double a, *double data) -> *double"
                     }
 
             language: string, optional
-                The programming language that the :class:`~msl.network.service.Service`
-                is running on.
+                The programming language that the
+                :class:`~msl.network.service.Service` is running on.
 
             os: string, optional
-                The name of the operating system that the :class:`~msl.network.service.Service`
-                is running on.
+                The name of the operating system that the
+                :class:`~msl.network.service.Service` is running on.
 
             max_clients: integer, optional
-                The maximum number of :class:`~msl.network.client.Client`\\s that can be
-                linked with the :class:`~msl.network.service.Service`. If the value is
-                :math:`\\leq` 0 then that means that an unlimited number of
-                :class:`~msl.network.client.Client`\\s can be linked
+                The maximum number of :class:`~msl.network.client.Client`\\s
+                that can be linked with the :class:`~msl.network.service.Service`.
+                If the value is :math:`\\leq` 0 then that means that an unlimited
+                number of :class:`~msl.network.client.Client`\\s can be linked
                 *(this is the default setting if max_clients is not specified)*.
 
         * :class:`~msl.network.client.Client`
@@ -158,128 +157,118 @@ class Network(object):
                 This must be equal to ``'client'`` (case-insensitive).
 
             name: string
-                The name to associate with the :class:`~msl.network.client.Client`
-                (can contain spaces).
+                The name to associate with the
+                :class:`~msl.network.client.Client` (can contain spaces).
 
             language: string, optional
-                The programming language that the :class:`~msl.network.client.Client`
-                is running on.
+                The programming language that the
+                :class:`~msl.network.client.Client` is running on.
 
             os: string, optional
-                The name of the operating system that the :class:`~msl.network.client.Client`
-                is running on.
+                The name of the operating system that the
+                :class:`~msl.network.client.Client` is running on.
 
         Returns
         -------
         :class:`dict`
             The identity of the network device.
         """
-        raise NotImplementedError
+        return self._identity
 
-    def send_line(self, writer, line):
-        """Send bytes through the network.
+    @staticmethod
+    def set_logging_level(level: Union[str, int]) -> bool:
+        """Set the :ref:`logging level <levels>`.
 
         Parameters
         ----------
-        writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
-            The writer to use to send the bytes.
-        line : :class:`bytes`
-            The bytes to send (that already end with the :attr:`termination` bytes).
+        level : :class:`int` or :class:`str`
+            The logging level of the ``msl.network`` logger.
+
+        Returns
+        -------
+        :class:`bool`
+            Whether setting the logging level was successful.
+        """
+        if isinstance(level, str):
+            try:
+                level = int(level)  # allow for '20' (as a string)
+            except ValueError:
+                level = level.upper()
+
+        try:
+            logger.setLevel(level)
+        except (ValueError, TypeError):
+            logger.error('invalid logging level %r', level)
+            return False
+        else:
+            return True
+
+    async def _write(self, message, *, writer=None):
+        """Serialize, append the termination and write it to the stream.
+
+        Parameters
+        ----------
+        message : :class:`dict`
+            A request or a response.
+        writer : :class:`asyncio.StreamWriter`, optional
+            The writer to use to write the data. If not specified then uses
+            the writer of this class.
         """
         if writer is None:
-            # could happen if the writer is for a Service and it was executing a
-            # request when Manager.shutdown_manager() was called
-            return
+            writer = self._writer
+        writer.write(f'{serialize(message)}\r\n'.encode('utf-8'))
+        await writer.drain()
 
-        n = len(line)
-
-        if self._debug:
-            logger.debug('%s is sending %d bytes ...', self._network_name, n)
-            if n > self._max_print_size:
-                half = self._max_print_size//2
-                logger.debug(line[:half] + b' ... ' + line[-half:])
-            else:
-                logger.debug(line)
-
-        t0 = perf_counter()
-        writer.write(line)
-
-        if self._debug:
-            dt = perf_counter() - t0
-            rate = n * 1e-6 / dt
-            seconds = si_seconds(dt)
-            if dt > 0:
-                logger.debug('%s sent %d bytes in %s [%.3f MB/s]',
-                             self._network_name, n, seconds, rate)
-            else:
-                logger.debug('%s sent %d bytes in %s',
-                             self._network_name, n, seconds)
-
-    def send_data(self, writer, data):
-        """Serialize `data` as a JSON_ string then send.
-
-        .. _JSON: https://www.json.org/
+    async def _write_result(self, result, *, requester=None, uuid='', writer=None,
+                            **ignored):
+        """Write a result message to the stream.
 
         Parameters
         ----------
-        writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
-            The writer to use to send the data.
-        data
-            Any object that can be serialized into a JSON_ string.
+        result
+            The result of a request. Must be a JSON-serializable object.
+        requester : :class:`str`, optional
+            The name of the device that sent the request.
+        uuid : :class:`str`, optional
+            The universally unique identifier of the request.
+        writer : :class:`asyncio.StreamWriter`, optional
+            The writer to use to write the data. If not specified then uses
+            the writer of this class.
         """
-        try:
-            self.send_line(writer, serialize(data, debug=self._debug).encode(ENCODING) + TERMINATION)
-        except Exception as e:
-            try:
-                self.send_error(writer, e, data['requester'])
-            except KeyError:
-                # fixes Issue #5
-                raise e from None
+        data = {
+            'error': False,
+            'requester': requester,
+            'result': result,
+            'uuid': uuid
+        }
+        await self._write(data, writer=writer)
 
-    def send_error(self, writer, error, requester, *, uuid=''):
-        """Send an error through the network.
+    async def _write_error(self, error, *, requester=None, uuid='', writer=None,
+                           **ignored):
+        """Write an error message to the stream.
 
         Parameters
         ----------
-        writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
-            The writer.
         error : :class:`Exception`
             An exception object.
-        requester : :class:`str`
-            The address, ``host:port``, of the device that sent the request.
-        uuid : :class:`str`, optional
-            The universally unique identifier of the request.
-        """
-        tb = traceback.format_exc()
-        message = error.__class__.__name__ + ': ' + str(error)
-        self.send_data(writer, {
-            'error': True,
-            'message': message,
-            'traceback': [] if tb.startswith('NoneType:') else tb.splitlines(),
-            'result': None,
-            'requester': requester,
-            'uuid': uuid,
-        })
-
-    def send_reply(self, writer, reply, *, requester='', uuid=''):
-        """Send a reply through the network.
-
-        .. _JSON: https://www.json.org/
-
-        Parameters
-        ----------
-        writer : :class:`asyncio.WriteTransport` or :class:`asyncio.StreamWriter`
-            The writer.
-        reply : :class:`object`
-            Any object that can be serialized into a JSON_ string.
         requester : :class:`str`, optional
-            The address, ``host:port``, of the device that sent the request.
-            It is only mandatory to specify the address of the `requester` if a
-            :class:`~msl.network.service.Service` is sending the reply.
+            The name of the device that sent the request.
         uuid : :class:`str`, optional
             The universally unique identifier of the request.
+        writer : :class:`asyncio.StreamWriter`, optional
+            The writer to use to write the data. If not specified then uses
+            the writer of this class.
         """
-        self.send_data(writer, {'result': reply, 'requester': requester, 'uuid': uuid, 'error': False})
+        e = traceback.format_exc()
+        data = {
+            'error': True,
+            'message': f'{error.__class__.__name__}: {error}',
+            'requester': requester,
+            'result': None,
+            'traceback': [] if e.startswith('NoneType:') else e.splitlines(),
+            'uuid': uuid
+        }
+        await self._write(data, writer=writer)
 
 
 class Device(Network):
@@ -288,7 +277,7 @@ class Device(Network):
         """Base class for a :class:`~msl.network.service.Service` and
         :class:`~msl.network.client.Client`.
 
-        .. versionadded:: 0.6
+        .. versionadded:: 1.0
 
         Parameters
         ----------
@@ -299,72 +288,109 @@ class Device(Network):
         """
         super(Device, self).__init__()
         self._address_manager = None
-        self._buffer = bytearray()
-        self._buffer_offset = 0
-        self._connection_successful = False
-        self._futures = dict()
-        self._identity = dict()
-        self._identity_successful = False
-        self._len_term = len(TERMINATION)
         self._name = self.__class__.__name__ if name is None else name
         self._password = None
+        self._password_manager = None
         self._port = None
-        self._t0 = 0  # used for profiling sections of the code
-        self._transport = None
+        self._queue = None
+        self._tasks = []
         self._username = None
 
-    def shutdown_handler(self, exc):
-        """Called when the connection to the Network
-        :class:`~msl.network.manager.Manager` has been lost.
+    @property
+    def address_manager(self):
+        """:class:`str`: The address of the :class:`~msl.network.manager.Manager`
+        that this device is connected to."""
+        return self._address_manager
 
-        Override this method to do any necessary cleanup.
+    @property
+    def name(self):
+        """:class:`str`: The name of the device on the
+        :class:`~msl.network.manager.Manager`."""
+        return self._name
 
-        .. versionadded:: 0.6
+    @property
+    def port(self):
+        """:class:`int`: The port number of this device that is being used for
+        the connection to the :class:`~msl.network.manager.Manager`."""
+        return self._port
+
+    def add_tasks(self, *coros_or_futures):
+        """Additional tasks to run in the event loop.
+
+        .. versionadded:: 1.0
 
         Parameters
         ----------
-        exc
-            The argument is either an exception object or :data:`None`.
-            The latter means a regular EOF is received, or the connection was
-            aborted or closed by this side of the connection.
+        coros_or_futures
+            Coroutines or futures that will be passed to
+            :func:`asyncio.gather` when the event loop runs.
+        """
+        self._tasks.extend(coros_or_futures)
+
+    def shutdown_handler(self):
+        """Called after the connection to the Network
+        :class:`~msl.network.manager.Manager` has been lost but before
+        the event loop stops.
+
+        Override this method to do any necessary cleanup.
+
+        .. versionadded:: 1.0
         """
         pass
 
     def _create_connection(self, **kwargs):
         # Connect to a Manager
+        if kwargs['host'] in LOCALHOST_ALIASES:
+            kwargs['host'] = HOSTNAME
+
+        self._address_manager = '{host}:{port}'.format(**kwargs)
+        self._username = kwargs['username']
+        self._password = kwargs['password']
+        self._password_manager = kwargs['password_manager']
+
+        # get SSL context
         context = None
-        is_localhost = kwargs['host'] in localhost_aliases()
         if not kwargs['disable_tls']:
             try:
                 cert_file, context = get_ssl_context(
-                    host=kwargs['host'], port=kwargs['port'],
-                    cert_file=kwargs['cert_file'], auto_save=kwargs['auto_save']
+                    cert_file=kwargs['cert_file'],
+                    host=kwargs['host'],
+                    port=kwargs['port'],
+                    auto_save=kwargs['auto_save']
                 )
-            except OSError as e:
-                msg = str(e)
-                if ('WRONG_VERSION_NUMBER' in msg) or ('UNKNOWN_PROTOCOL' in msg):
-                    msg += '\nTry setting disable_tls=True'
-                elif is_localhost:
-                    msg += '\nMake sure a Network Manager is running on this computer'
+            except OSError as error:
+                e = str(error)
+                if ('WRONG_VERSION_NUMBER' in e) or ('UNKNOWN_PROTOCOL' in e):
+                    e += '\nTry setting disable_tls=True'
+                elif kwargs['host'] in LOCALHOST_ALIASES:
+                    e += '\nMake sure a Manager is running on this computer'
                 else:
-                    msg += '\nCannot connect to {host}:{port} to get the certificate'.format(**kwargs)
-                raise ConnectionError(msg) from None
+                    e += '\nCannot connect to {host}:{port} to get the ' \
+                         'certificate'.format(**kwargs)
+                raise ConnectionError(e) from None
 
-            if not context:
-                return False
+            if context is None:
+                # then the user chose to not accept the SSL certificate
+                return
 
-            kwargs['cert_file'] = cert_file
             context.check_hostname = kwargs['assert_hostname']
             logger.debug('loaded %s', cert_file)
 
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        if kwargs['read_limit'] is None:
+            kwargs['read_limit'] = sys.maxsize
+
+        # connect
         try:
-            self._loop.run_until_complete(
+            self._reader, self._writer = loop.run_until_complete(
                 asyncio.wait_for(
-                    self._loop.create_connection(
-                        lambda: self,
+                    asyncio.open_connection(
                         host=kwargs['host'],
                         port=kwargs['port'],
                         ssl=context,
+                        limit=kwargs['read_limit'],
                     ),
                     kwargs['timeout']
                 )
@@ -372,7 +398,8 @@ class Device(Network):
         except Exception as error:
             if isinstance(error, asyncio.TimeoutError):
                 raise TimeoutError(
-                    'Cannot connect to {host}:{port} within {timeout} seconds'.format(**kwargs)
+                    'Cannot connect to {host}:{port} within '
+                    '{timeout} seconds'.format(**kwargs)
                 ) from None
 
             msg = str(error)
@@ -392,102 +419,94 @@ class Device(Network):
             elif ('WRONG_VERSION_NUMBER' in msg) or ('UNKNOWN_PROTOCOL' in msg):
                 msg += '\nTry setting disable_tls=True'
             elif 'nodename nor servname provided' in msg:
-                msg += '\nYou might need to add "{} {}" to /etc/hosts'.format(
-                    kwargs['host'], HOSTNAME)
+                host = kwargs['host']
+                msg += f'\nYou might need to add "{host} {HOSTNAME}" to /etc/hosts'
             raise ConnectionError(msg) from None
 
-        # Make sure that the Manager registered this Client/Service by requesting its identity.
-        # The following fixed the case where the Manager required TLS but the Client/Service was
-        # started with ``disable_tls=True``. The connection_made() function was called
-        # but the Manager never saw the connection request to register the Client/Service and the
-        # Client/Service never raised an exception but just waited at run_forever().
-        async def check_for_identity_request():
-            t0 = perf_counter()
-            timeout = kwargs['timeout']
-            while True:
-                await asyncio.sleep(0.01)
-                if self._connection_successful or self._identity_successful:
-                    break
-                if timeout and perf_counter() - t0 > timeout:
-                    err = 'The connection to {host}:{port} was not established.'.format(**kwargs)
-                    if kwargs['disable_tls']:
-                        err += '\nYou have TLS disabled. Perhaps the Manager is ' \
-                               'using TLS for the connection.'
-                    raise ConnectionError(err)
-            while not self._identity_successful:
-                await asyncio.sleep(0.01)
+        # authenticate
+        try:
+            loop.run_until_complete(
+                asyncio.wait_for(self._authenticate(), kwargs['timeout']))
+        except asyncio.TimeoutError:
+            msg = 'The connection to {host}:{port} was not established after ' \
+                  '{timeout} second(s)'.format(**kwargs)
+            if kwargs['disable_tls']:
+                msg += '\nYou have TLS disabled. Perhaps the Manager is ' \
+                       'using TLS for the connection.'
+            raise ConnectionError(msg) from None
+
+        return loop
+
+    def _run_until_complete(self):
+        # Run all tasks until complete
+
+        # must instantiate the Queue after the connection has been established
+        # since self._create_connection creates a new event loop
+        self._queue = asyncio.Queue()
 
         try:
-            self._loop.run_until_complete(check_for_identity_request())
-        except RuntimeError:  # raised if the authentication step failed
-            return False
-        else:
-            return True
-
-    def _run_forever(self):
-        try:
-            self._loop.run_forever()
+            self._loop.run_until_complete(self._gather())
         except KeyboardInterrupt:
-            logger.debug('CTRL+C keyboard interrupt received')
+            logger.debug('CTRL+C keyboard interrupt')
         except SystemExit:
-            logger.debug('SystemExit was raised')
+            logger.debug('SystemExit raised')
+        except Exception as e:
+            logger.exception(e)
         finally:
-            if self._transport is not None:
-                self._transport.close()
-            logger.info('%s disconnected', self._network_name)
+            self._reader.feed_eof()
+            self._loop.run_until_complete(self._queue.join())
+            self._writer.close()
             self._loop.close()
-            logger.info('%s closed the event loop', self._network_name)
+            logger.info('disconnected from Manager[%s]', self._address_manager)
 
-    def _parse_buffer(self, data):
-        # Called in the data_received method of a Client/Service to determine
-        # if the TERMINATION characters are located in the buffer
-        if self._buffer_offset == 0:
-            self._t0 = perf_counter()
+    async def _authenticate(self):
+        # The Manager may ask for a username/password and will always request
+        # the identity of the connecting device
+        logger.debug('start authentication')
+        while True:
+            request = deserialize(await self._reader.readline())
+            if request['error']:
+                raise ValueError(request['message'])
+            identified = await self._handle_manager_request(request)
+            if identified:
+                break
+        logger.debug('finish authentication')
 
-        if data is not None:
-            # a value of None is passed in indirectly via
-            # self._check_buffer_for_message
-            self._buffer += data
+    async def _gather(self):
+        # Gather all tasks
+        await asyncio.gather(*self._tasks)
 
-        len_buffer = len(self._buffer)
-        if len_buffer - self._buffer_offset < self._len_term:
-            return
+    async def _handle_manager_request(self, request):
+        # Handle a request from a Manager
+        logger.debug('Manager[%s] requested %r', self._address_manager,
+                     request['attribute'])
 
-        index = self._buffer.find(TERMINATION, self._buffer_offset)
-        if index == -1:
-            # Edge case when the TERMINATION byte sequence is received in
-            # two sequential network packets. For example, if
-            # TERMINATION=b'MSLNZ' and the first packet received ends with
-            # '12345MS' and then the next packet starts with 'LNZ6789'
-            self._buffer_offset = len_buffer - self._len_term + 1
-            return
+        if request['attribute'] == 'identity':
+            await self._write_result(self._identity)
+            self._port = int(self._writer.get_extra_info('sockname')[1])
+            self._network_name = f'{self._name}[{HOSTNAME}:{self._port}]'
+            logger.info('connected to Manager[%s] as %s',
+                        self._address_manager, self._network_name)
+            return True
+        elif request['attribute'] == 'username':
+            if self._username is None:
+                name = request['args'][0]
+                self._username = input(f'Enter a username for {name} > ')
+            await self._write_result(self._username, **request)
+        elif request['attribute'] == 'password':
+            def get():
+                return getpass.getpass(f'Enter the password for {name} > ')
 
-        end = index + self._len_term
-        chunk = self._buffer[:end]
-        del self._buffer[:end]
-        self._buffer_offset = 0
-        return bytes(chunk)
+            name = request['args'][0]
+            if _is_manager_regex.search(name) is not None:
+                if self._password_manager is None:
+                    self._password_manager = get()
+                password = self._password_manager
+            else:
+                if self._password is None:
+                    self._password = get()
+                password = self._password
 
-    def _check_buffer_for_message(self):
-        # Check if another message is still in the buffer.
-        # Call the asyncio.Protocol.data_received method
-        self.data_received(None)
-
-    def _log_data_received(self, message):
-        dt = perf_counter() - self._t0
-        n = len(message)
-        rate = n * 1e-6 / dt
-        seconds = si_seconds(dt)
-
-        if dt > 0:
-            logger.debug('%s received %d bytes in %s [%.3f MB/s] ...',
-                         self, n, seconds, rate)
+            await self._write_result(password, **request)
         else:
-            logger.debug('%s received %d bytes in %s ...',
-                         self, n, seconds)
-
-        if n > self._max_print_size:
-            half = self._max_print_size // 2
-            logger.debug(message[:half] + b' ... ' + message[-half:])
-        else:
-            logger.debug(message)
+            assert False, 'should not get here!'
