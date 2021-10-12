@@ -44,7 +44,8 @@ class Manager(object):
     log_file = os.path.join(home, 'testing.log')
 
     def __init__(self, *service_classes, disable_tls=False, password_manager=None,
-                 auth_login=True, auth_hostname=False, cert_common_name=None, **kwargs):
+                 auth_login=True, auth_hostname=False, cert_common_name=None,
+                 add_heartbeat_task=False, read_limit=None, **kwargs):
         """Starts the Network Manager and all specified Services to use for testing.
 
         Parameters
@@ -82,6 +83,7 @@ class Manager(object):
             'cert_file': self.cert_file,
             'disable_tls': disable_tls,
             'password_manager': password_manager,
+            'read_limit': read_limit,
         }
 
         # start the Network Manager in a subprocess
@@ -108,12 +110,14 @@ class Manager(object):
             for cls in service_classes:
                 name = cls.__name__
                 service = cls(**kwargs)
+                if add_heartbeat_task and name == 'Heartbeat':
+                    service.add_tasks(service.emit())
                 thread = Thread(target=service.start, kwargs=self.kwargs, daemon=True)
                 thread.start()
                 t0 = time.time()
                 while True:
                     time.sleep(0.1)
-                    services = cxn.manager()['services']
+                    services = cxn.identities()['services']
                     if name in services:
                         break
                     if time.time() - t0 > 30:
