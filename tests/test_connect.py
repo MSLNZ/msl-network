@@ -11,14 +11,13 @@ from msl.network import (
     connect,
     cryptography,
     constants,
-    MSLNetworkError,
 )
-from msl.network.utils import localhost_aliases
+from msl.network.constants import LOCALHOST_ALIASES
 
 
 def test_no_manager_no_certificate_localhost():
     conftest.Manager.remove_files()
-    match = r'Make sure a Network Manager is running on this computer$'
+    match = r'Make sure a Manager is running on this computer$'
     with pytest.raises(ConnectionError, match=match):
         connect(disable_tls=False)
 
@@ -35,18 +34,20 @@ def test_no_manager_no_certificate_remotehost():
 @pytest.mark.skipif(sys.platform != 'win32', reason='darwin and linux raise ConnectionError')
 def test_no_manager_timeout_asyncio():
     timeout = 0.5
+    port = conftest.Manager.get_available_port()
     match = r'Cannot connect to {}:{} within {} seconds$'.format(
-        constants.HOSTNAME, constants.PORT, timeout)
+        constants.HOSTNAME, port, timeout)
     t0 = perf_counter()
     with pytest.raises(TimeoutError, match=match):
-        connect(disable_tls=True, timeout=timeout)
+        connect(port=port, disable_tls=True, timeout=timeout)
     assert abs(timeout - (perf_counter() - t0)) < 0.2
 
 
 def test_no_manager_no_timeout_localhost():
-    match = r'Cannot connect to {}:{}$'.format(constants.HOSTNAME, constants.PORT)
+    port = conftest.Manager.get_available_port()
+    match = r'Cannot connect to {}:{}$'.format(constants.HOSTNAME, port)
     with pytest.raises(ConnectionError, match=match):
-        connect(disable_tls=True, timeout=None)
+        connect(port=port, disable_tls=True, timeout=None)
 
 
 def test_no_manager_no_timeout_remotehost():
@@ -132,7 +133,7 @@ def test_tls_enabled():
     manager.shutdown()
 
 
-@pytest.mark.parametrize('host', localhost_aliases())
+@pytest.mark.parametrize('host', LOCALHOST_ALIASES)
 def test_hostname_mismatch(host):
     a = cryptography.x509.NameAttribute
     o = cryptography.x509.NameOID
@@ -150,7 +151,7 @@ def test_invalid_manager_password():
     manager = conftest.Manager(password_manager='asdvgbaw4bn')
     kwargs = manager.kwargs.copy()
     kwargs['password_manager'] = 'x'
-    with pytest.raises(MSLNetworkError, match=r'Wrong Manager password'):
+    with pytest.raises(ValueError, match=r'Wrong Manager password'):
         connect(**kwargs)
     manager.shutdown()
 
@@ -159,7 +160,7 @@ def test_invalid_username():
     manager = conftest.Manager()
     kwargs = manager.kwargs.copy()
     kwargs['username'] = 'x'
-    with pytest.raises(MSLNetworkError, match=r'Unregistered username'):
+    with pytest.raises(ValueError, match=r'Unregistered user'):
         connect(**kwargs)
     manager.shutdown()
 
@@ -168,6 +169,6 @@ def test_invalid_password():
     manager = conftest.Manager()
     kwargs = manager.kwargs.copy()
     kwargs['password'] = 'x'
-    with pytest.raises(MSLNetworkError, match=r'Wrong login password'):
+    with pytest.raises(ValueError, match=r'Wrong login password'):
         connect(**kwargs)
     manager.shutdown()

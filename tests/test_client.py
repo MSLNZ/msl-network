@@ -1,10 +1,12 @@
 import re
 import platform
 
+import pytest
+
 import conftest
 
 from msl.network import connect
-from msl.network.utils import localhost_aliases, HOSTNAME
+from msl.network.constants import HOSTNAME, LOCALHOST_ALIASES
 from msl.examples.network import BasicMath, MyArray, Echo
 
 
@@ -31,8 +33,11 @@ def test_admin_requests():
     assert conns[1][5] == 'connected as a client'
 
     hostnames = cxn.admin_request('hostnames_table.hostnames')
-    for alias in localhost_aliases():
+    for alias in LOCALHOST_ALIASES:
         assert alias in hostnames
+
+    with pytest.raises(ValueError, match=r'Cannot make asynchronous requests'):
+        cxn.admin_request('users_table.usernames', asynchronous=True)
 
     manager.shutdown(connection=cxn)
 
@@ -45,21 +50,21 @@ def test_manager_identity():
     os = '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
     language = 'Python ' + platform.python_version()
 
-    identity = cxn.manager()
-    assert identity['hostname'] == HOSTNAME
-    assert identity['port'] == manager.port
-    assert identity['attributes'] == {
+    identities = cxn.identities()
+    assert identities['hostname'] == HOSTNAME
+    assert identities['port'] == manager.port
+    assert identities['attributes'] == {
         'identity': '() -> dict',
         'link': '(service: str) -> bool'
     }
-    assert identity['language'] == language
-    assert identity['os'] == os
-    assert 'A.B.C[{}:{}]'.format(HOSTNAME, cxn.port) in identity['clients']
-    assert 'BasicMath' in identity['services']
-    assert 'Echo' in identity['services']
-    assert 'MyArray' in identity['services']
+    assert identities['language'] == language
+    assert identities['os'] == os
+    assert 'A.B.C[{}:{}]'.format(HOSTNAME, cxn.port) in identities['clients']
+    assert 'BasicMath' in identities['services']
+    assert 'Echo' in identities['services']
+    assert 'MyArray' in identities['services']
 
-    identity = cxn.manager(as_string=True)
+    identities = cxn.identities(as_string=True)
     expected = r'''Manager\[{hostname}:\d+]
   attributes:
     identity\(\) -> dict
@@ -80,6 +85,7 @@ Services \[3]:
       multiply\(x:\s?Union\[int, float], y:\s?Union\[int, float]\) -> Union\[int, float]
       pi\(\) -> 3.141592653589793
       power\(x:\s?Union\[int, float], n=2\) -> Union\[int, float]
+      set_logging_level\(level:\s?Union\[str, int]\) -> bool
       subtract\(x:\s?Union\[int, float], y:\s?Union\[int, float]\) -> Union\[int, float]
     language: {language}
     max_clients: -1
@@ -87,6 +93,7 @@ Services \[3]:
   Echo\[{hostname}:\d+]
     attributes:
       echo\(\*args, \*\*kwargs\)
+      set_logging_level\(level:\s?Union\[str, int]\) -> bool
     language: {language}
     max_clients: -1
     os: {os}
@@ -94,15 +101,25 @@ Services \[3]:
     attributes:
       linspace\(start:\s?Union\[int, float], stop:\s?Union\[int, float], n=100\) -> List\[float]
       scalar_multiply\(scalar:\s?Union\[int, float], data:\s?List\[float]\) -> List\[float]
+      set_logging_level\(level:\s?Union\[str, int]\) -> bool
     language: {language}
     max_clients: -1
     os: {os}
 '''.format(hostname=HOSTNAME, language=language, os=os).splitlines()
 
-    id_lines = identity.splitlines()
+    id_lines = identities.splitlines()
     assert len(id_lines) == len(expected)
 
     for pattern, string in zip(expected, id_lines):
         assert re.match(pattern, string)
 
+    manager.shutdown(connection=cxn)
+
+
+def test_not_json_serializable():
+    manager = conftest.Manager(Echo)
+    cxn = connect(**manager.kwargs)
+    e = cxn.link('Echo')
+    with pytest.raises(TypeError, match=r'not JSON serializable'):
+        e.echo(1 + 4j)
     manager.shutdown(connection=cxn)

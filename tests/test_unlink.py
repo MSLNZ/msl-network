@@ -6,7 +6,6 @@ import pytest
 
 from msl.examples.network import Echo
 from msl.network import connect, LinkedClient
-from msl.network.exceptions import MSLNetworkError
 from msl.network.manager import run_services
 
 
@@ -29,13 +28,13 @@ def test_unlink_client_max1():
     assert link1b.echo(1, x=2) == [[1], {'x': 2}]
 
     # another Client cannot link
-    with pytest.raises(MSLNetworkError, match=r'The maximum number of Clients are already linked'):
+    with pytest.raises(RuntimeError, match=r'The maximum number of Clients are already linked'):
         cxn2.link('Echo')
 
     link1.unlink()
     assert repr(link1).startswith("<Un-Linked from Echo[")
     assert link1._client is None
-    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
+    with pytest.raises(AttributeError, match=r"Cannot access 'echo' since the link has been broken"):
         link1.echo(1)
 
     # another Client can now link
@@ -45,7 +44,7 @@ def test_unlink_client_max1():
 
     link2.unlink()
     assert link2._client is None
-    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
+    with pytest.raises(AttributeError, match=r"Cannot access 'echo' since the link has been broken"):
         link2.echo(1)
 
     # un-linking multiple times is okay
@@ -56,8 +55,8 @@ def test_unlink_client_max1():
     manager.shutdown(connection=cxn1)
 
     # shutting down the manager using cxn1 will also disconnect cxn2
-    assert cxn2.address_manager is None
-    assert cxn2.port is None
+    assert not cxn1.is_connected()
+    assert not cxn2.is_connected()
 
 
 def test_unlink_client_max10():
@@ -73,12 +72,12 @@ def test_unlink_client_max10():
     cxn = connect(**manager.kwargs)
 
     # another Client cannot link
-    with pytest.raises(MSLNetworkError, match=r'The maximum number of Clients are already linked'):
+    with pytest.raises(RuntimeError, match=r'The maximum number of Clients are already linked'):
         cxn.link('Echo')
 
     links[0].unlink()
     assert links[0]._client is None
-    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
+    with pytest.raises(AttributeError, match=r"Cannot access 'echo' since the link has been broken"):
         links[0].echo(1)
 
     # another Client can now link
@@ -88,15 +87,14 @@ def test_unlink_client_max10():
 
     link2.unlink()
     assert link2._client is None
-    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
+    with pytest.raises(AttributeError, match=r"Cannot access 'echo' since the link has been broken"):
         link2.echo(1)
 
     manager.shutdown(connection=cxn)
 
     # shutting down the manager using cxn will also disconnect all clients
     for client in clients:
-        assert client.address_manager is None
-        assert client.port is None
+        assert not client.is_connected()
 
 
 def test_unlink_linkedclient_max10():
@@ -129,12 +127,12 @@ def test_unlink_linkedclient_max10():
         assert link.echo(1, x=2) == [[1], {'x': 2}]
 
     # creating another LinkedClient is not allowed
-    with pytest.raises(MSLNetworkError, match=r'The maximum number of Clients are already linked'):
+    with pytest.raises(RuntimeError, match=r'The maximum number of Clients are already linked'):
         LinkedClient('ShutdownableEcho', port=port, name='foobar10')
 
     linked_clients[0].unlink()
     assert linked_clients[0]._link is None
-    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
+    with pytest.raises(AttributeError, match=r"Cannot access 'echo' since the link has been broken"):
         linked_clients[0].echo(1)
 
     # another LinkedClient can now be created
@@ -146,7 +144,7 @@ def test_unlink_linkedclient_max10():
     link2.unlink()
     assert link2._link is None
     assert repr(link2).startswith('<Un-Linked[name=foobar10]')
-    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute"):
+    with pytest.raises(AttributeError, match=r"Cannot access 'echo' since the link has been broken"):
         link2.echo(1)
 
     # un-linking the LinkedClient multiple times is okay

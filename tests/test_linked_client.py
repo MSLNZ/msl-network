@@ -2,7 +2,7 @@ import conftest
 
 import pytest
 
-from msl.network import LinkedClient, MSLNetworkError
+from msl.network import LinkedClient
 from msl.examples.network import Echo
 
 
@@ -35,11 +35,12 @@ def test_linked_echo():
     assert kwargs['y'] == 5
     assert kwargs['z'] == 6
 
-    assert len(link.service_attributes) == 1
+    assert len(link.service_attributes) == 2
     assert 'echo' in link.service_attributes
+    assert 'set_logging_level' in link.service_attributes
     assert link.name == 'foobar'
 
-    with pytest.raises(MSLNetworkError):
+    with pytest.raises(RuntimeError):
         link.does_not_exist()
 
     manager.shutdown(connection=link.client)

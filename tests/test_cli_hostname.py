@@ -6,8 +6,7 @@ import conftest
 
 from msl.network import cli
 from msl.network.database import HostnamesTable
-from msl.network.constants import DATABASE
-from msl.network.utils import localhost_aliases
+from msl.network.constants import DATABASE, LOCALHOST_ALIASES
 
 
 def process(command):
@@ -51,7 +50,7 @@ def test_list(capsys):
     assert out_lines[0] == 'Trusted devices in {}'.format(DATABASE)
     assert not out_lines[1]
     assert out_lines[2] == 'Hostnames:'
-    for i, alias in enumerate(sorted(localhost_aliases())):
+    for i, alias in enumerate(sorted(LOCALHOST_ALIASES)):
         assert out_lines[i+3] == '  ' + alias
 
 

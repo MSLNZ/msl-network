@@ -6,8 +6,10 @@ import threading
 import conftest
 
 from msl.network import connect
-from msl.network.constants import TERMINATION, NOTIFICATION_UUID
+from msl.network.constants import NOTIFICATION_UUID
 from msl.examples.network import Echo
+
+TERMINATION = b'\r\n'
 
 
 def test_from_service():
@@ -67,7 +69,7 @@ def test_from_service():
                 'service': name,
                 'uuid': NOTIFICATION_UUID,
             }).encode()
-            sock.sendall(notify1 + TERMINATION + response + TERMINATION + notify2 + TERMINATION)
+            sock.sendall(notify1 + TERMINATION + notify2 + TERMINATION + response + TERMINATION)
 
             # wait for the Manager to shutdown
             sock.recv(1024)

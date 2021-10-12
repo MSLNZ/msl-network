@@ -5,7 +5,7 @@ import conftest
 
 import pytest
 
-from msl.network import connect, Service, MSLNetworkError, LinkedClient
+from msl.network import connect, Service, LinkedClient
 from msl.examples.network import Echo
 from msl.network.manager import run_services
 
@@ -53,12 +53,13 @@ def test_single_service():
     assert kwargs['y'] == 5
     assert kwargs['z'] == 6
 
-    assert len(link.service_attributes) == 2
+    assert len(link.service_attributes) == 3
     assert 'echo' in link.service_attributes
+    assert 'set_logging_level' in link.service_attributes
     assert 'shutdown_service' in link.service_attributes
     assert link.name == 'foobar'
 
-    with pytest.raises(MSLNetworkError):
+    with pytest.raises(RuntimeError):
         link.does_not_exist()
 
     link.shutdown_service()
@@ -103,7 +104,7 @@ def test_multiple_services():
     cxn = connect(password_manager=password_manager, port=port)
 
     # wait for the Services to be running before linking
-    while len(cxn.manager()['services']) != 2:
+    while len(cxn.identities()['services']) != 2:
         time.sleep(0.1)
 
     s = cxn.link('SubtractService')
@@ -114,11 +115,11 @@ def test_multiple_services():
     # shut down the AddService
     reply = a.shutdown_service(1, x=9)
     assert reply == [[1], {'x': 9}]
-    while len(cxn.manager()['services']) == 2:
+    while len(cxn.identities()['services']) == 2:
         time.sleep(0.1)
-    with pytest.raises(MSLNetworkError):
-        a.add(1, 2)
-    with pytest.raises(MSLNetworkError):
+    with pytest.raises(AttributeError, match=r'the link has been broken'):
+        assert a.add(1, 2) is None
+    with pytest.raises(RuntimeError):
         cxn.link('AddService')
 
     # the SubtractService is still available
@@ -126,9 +127,7 @@ def test_multiple_services():
     # shut down the SubtractService
     reply = s.shutdown_service('foo', 'bar', xyz=None)
     assert reply == [['foo', 'bar'], {'xyz': None}]
-    time.sleep(1)
-    # ConnectionError because the Manager has shut down
-    with pytest.raises(ConnectionError):
+    with pytest.raises(AttributeError, match=r'the link has been broken'):
         s.subtract(1, 2)
 
     # the `run_services` function will block the unittests forever if the

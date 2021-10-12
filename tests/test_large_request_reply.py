@@ -1,4 +1,4 @@
-import asyncio
+import concurrent.futures
 
 import conftest
 
@@ -33,10 +33,23 @@ def test_asynchronous():
     args = ['a' * int(1e6), 'b' * int(5e6), 'c' * int(1e7)]
     kwargs = {'1e6': 'x' * int(1e6), '5e6': 'y' * int(5e6),
               'array': list(range(int(1e7)))}
-    future = echo.echo(*args, asynchronous=True, **kwargs)
-    assert isinstance(future, asyncio.Future)
+    future1 = echo.echo(*args, asynchronous=True, **kwargs)
 
-    cxn.send_pending_requests()
-    assert future.result() == [args, kwargs]
+    # a few small requests
+    future2 = echo.echo('a', asynchronous=True)
+    future3 = echo.echo(data=list(range(10)), asynchronous=True)
+
+    # and a medium request
+    future4 = echo.echo(-2, -1, 0, q='q'*int(1e6), asynchronous=True)
+
+    assert isinstance(future1, concurrent.futures.Future)
+    assert isinstance(future2, concurrent.futures.Future)
+    assert isinstance(future3, concurrent.futures.Future)
+    assert isinstance(future4, concurrent.futures.Future)
+
+    assert future1.result(30) == [args, kwargs]
+    assert future2.result(30) == [['a'], {}]
+    assert future3.result(30) == [[], {'data': list(range(10))}]
+    assert future4.result(30) == [[-2, -1, 0], {'q': 'q'*int(1e6)}]
 
     manager.shutdown(connection=cxn)

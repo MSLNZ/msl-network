@@ -51,3 +51,9 @@ def test_cannot_use_auth_login_with_empty_table(capsys):
     assert len(err_lines) == 2
     assert err_lines[0] == 'The \'auth_users\' table is empty, no one could log in'
     os.remove(db)
+
+
+def test_invalid_log_level(capsys):
+    process('start --log-level INVALID')
+    _, err = capsys.readouterr()
+    assert err.rstrip().endswith("ValueError: Cannot set logging level to 'INVALID'")

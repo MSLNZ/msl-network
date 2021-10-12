@@ -25,7 +25,7 @@ def test_client_linkedclient_handlers():
     def handler4(*args, **kwargs):
         values4.append(1)
 
-    manager = conftest.Manager(Echo, Heartbeat)
+    manager = conftest.Manager(Echo, Heartbeat, add_heartbeat_task=True)
     cxn = connect(**manager.kwargs)
     link_hb = cxn.link('Heartbeat')
     lc_hb = LinkedClient('Heartbeat', **manager.kwargs)
@@ -51,8 +51,8 @@ def test_client_linkedclient_handlers():
     lc_hb.notification_handler = handler2
     time.sleep(5)
 
-    assert len(values1) > 15
-    assert len(values2) > 7
+    assert len(values1) > 60
+    assert len(values2) > 30
     assert len(values3) == 0  # the Echo Service does not emit notifications
     assert len(values4) == 0  # the Echo Service does not emit notifications
     assert values1.count(3) == 2  # the value 3 should appear twice since reset() was called twice
@@ -63,6 +63,6 @@ def test_client_linkedclient_handlers():
 
     link_hb.unlink()
     lc_hb.unlink()
-    link_echo.disconnect()  # disconnect is an alias for unlink for a LinkedClient
+    link_echo.disconnect()  # disconnect is an alias for unlink
     lc_echo.disconnect()
     manager.shutdown(connection=cxn)
