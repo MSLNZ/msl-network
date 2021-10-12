@@ -6,12 +6,12 @@ Connecting from a Terminal
 One can connect to the Network :class:`~msl.network.manager.Manager` from a terminal,
 e.g., using `openssl s_client`_, to manually send requests to the Network
 :class:`~msl.network.manager.Manager`. So that you do not have to enter a request in the
-*very-specific* :ref:`client-format` for the JSON_ string, the following syntax can be used.
+*very-specific* JSON_ representation of the :ref:`client-format`, the following syntax
+can be used instead.
 
 Connecting from a terminal is only convenient when connecting as a
-:class:`~msl.network.client.Client`. A :class:`~msl.network.service.Service` must enter the
-:ref:`service-format` for the JSON_ string when it sends a reply. *Although, why would you connect*
-*as a* :class:`~msl.network.service.Service` *and manually execute requests?*
+:class:`~msl.network.client.Client`. A :class:`~msl.network.service.Service` must enter
+the full JSON_ representation of the :ref:`service-format` when it sends a response.
 
 Some tips for connecting as a :class:`~msl.network.client.Client`:
 
@@ -51,7 +51,7 @@ Some tips for connecting as a :class:`~msl.network.client.Client`:
 
     .. code-block:: console
 
-      Manager users_table.is_user_registered n.bohr
+       Manager users_table.is_user_registered n.bohr
 
     .. note::
 
@@ -84,7 +84,7 @@ Some tips for connecting as a :class:`~msl.network.client.Client`:
 
     .. code-block:: console
 
-      BasicMath add 4 10
+       BasicMath add 4 10
 
     or
 
@@ -105,7 +105,7 @@ Some tips for connecting as a :class:`~msl.network.client.Client`:
 
     .. code-block:: console
 
-      disconnect
+       disconnect
 
     or
 

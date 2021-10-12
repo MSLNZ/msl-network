@@ -4,7 +4,7 @@
 MSL-Network CLI Documentation
 =============================
 
-The follow commands summarize the various ways to use **MSL-Network**
+The follow commands summarize the various ways to use MSL-Network
 from a terminal.
 
 .. toctree::

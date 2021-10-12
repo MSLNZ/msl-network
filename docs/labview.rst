@@ -9,7 +9,7 @@ LabVIEW 2010. The LabVIEW code uses the `i3 JSON Toolkit`_, which is bundled wit
 to (de)serialize JSON_ data.
 
 .. attention::
-   The :ref:`asynchronous <asynchronous-programming>` aspect of **MSL-Network** is not implemented in the VI's.
+   The :ref:`asynchronous <asynchronous-programming>` aspect of MSL-Network is not implemented in the VI's.
 
 The first step is to :ref:`start-manager`. Since LabVIEW does not natively support the TLS_ protocol you must
 start the Network :class:`~msl.network.manager.Manager` with the ``--disable-tls`` flag, and, to simplify the
@@ -28,8 +28,9 @@ be displayed. These values will need to be entered in the front panel of the VI'
 
 Client
 ------
-The following shows how to send a request to the :ref:`myarray-service`. Before running ``MyArray_client.vi``
-make sure that the :ref:`myarray-service` is running on the Network :class:`~msl.network.manager.Manager`
+The following shows how to send a request to the :ref:`myarray-service-source`. Before running
+``MyArray_client.vi`` make sure that the :ref:`myarray-service-source` is running on the Network
+:class:`~msl.network.manager.Manager`
 
 .. code-block:: console
 

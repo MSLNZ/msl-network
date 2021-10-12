@@ -87,7 +87,7 @@ with ``setup.py`` as
             # will automatically wait for all Futures that it is currently
             # executing to either finish or to be cancelled before the
             # RPiService disconnects from the Network Manager.
-            return None
+            pass
 
         def add_numbers(self, a, b, c, d):
             return a + b + c + d
@@ -109,29 +109,26 @@ and ``my_client.py`` as
         def disconnect(self):
             # We override the `disconnect` method because we want to shut
             # down the RPiService and the Network Manager when MyClient
-            # disconnects from the Raspberry Pi. You don't always want to
-            # shut down a Service and the Manager when a Client disconnects
-            # from the Manager and so we wouldn't override this method. The
-            # Manager might have other Services running on it that other
-            # Clients are using. Also, not every Service will allow a Client
-            # to shut it down. However, we have decided to design mypackage
-            # in a particular way that MyClient is intended to be the only
-            # Client connected to the Manager and when MyClient is done
-            # communicating with the RPiService then everything shuts down.
-            # The Client can also include *args and **kwargs in the
-            # shutdown_service() request, but we don't use them in this example.
+            # disconnects from the Raspberry Pi. Not every Service will
+            # allow a Client to shut it down. However, we have decided to
+            # design mypackage in a particular way that MyClient is
+            # intended to be the only Client connected to the Manager and
+            # when MyClient is done communicating with the RPiService then
+            # both the Manager and the Service shut down. The Client can
+            # also include *args and **kwargs in the shutdown_service()
+            # request, but we don't use them in this example.
             self.shutdown_service()
             super(MyClient, self).disconnect()
 
         def service_error_handler(self):
-            # We override this method to shut down the RPiService and the
-            # Manager if there was an error on the RPiService. In general,
-            # if a Service raises an exception you wouldn't want it to shut
+            # We can override this method to handle the situation if
+            # there is an error on the Service. In general, if a Service
+            # raises an exception you wouldn't want it to shut
             # down because you would have to manually restart it. Especially
-            # if other Clients in other peoples code are requesting information
-            # from that Service it can become frustrating. However, for
-            # mypackage we want everything to shut down (RPiService, MyClient
-            # and the Manager) when any one of them raises an exception.
+            # if other Clients are requesting information from that Service.
+            # However, for mypackage we want everything to shut down
+            # (RPiService, MyClient and the Manager) when any one of them
+            # raises an exception.
             self.disconnect()
 
 To create a source distribution of ``mypackage`` run the following in the root folder of your
@@ -155,9 +152,6 @@ The following libraries are needed to install the cryptography_ package from sou
    with them. However, in what follows we show how to install ``mypackage`` without using a
    `virtual environment`_ for simplicity.
 
-   Sometimes running the ``pip3 install mypackage-0.1.0.tar.gz`` command can raise an error.
-   Try running the command a few times since it might just be a temporary network issue on the Pi.
-
 Install ``mypackage-0.1.0.tar.gz`` on the Raspberry Pi using
 
 .. code-block:: console
@@ -177,7 +171,7 @@ hostname. The hostname of the Raspberry Pi is (most likely) ``'raspberrypi'`` an
 does not equal ``'raspberrypi'`` when the security of the connection is checked behind the scenes.
 If you specify the hostname of the Raspberry Pi then you can do hostname verification and not include
 the ``assert_hostname`` keyword argument. In general, use ``assert_hostname=False`` at your own risk
-if there is a possibility of a man-in-the-middle hijack in your connection to the Pi.
+if there is a possibility of a man-in-the-middle attack in your connection to the Pi.
 
 .. code-block:: pycon
 
@@ -209,7 +203,7 @@ running on the Raspberry Pi and disconnect ``MyClient`` from the Pi.
       [Errno 98] error while attempting to bind on address ('::', 1875, 0, 0): address already in use
 
    This means that there is probably a :class:`~msl.network.manager.Manager` already running
-   on the Raspberry Pi at port 1875. You have four options to solve this problem using **MSL-Network**.
+   on the Raspberry Pi at port 1875. You have four options to solve this problem using MSL-Network.
 
    (1) Start another :class:`~msl.network.manager.Manager` on a different port
 
@@ -224,9 +218,9 @@ running on the Raspberry Pi and disconnect ``MyClient`` from the Pi.
 
    .. code-block:: pycon
 
-      >>> from msl.network import connect
+      >>> from msl.network import connect, constants
       >>> cxn = connect(host='192.168.1.65', assert_hostname=False)
-      >>> cxn.admin_request('shutdown_manager')
+      >>> cxn.admin_request(constants.SHUTDOWN_MANAGER)
 
    (3) Kill the :class:`~msl.network.manager.Manager`
 

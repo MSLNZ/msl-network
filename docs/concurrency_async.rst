@@ -58,9 +58,9 @@ A :class:`~msl.network.client.Client` can send requests either *synchronously* o
 requests are sent sequentially and the :class:`~msl.network.client.Client` must wait to receive the reply before
 proceeding to send the next request. These are blocking requests where the total execution time to receive all
 replies is the combined sum of executing each request individually. Asynchronous requests do not wait for the
-reply but immediately return a :class:`~asyncio.Future` object, which is an object that is a *promise* that a
-result will be available later (i.e., in the future). These are non-blocking requests where the total execution
-time to receive all replies is equal to the time it takes to execute the longest-running request.
+reply but immediately return a :class:`~concurrent.futures.Future` instance, which is an object that is a
+*promise* that a result (or exception) will be available later. These are non-blocking requests where the total
+execution time to receive all replies is equal to the time it takes to execute the longest-running request.
 
 .. image:: _static/sync_vs_async.png
    :scale: 60%
@@ -77,53 +77,55 @@ computer make sure to :ref:`start-manager` and start the :ref:`basic-math-servic
 
 .. code-block:: python
 
-   ## synchronous.py
+    # synchronous.py
+    #
+    # This script takes about 21 seconds to run.
 
-   import time
-   from msl.network import connect
+    import time
+    from msl.network import connect
 
-   # connect to the Manager (that is running on the same computer)
-   cxn = connect()
+    # Connect to the Manager (that is running on the same computer)
+    cxn = connect()
 
-   # establish a link to the BasicMath Service
-   bm = cxn.link('BasicMath')
+    # Establish a link to the BasicMath Service
+    bm = cxn.link('BasicMath')
 
-   # start a counter (used to determine the total execution time for getting all results)
-   t0 = time.perf_counter()
+    # Get the start time before sending the requests
+    t0 = time.perf_counter()
 
-   # send all requests synchronously
-   # the returned object is the expected result for each request
-   add = bm.add(1, 2)
-   subtract = bm.subtract(1, 2)
-   multiply = bm.multiply(1, 2)
-   divide = bm.divide(1, 2)
-   is_positive = bm.ensure_positive(1)
-   power = bm.power(2, 4)
+    # Send all requests synchronously
+    # The returned object is the result of each request
+    add = bm.add(1, 2)
+    subtract = bm.subtract(1, 2)
+    multiply = bm.multiply(1, 2)
+    divide = bm.divide(1, 2)
+    is_positive = bm.ensure_positive(1)
+    power = bm.power(2, 4)
 
-   # the amount of time that passed to receive all results from the BasicMath Service
-   dt = time.perf_counter() - t0
+    # Print the results
+    print(f'1+2= {add}')
+    print(f'1-2= {subtract}')
+    print(f'1*2= {multiply}')
+    print(f'1/2= {divide}')
+    print(f'is positive? {is_positive}')
+    print(f'2**4= {power}')
 
-   # print the results and the total execution time
-   print('1+2= %f' % add)
-   print('1-2= %f' % subtract)
-   print('1*2= %f' % multiply)
-   print('1/2= %f' % divide)
-   print('is positive? %s' % is_positive)
-   print('2**4= %f' % power)
-   print('Total execution time: %f seconds' % dt)
+    # The total time that passed to receive all results
+    dt = time.perf_counter() - t0
+    print(f'Total execution time: {dt:.2f} seconds')
 
-   # disconnect from the Manager
-   cxn.disconnect()
+    # Disconnect from the Manager
+    cxn.disconnect()
 
 The output of the ``synchronous.py`` program will be::
 
-   1+2= 3.000000
-   1-2= -1.000000
-   1*2= 2.000000
-   1/2= 0.500000
-   is positive? True
-   2**4= 16.000000
-   Total execution time: 21.059383 seconds
+    1+2= 3
+    1-2= -1
+    1*2= 2
+    1/2= 0.5
+    is positive? True
+    2**4= 16
+    Total execution time: 21.06 seconds
 
 The *Total execution time* value will be slightly different for you, but the important thing to notice is that
 executing all requests took about 21 seconds (i.e., 1+2+3+4+5+6=21 for the :func:`time.sleep` functions in the
@@ -139,62 +141,66 @@ computer make sure to :ref:`start-manager` and start the :ref:`basic-math-servic
 
 .. code-block:: python
 
-   ## asynchronous.py
+    # asynchronous.py
+    #
+    # This script takes about 6 seconds to run.
 
-   import time
-   from msl.network import connect
+    import time
+    from msl.network import connect
 
-   # connect to the Manager (that is running on the same computer)
-   cxn = connect()
+    # Connect to the Manager (that is running on the same computer)
+    cxn = connect()
 
-   # establish a link to the BasicMath Service
-   bm = cxn.link('BasicMath')
+    # Establish a link to the BasicMath Service
+    bm = cxn.link('BasicMath')
 
-   # start a counter (used to determine the total execution time for getting all results)
-   t0 = time.perf_counter()
+    # Get the start time before sending the requests
+    t0 = time.perf_counter()
 
-   # create asynchronous requests by using the asynchronous=True keyword argument
-   # the returned object is a Future object and not the expected result for each request
-   add = bm.add(1, 2, asynchronous=True)
-   subtract = bm.subtract(1, 2, asynchronous=True)
-   multiply = bm.multiply(1, 2, asynchronous=True)
-   divide = bm.divide(1, 2, asynchronous=True)
-   is_positive = bm.ensure_positive(1, asynchronous=True)
-   power = bm.power(2, 4, asynchronous=True)
+    # Create asynchronous requests by using the asynchronous=True keyword argument
+    # The returned object is a Future object (not the result of each request)
+    add = bm.add(1, 2, asynchronous=True)
+    subtract = bm.subtract(1, 2, asynchronous=True)
+    multiply = bm.multiply(1, 2, asynchronous=True)
+    divide = bm.divide(1, 2, asynchronous=True)
+    is_positive = bm.ensure_positive(1, asynchronous=True)
+    power = bm.power(2, 4, asynchronous=True)
 
-   # send all requests (this blocks the program until all results are available)
-   cxn.send_pending_requests()
+    # There are different ways to gather the results of the Future objects.
+    # Calling result() on the Future will block until the result becomes
+    # available (or until the request raised an exception). Note, the
+    # result() method also supports a timeout argument. You can also
+    # register callbacks to be called when a Future is done.
 
-   # the amount of time that passed to receive all results from the BasicMath Service
-   dt = time.perf_counter() - t0
+    # Print the results
+    print(f'1+2= {add.result()}')
+    print(f'1-2= {subtract.result()}')
+    print(f'1*2= {multiply.result()}')
+    print(f'1/2= {divide.result()}')
+    print(f'is positive? {is_positive.result()}')
+    print(f'2**4= {power.result()}')
 
-   # print the results and the total execution time
-   # since an asynchronous request returns a Future object we must get the result from the Future
-   print('1+2= %f' % add.result())
-   print('1-2= %f' % subtract.result())
-   print('1*2= %f' % multiply.result())
-   print('1/2= %f' % divide.result())
-   print('is positive? %s' % is_positive.result())
-   print('2**4= %f' % power.result())
-   print('Total execution time: %f seconds' % dt)
+    # The total time that passed to receive all results
+    dt = time.perf_counter() - t0
+    print(f'Total execution time: {dt:.2f} seconds')
 
-   # disconnect from the Manager
-   cxn.disconnect()
+    # Disconnect from the Manager
+    cxn.disconnect()
 
 The output of the ``asynchronous.py`` program will be::
 
-   1+2= 3.000000
-   1-2= -1.000000
-   1*2= 2.000000
-   1/2= 0.500000
-   is positive? True
-   2**4= 16.000000
-   Total execution time: 6.009762 seconds
+    1+2= 3
+    1-2= -1
+    1*2= 2
+    1/2= 0.5
+    is positive? True
+    2**4= 16
+    Total execution time: 6.02 seconds
 
 The *Total execution time* value will be slightly different for you, but the important thing to notice is that
 executing all requests took about 6 seconds (i.e., max(1, 2, 3, 4, 5, 6) for the :func:`time.sleep` functions in the
-:ref:`basic-math-service`) and that the returned object from each request was a :class:`~asyncio.Future` object
-which we needed to get the :meth:`~asyncio.Future.result` of.
+:ref:`basic-math-service`) and that the returned object from each request was a :class:`~concurrent.futures.Future`
+instance which we needed to get the :meth:`~concurrent.futures.Future.result` of.
 
 Synchronous vs Asynchronous comparison
 ++++++++++++++++++++++++++++++++++++++
@@ -203,15 +209,15 @@ Comparing the total execution time for the :ref:`synchronous` and the :ref:`asyn
 program is 3.5 times faster. Choosing whether to send a request synchronously or asynchronously is performed by passing
 in an ``asynchronous=False`` or ``asynchronous=True`` keyword argument, respectively. Also, in the synchronous example
 when a request is sent the object that is returned is the result of the method from the :ref:`basic-math-service`,
-whereas in the asynchronous example the returned value is a :class:`~asyncio.Future` object that provides the result
-later.
+whereas in the asynchronous example the returned value is a :class:`~concurrent.futures.Future` object that
+provides the result later.
 
-+-----------------------------+------------------------------+-----------------------------------+
-|                             |   Synchronous                |   Asynchronous                    |
-+=============================+==============================+===================================+
-| Total execution time        |    21 seconds                |     6 seconds                     |
-+-----------------------------+------------------------------+-----------------------------------+
-| Keyword argument to invoke  | asynchronous=False (default) |  asynchronous=True                |
-+-----------------------------+------------------------------+-----------------------------------+
-| Returned value from request |    the result                | a :class:`~asyncio.Future` object |
-+-----------------------------+------------------------------+-----------------------------------+
++-----------------------------+------------------------------+----------------------------------------------+
+|                             |   Synchronous                |   Asynchronous                               |
++=============================+==============================+==============================================+
+| Total execution time        |    21 seconds                |     6 seconds                                |
++-----------------------------+------------------------------+----------------------------------------------+
+| Keyword argument to invoke  | asynchronous=False (default) |  asynchronous=True                           |
++-----------------------------+------------------------------+----------------------------------------------+
+| Returned value from request |    the result                | a :class:`~concurrent.futures.Future` object |
++-----------------------------+------------------------------+----------------------------------------------+

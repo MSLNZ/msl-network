@@ -3,7 +3,7 @@
 ===========
 MSL-Network
 ===========
-**MSL-Network** uses concurrency and asynchronous programming to transfer data across a network and it is composed
+MSL-Network uses concurrency and asynchronous programming to transfer data across a network and it is composed
 of three objects -- a Network :class:`~msl.network.manager.Manager`, :class:`~msl.network.client.Client`\s and
 :class:`~msl.network.service.Service`\s.
 
@@ -23,7 +23,7 @@ to execute. See :ref:`concurrent-asynchronous` for more details.
 :class:`~msl.network.client.Client` and a :class:`~msl.network.service.Service`. As such, it is possible to
 implement a :class:`~msl.network.client.Client` or a :class:`~msl.network.service.Service` in any programming
 language to connect to the Network :class:`~msl.network.manager.Manager`. See the :ref:`json-formats` section
-for an overview of the data format. One can even connect to the Network :class:`~msl.network.manager.Manager`
+for an overview of the data format. One can also connect to the Network :class:`~msl.network.manager.Manager`
 from a terminal to send requests, see :ref:`terminal-input` for more details.
 
 ========

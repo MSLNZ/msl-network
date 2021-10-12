@@ -3,7 +3,7 @@ MSL-Network
 
 |docs| |pypi| |github tests|
 
-**MSL-Network** uses concurrency and asynchronous programming to transfer data across a network and
+MSL-Network uses concurrency and asynchronous programming to transfer data across a network and
 it is composed of three objects -- a Network Manager_, Client_\s and Service_\s.
 
 The Network Manager_ allows for multiple Client_\s and Service_\s to connect to it and it links a Client_'s
@@ -22,7 +22,7 @@ Manager_ from a terminal to send requests, see `Connecting from a Terminal`_ for
 
 Install
 -------
-To install **MSL-Network** run::
+To install MSL-Network run::
 
    pip install msl-network
 
@@ -38,7 +38,7 @@ Dependencies
 
 Documentation
 -------------
-The documentation for **MSL-Network** can be found `here <https://msl-network.readthedocs.io/en/latest/index.html>`_.
+The documentation for MSL-Network can be found `here <https://msl-network.readthedocs.io/en/latest/index.html>`_.
 
 .. |docs| image:: https://readthedocs.org/projects/msl-network/badge/?version=latest
    :target: https://msl-network.readthedocs.io/en/latest/

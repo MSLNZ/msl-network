@@ -4,11 +4,11 @@
 MSL-Network API Documentation
 =============================
 
-**MSL-Network** has very little functions or classes that need to be accessed in a user's application.
+MSL-Network has very little functions or classes that need to be accessed in a user's application.
 
 Typically, only the :class:`~msl.network.service.Service` class needs to be subclassed and the
 :func:`~msl.network.client.connect` function will be called to connect to the Network
-:class:`~msl.network.manager.Manager` for most applications using **MSL-Network**.
+:class:`~msl.network.manager.Manager` for most applications using MSL-Network.
 
 The :mod:`msl.network.ssh` module provides some functions for using `SSH <https://www.ssh.com/ssh/>`_
 to connect to a remote computer. :ref:`ssh-example` shows an example Python package that can
@@ -30,7 +30,6 @@ Package Structure
    msl.network.constants <_api/msl.network.constants>
    msl.network.cryptography <_api/msl.network.cryptography>
    msl.network.database <_api/msl.network.database>
-   msl.network.exceptions <_api/msl.network.exceptions>
    msl.network.json <_api/msl.network.json>
    msl.network.manager <_api/msl.network.manager>
    msl.network.network <_api/msl.network.network>

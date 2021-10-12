@@ -3,7 +3,7 @@
 Install MSL-Network
 ===================
 
-To install **MSL-Network** run:
+To install MSL-Network run:
 
 .. code-block:: console
 
@@ -17,9 +17,8 @@ Alternatively, using the `MSL Package Manager`_ run:
 
 Compatibility
 -------------
-**MSL-Network** uses coroutines with the ``async`` and ``await`` syntax that were added in
-Python 3.5 (PEP492_). Therefore, the Network :class:`~msl.network.manager.Manager` class is
-only compatible with Python 3.5+.
+MSL-Network uses coroutines with the ``async`` and ``await`` syntax that were added in
+PEP492_ and is compatible with Python 3.6+.
 
 The :class:`~msl.network.client.Client` and :class:`~msl.network.service.Service` classes can be
 implemented in any programming language (and also in previous versions of Python). See the
@@ -28,7 +27,7 @@ information between a :class:`~msl.network.client.Client` and a :class:`~msl.net
 
 Dependencies
 ------------
-* Python 3.5+
+* Python 3.6+
 * cryptography_
 * paramiko_
 
@@ -44,11 +43,10 @@ read the documentation of :class:`msl.network.json.Package`.
 
 .. _MSL Package Manager: https://msl-package-manager.readthedocs.io/en/stable/
 .. _PEP492: https://www.python.org/dev/peps/pep-0492/
-.. _PEP498: https://www.python.org/dev/peps/pep-0498/
 .. _cryptography: https://cryptography.io/en/latest/
 .. _JSON: https://www.json.org/
 .. _UltraJSON: https://pypi.python.org/pypi/ujson/
 .. _RapidJSON: https://pypi.python.org/pypi/python-rapidjson/
 .. _simplejson: https://pypi.python.org/pypi/simplejson/
 .. _orjson: https://pypi.org/project/orjson/
-.. _paramiko: http://www.paramiko.org/
+.. _paramiko: https://www.paramiko.org/

@@ -3,7 +3,7 @@
 Python Examples
 ===============
 
-The following examples illustrate some ideas on how one could use **MSL-Network**.
+The following examples illustrate some ideas on how one could use MSL-Network.
 
 1. :ref:`digital-multimeter`
 2. :ref:`additional-examples`
@@ -16,13 +16,13 @@ Digital Multimeter
 
 This example shows how a digital multimeter that has a non-Ethernet interface, e.g., GPIB or RS232, can be
 controlled from any computer that is on the network. It uses the MSL-Equipment_ package to connect to the digital
-multimeter and **MSL-Network** to enable the digital multimeter as a :class:`~msl.network.service.Service` on the
-network. This example is included with **MSL-Network** when it is installed, but since it requires additional hardware
+multimeter and MSL-Network to enable the digital multimeter as a :class:`~msl.network.service.Service` on the
+network. This example is included with MSL-Network when it is installed, but since it requires additional hardware
 (a digital multimeter) it can only be run if the hardware is attached to the computer.
 
 The first task to do is to :ref:`start-manager` on the same computer that the digital multimeter is
 physically connected to (via a GPIB cable or a DB9 cable). Next, on the same computer, copy and paste the
-following script to a file, edit the configuration file used by MSL-Equipment_ for the information relevant
+following script to a file, edit the equipment record used by MSL-Equipment_ for the information relevant
 to your DMM (e.g., the COM#, GPIB address) and then run the script to start the digital multimeter
 :class:`~msl.network.service.Service`.
 
@@ -78,16 +78,16 @@ to be able to control the digital multimeter.
 
 Additional (Runnable) Examples
 ------------------------------
-The following :class:`~msl.network.service.Service`\'s are included with **MSL-Network**. To start
+The following :class:`~msl.network.service.Service`\'s are included with MSL-Network. To start
 any of these :class:`~msl.network.service.Service`\'s, first make sure that you :ref:`start-manager`,
-and then run the following command in a `command prompt`_ (Windows) or in a terminal (\*nix, replace *python*
-with *python3*). For this example, the ``Echo`` :class:`~msl.network.service.Service` is started
+and then run the following command in a terminal. For this example, the :ref:`echo-service-source`
+is running
 
 .. code-block:: console
 
    python -c "from msl.examples.network import Echo; Echo().start()"
 
-You can then send requests to the ``Echo`` :class:`~msl.network.service.Service`
+You can then send requests to the :ref:`echo-service-source`
 
 .. code-block:: pycon
 
@@ -100,35 +100,33 @@ You can then send requests to the ``Echo`` :class:`~msl.network.service.Service`
    [['world!'], {'x': 7, 'array': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}]
    >>> cxn.disconnect()
 
-.. _echo-service:
+.. _echo-service-source:
 
 Echo Service
 ++++++++++++
 
 .. literalinclude:: ../msl/examples/network/echo.py
 
-.. _basicmath-service:
+.. _basicmath-service-source:
 
 BasicMath Service
 +++++++++++++++++
 
 .. literalinclude:: ../msl/examples/network/basic_math.py
 
-.. _myarray-service:
+.. _myarray-service-source:
 
 MyArray Service
 ++++++++++++++++
 
 .. literalinclude:: ../msl/examples/network/array.py
 
-.. _heartbeat-service:
+.. _heartbeat-service-source:
 
 Heartbeat Service
 +++++++++++++++++
 
 .. literalinclude:: ../msl/examples/network/heartbeat.py
 
-
 .. _MSL-Equipment: https://msl-equipment.readthedocs.io/en/latest/
-.. _command prompt: https://en.wikipedia.org/wiki/Cmd.exe
 .. _RPi-SmartGadget: https://github.com/MSLNZ/rpi-smartgadget

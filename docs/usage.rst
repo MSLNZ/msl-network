@@ -3,7 +3,7 @@
 Usage
 =====
 
-Using **MSL-Network** requires a sequence of 3 steps:
+Using MSL-Network requires a sequence of 3 steps:
 
 1. :ref:`start-manager`
 2. :ref:`start-service`
@@ -14,10 +14,10 @@ Using **MSL-Network** requires a sequence of 3 steps:
 Start the Network Manager
 -------------------------
 
-The first thing to do is to start the Network :class:`~msl.network.manager.Manager`. There are 3 ways
-to do this.
+The first thing to do is to start the Network :class:`~msl.network.manager.Manager`.
+There are 3 ways to do this.
 
-1. From a `command prompt`_ (Windows) or a terminal (\*nix) by running:
+1. From a terminal run:
 
     .. code-block:: console
 
@@ -52,31 +52,29 @@ to do this.
 Start a Service on the Network Manager
 --------------------------------------
 
-Below is a simple, *and terribly inefficient*, :class:`~msl.network.service.Service` that performs some basic
-math operations. In order to create a new :class:`~msl.network.service.Service` just create a class that
-is a subclass of :class:`~msl.network.service.Service` and call the :meth:`~msl.network.service.Service.start`
-method.
-
-.. note::
-   The reason for adding the :func:`time.sleep` functions in the :ref:`basic-math-service` will become evident
-   when discussing :ref:`asynchronous-programming`.
+In order to create a new Service just create a class that is a subclass of
+:class:`~msl.network.service.Service` and call the
+:meth:`~msl.network.service.Service.start` method.
 
 .. _basic-math-service:
 
 BasicMath Service
 +++++++++++++++++
+For example, the :ref:`basicmath-service-source` is a simple (*and terribly inefficient*)
+:class:`~msl.network.service.Service` that performs some basic math operations
+and it is included with MSL-Network.
 
-.. literalinclude:: ../msl/examples/network/basic_math.py
-
-The :ref:`basic-math-service` is included with **MSL-Network**. To start the service run the following
-command in a `command prompt`_ (Windows) or in a terminal (\*nix, replace *python* with *python3*)
+To start the `BasicMath Service`_ on the :class:`~msl.network.manager.Manager`
+that is :ref:`running on the same computer <start-manager>`, run the following
+command in a terminal
 
 .. code-block:: console
 
    python -c "from msl.examples.network import BasicMath; BasicMath().start()"
 
-This will start the :ref:`basic-math-service` on the Network :class:`~msl.network.manager.Manager`
-that is running on the same computer.
+.. note::
+   The reason for adding the :func:`time.sleep` functions in the `BasicMath Service`_
+   will become evident when discussing :ref:`asynchronous-programming`.
 
 .. _connect-client:
 
@@ -90,7 +88,7 @@ Now that there is a :ref:`basic-math-service` running on the Network :class:`~ms
 .. code-block:: pycon
 
    >>> from msl.network import connect
-   >>> cxn = connect()
+   >>> cxn = connect(name='MyClient')
 
 establish a link with the :ref:`basic-math-service`
 
@@ -111,16 +109,16 @@ To find out what devices are currently connected to the :class:`~msl.network.man
 
 .. code-block:: pycon
 
-   >>> print(cxn.manager(as_string=True))
+   >>> print(cxn.identities(as_string=True))
    Manager[localhost:1875]
      attributes:
        identity() -> dict
        link(service: str) -> bool
-     language: Python 3.7.3
+     language: Python 3.9.7
      os: Windows 10 AMD64
    Clients [1]:
-     Client[localhost:63818]
-       language: Python 3.7.3
+     MyClient[localhost:63818]
+       language: Python 3.9.7
        os: Windows 10 AMD64
    Services [1]:
      BasicMath[localhost:63815]
@@ -132,8 +130,9 @@ To find out what devices are currently connected to the :class:`~msl.network.man
          multiply(x: Union[int, float], y: Union[int, float]) -> Union[int, float]
          pi() -> 3.141592653589793
          power(x: Union[int, float], n=2) -> Union[int, float]
+         set_logging_level(level: Union[str, int]) -> bool
          subtract(x: Union[int, float], y: Union[int, float]) -> Union[int, float]
-       language: Python 3.7.3
+       language: Python 3.9.7
        max_clients: -1
        os: Windows 10 AMD64
 
@@ -162,4 +161,3 @@ then you could create a :class:`~msl.network.client.LinkedClient`
 .. _TLS: https://en.wikipedia.org/wiki/Transport_Layer_Security
 .. _Elliptic-Curve Cryptography: https://en.wikipedia.org/wiki/Elliptic-curve_cryptography
 .. _SQLite: https://www.sqlite.org/
-.. _command prompt: https://en.wikipedia.org/wiki/Cmd.exe

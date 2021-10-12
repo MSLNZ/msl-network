@@ -5,12 +5,14 @@ JSON Formats
 
 Information is exchanged between a :class:`~msl.network.manager.Manager`, a :class:`~msl.network.client.Client`
 and a :class:`~msl.network.service.Service` using JSON_ as the data format. The information is
-`serialized <https://en.wikipedia.org/wiki/Serialization>`_ to bytes and terminated with ``"\r\n"``.
+serialized_ to bytes and terminated with ``"\r\n"`` (a carriage return and a line feed).
 
-A :class:`~msl.network.client.Client` or a :class:`~msl.network.service.Service` can be written in any programming
-language, but the JSON_ data format must adhere to the specific requirements specified below. The
-:class:`~msl.network.client.Client` and :class:`~msl.network.service.Service` must also check for the ``"\r\n"``
-byte sequence in each packet that it receives in order to ensure that all bytes have been received.
+A :class:`~msl.network.client.Client` or a :class:`~msl.network.service.Service` can be written in
+any programming language, but the JSON_ data format must adhere to the specific requirements specified
+below. The :class:`~msl.network.client.Client` and :class:`~msl.network.service.Service` must also
+check for the ``"\r\n"`` (or just the ``"\n"``) byte sequence in each network packet that it receives
+in order to ensure that all bytes have been received or to check if multiple requests/responses are
+contained within the same network packet.
 
 .. _client-format:
 
@@ -22,11 +24,11 @@ A :class:`~msl.network.client.Client` must **send a request** with the following
 .. code-block:: console
 
     {
-      "error": false
-      "service": string (the name of the Service, or "Manager" if the request is for the Manager)
-      "attribute": string (the name of a method or variable to access from the Manager or Service)
       "args": array of objects (arguments to be passed to the method of the Manager or Service)
+      "attribute": string (the name of a method or variable to access from the Manager or Service)
+      "error": false
       "kwargs": name-value pairs (keyword arguments to be passed to the method of the Manager or Service)
+      "service": string (the name of the Service, or "Manager" if the request is for the Manager)
       "uuid": string (a universally unique identifier of the request)
     }
 
@@ -48,8 +50,8 @@ To send a reply to the :class:`~msl.network.manager.Manager` use the following J
 
     {
       "error": false (can be omitted)
-      "result": object (the reply from the Client)
       "requester": string (can be omitted)
+      "result": object (the reply from the Client)
       "uuid": string (can be omitted)
     }
 
@@ -73,9 +75,9 @@ will be:
 .. code-block:: console
 
     {
-      "error": false
-      "attribute": string (the name of a method to call from the Client)
       "args": array of objects (arguments to be passed to the method of the Client)
+      "attribute": string (the name of a method to call from the Client)
+      "error": false
       "kwargs": name-value pairs (keyword arguments to be passed to the method of the Client)
       "requester": string (the address of the Network Manager)
       "uuid": string (an empty string)
@@ -87,8 +89,8 @@ If the bytes received represent a reply from a :class:`~msl.network.service.Serv
 
     {
       "error": false
-      "result": object (the reply from the Service)
       "requester": string (the address of the Client that made the request)
+      "result": object (the reply from the Service)
       "uuid": string (the universally unique identifier of the request)
     }
 
@@ -99,9 +101,9 @@ If the bytes received represent an error then the JSON_ object will be:
     {
       "error": true
       "message": string (a short description of the error)
-      "traceback": array of strings (a detailed stack trace of the error)
-      "result": null
       "requester": string (the address of the device that made the request)
+      "result": null
+      "traceback": array of strings (a detailed stack trace of the error)
       "uuid": string
     }
 
@@ -134,9 +136,9 @@ object will be:
     {
       "error": true
       "message": string (a short description of the error)
-      "traceback": array of strings (a detailed stack trace of the error)
-      "result": null
       "requester": string (the address of the Manager)
+      "result": null
+      "traceback": array of strings (a detailed stack trace of the error)
       "uuid": string (an empty string)
     }
 
@@ -146,15 +148,15 @@ If the bytes received represent a request from the :class:`~msl.network.manager.
 .. code-block:: console
 
     {
-      "error": false
-      "attribute": string (the name of a method or variable to access from the Service)
       "args": array of objects (arguments to be passed to the method of the Service )
+      "attribute": string (the name of a method or variable to access from the Service)
+      "error": false
       "kwargs": name-value pairs (keyword arguments to be passed to the method of the Service)
       "requester": string (the address of the device that made the request)
       "uuid": string (the universally unique identifier of the request)
     }
 
-A :class:`~msl.network.service.Service` will **send** data in 1 of 2 JSON_ representations.
+A :class:`~msl.network.service.Service` will **send a response** in 1 of 2 JSON_ representations.
 
 If the :class:`~msl.network.service.Service` raised an exception then the JSON_ object will be:
 
@@ -163,9 +165,9 @@ If the :class:`~msl.network.service.Service` raised an exception then the JSON_ 
     {
       "error": true
       "message": string (a short description of the error)
-      "traceback": array of strings (a detailed stack trace of the error)
-      "result": null
       "requester": string (the address of the device that made the request)
+      "result": null
+      "traceback": array of strings (a detailed stack trace of the error)
       "uuid": string (the universally unique identifier of the request)
     }
 
@@ -175,8 +177,8 @@ If the :class:`~msl.network.service.Service` successfully executed the request t
 
     {
       "error": false
-      "result": object (the reply from the Service)
       "requester": string (the address of the device that made the request)
+      "result": object (the reply from the Service)
       "uuid": string (the universally unique identifier of the request)
     }
 
@@ -190,8 +192,9 @@ A :class:`~msl.network.service.Service` can also emit a notification to all
     {
       "error": false
       "result": array (a 2-element list of [args, kwargs], e.g., [[1, 2, 3], {"x": 4, "y": 5}])
-      "service": string (the name of the Service that is emitting the notification)
+      "service": string (the name of the Service that emitted the notification)
       "uuid": "notification"
     }
 
 .. _JSON: https://www.json.org/
+.. _serialized: https://en.wikipedia.org/wiki/Serialization
