@@ -130,7 +130,7 @@ def generate_certificate(*, path=None, key_path=None, key_password=None,
                          algorithm='SHA256', years_valid=None, digest_size=None, name=None):
     """Generate a self-signed certificate.
 
-    .. versionchanged:: 0.6
+    .. versionchanged:: 1.0
        Added the `digest_size` and `name` keyword arguments.
 
     Parameters
@@ -158,7 +158,7 @@ def generate_certificate(*, path=None, key_path=None, key_password=None,
         :meth:`~cryptography.x509.CertificateBuilder.issuer_name`. If not
         specified then a default `name` is used.
     digest_size : :class:`int`, optional
-        The digest size, if the hash `algorithm` requires one.
+        The digest size (if the hash `algorithm` requires one).
 
     Returns
     -------
@@ -254,9 +254,9 @@ def get_default_key_path():
 
 
 def get_fingerprint(cert, *, algorithm='SHA1', digest_size=None):
-    """Get the fingerprint of the certificate.
+    """Get the fingerprint of a certificate.
 
-    .. versionchanged:: 0.6
+    .. versionchanged:: 1.0
        Added the `digest_size` keyword argument and allow
        `algorithm` to be a string.
 
@@ -268,7 +268,7 @@ def get_fingerprint(cert, *, algorithm='SHA1', digest_size=None):
         The hash algorithm to use. See :doc:`hazmat/primitives/cryptographic-hashes`
         for allowed hash algorithms.
     digest_size : :class:`int`, optional
-        The digest size, if the hash `algorithm` requires one.
+        The digest size (if the hash `algorithm` requires one).
 
     Returns
     -------
@@ -281,7 +281,7 @@ def get_fingerprint(cert, *, algorithm='SHA1', digest_size=None):
 
 
 def get_metadata(cert):
-    """Get the metadata of the certificate.
+    """Get the metadata of a certificate.
 
     Parameters
     ----------
@@ -373,7 +373,7 @@ def get_metadata(cert):
 
 
 def get_metadata_as_string(cert):
-    """Returns the metadata of the certificate as a *human-readable* string.
+    """Returns the metadata of a certificate as a *human-readable* string.
 
     Parameters
     ----------
@@ -453,7 +453,7 @@ def get_ssl_context(*, cert_file=None, host=None, port=None, auto_save=False):
     .. versionchanged:: 0.4
        Renamed `certificate` to `certfile`.
 
-    .. versionchanged:: 0.6
+    .. versionchanged:: 1.0
        Renamed `certfile` to `cert_file`.
        Added the `auto_save` keyword argument.
 
