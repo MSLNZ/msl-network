@@ -1,18 +1,33 @@
 """
-Example heartbeat :class:`~msl.network.service.Service` that emits notifications.
+Example Service that emits notifications to all linked Clients. This example
+also shows how to add a task to the event loop of the Service.
 
-Before running this module ensure that the Network :class:`~msl.network.manager.Manager`
-is running on the same computer (i.e., run ``msl-network start`` in a terminal
-to start the Network :class:`~msl.network.manager.Manager`).
+Before running this module ensure that the Network Manager is running on the
+same computer, i.e., run the following command in a terminal
 
-After the ``Heartbeat`` :class:`~msl.network.service.Service` starts you can
-:meth:`~msl.network.client.connect` to the Network :class:`~msl.network.manager.Manager`,
-:meth:`~msl.network.client.Client.link` with the ``Heartbeat`` :class:`~msl.network.service.Service`
-and re-assign the :meth:`~msl.network.client.Link.notification_handler` method to handle
-the notifications.
+msl-network start
+
+then run this module to connect to the Manager as a Service.
+
+After the Heartbeat Service starts you can connect to the Manager as a Client,
+link with the Heartbeat Service, handle notifications from the Service and also
+send requests, e.g.,
+
+import types
+from msl.network import connect
+
+def print_notification(self, *args, **kwargs):
+    print(f'The {self.service_name} Service emitted', args, kwargs)
+
+cxn = connect()
+heartbeat = cxn.link('Heartbeat')
+heartbeat.notification_handler = types.MethodType(print_notification, heartbeat)
+
+# some time later
+
+heartbeat.reset()
 """
 import asyncio
-from threading import Thread
 
 from msl.network import Service
 
@@ -25,38 +40,37 @@ class Heartbeat(Service):
         self._sleep = 1.0
         self._counter = 0
         self._alive = True
-        self._thread = Thread(target=self._run_iterate_loop, daemon=True)
-        self._thread.start()
 
-    def kill(self) -> None:
+    def kill(self):
         """Stop emitting the heartbeat."""
         self._alive = False
 
-    def reset(self) -> None:
+    def reset(self):
         """Reset the heartbeat counter."""
         self._counter = 0
 
-    def set_heart_rate(self, beats_per_second: int) -> None:
+    def set_heart_rate(self, beats_per_second: int):
         """Change the rate that the value of the counter is emitted."""
         self._sleep = 1.0 / float(beats_per_second)
 
-    async def _iterate(self):
-        """Private method that emits the heartbeat."""
+    def shutdown_handler(self):
+        """Called when the connection to the Manager is closed."""
+        self._alive = False
+
+    async def emit(self):
+        """This coroutine is also run in the event loop."""
         while self._alive:
             self.emit_notification(self._counter)
             self._counter += 1
             await asyncio.sleep(self._sleep)
 
-    def _run_iterate_loop(self):
-        """Private method that start the heartbeat loop."""
-        loop = asyncio.new_event_loop()
-        task = loop.create_task(self._iterate())
-        loop.run_until_complete(task)
-
-    def shutdown_handler(self, exc):
-        self._alive = False
-
 
 if __name__ == '__main__':
+    # Initialize the Service
     service = Heartbeat()
+
+    # Add a task to the event loop of the Service
+    service.add_tasks(service.emit())
+
+    # Start the Service
     service.start()

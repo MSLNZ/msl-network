@@ -1,14 +1,21 @@
 """
-Example :class:`~msl.network.service.Service` for performing basic math operations.
+Example Service for illustrating the difference between synchronous and
+asynchronous requests.
 
-Before running this module ensure that the Network :class:`~msl.network.manager.Manager`
-is running on the same computer (i.e., run ``msl-network start`` in a terminal
-to start the Network :class:`~msl.network.manager.Manager`).
+Before running this module ensure that the Network Manager is running on the
+same computer, i.e., run the following command in a terminal
 
-After the ``BasicMath`` :class:`~msl.network.service.Service` starts you can
-:meth:`~msl.network.client.connect` to the Network :class:`~msl.network.manager.Manager`,
-:meth:`~msl.network.client.Client.link` with the ``BasicMath`` :class:`~msl.network.service.Service`
-and then have the ``BasicMath`` :class:`~msl.network.service.Service` execute tasks.
+msl-network start
+
+then run this module to connect to the Manager as a Service.
+
+After the BasicMath Service starts you can connect to the Manager as a Client,
+link with the BasicMath Service and then send requests, e.g.,
+
+from msl.network import connect
+cxn = connect()
+bm = cxn.link('BasicMath')
+value = bm.add(1, 2)
 """
 import time
 from typing import Union
@@ -56,10 +63,10 @@ class BasicMath(Service):
 if __name__ == '__main__':
     import logging
 
-    # allows for "info" log messages to be visible from the Service
+    # Optional: allows for "info" log messages to be visible on the Service
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s [%(levelname)-5s] %(name)s - %(message)s',
+        format='%(asctime)s [%(levelname)-5s] %(message)s',
     )
 
     service = BasicMath()

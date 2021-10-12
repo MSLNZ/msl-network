@@ -1,22 +1,21 @@
 """
-Example showing how a digital multimeter that has a non-Ethernet interface,
-e.g., GPIB or RS232, can be controlled from any computer that is on the network.
+Example showing how a digital multimeter that has a non-Ethernet interface
+(e.g., GPIB or RS232) can be controlled from any computer that is on the network.
 """
 from msl.network import Service
+from msl.equipment import (
+    EquipmentRecord,
+    ConnectionRecord,
+)
 
 
 class DigitalMultimeter(Service):
 
-    def __init__(self, config_path, alias):
-        """Initialize and start the Service.
+    def __init__(self):
+        """Initialize the communication with the digital multimeter.
 
-        Parameters
-        ----------
-        config_path : str
-            The path to the configuration file that is used by MSL-Equipment.
-        alias : str
-            The alias of the digital multimeter that was defined in the
-            MSL-Equipment configuration file.
+        This script must be run on a computer that the multimeter is
+        physically connected to.
         """
 
         # Initialize the Service. Set the name of the DigitalMultimeter Service,
@@ -27,12 +26,17 @@ class DigitalMultimeter(Service):
         # DigitalMultimeter Service to control the digital multimeter.
         super().__init__(name='Hewlett Packard 34401A', max_clients=1)
 
-        # Load the MSL-Equipment database
-        # See MSL-Equipment for details
-        db = Config(config_path).database()
-
         # Connect to the digital multimeter
-        self._dmm = db.equipment[alias].connect()
+        # (see MSL-Equipment for more details)
+        record = EquipmentRecord(
+            manufacturer='HP',
+            model='34401A',
+            connection=ConnectionRecord(
+                address='COM4',  # RS232 interface
+                backend='MSL',
+            )
+        )
+        self._dmm = record.connect()
 
     def write(self, command: str) -> None:
         """Write a command to the digital multimeter.
@@ -73,15 +77,6 @@ class DigitalMultimeter(Service):
 
 
 if __name__ == '__main__':
-    import sys
-    from msl.equipment import Config
-
-    # The user must specify the path to the configuration file that is used by MSL-Equipment
-    # and the alias of the EquipmentRecord (see the documentation for MSL-Equipment for more details)
-    if len(sys.argv) != 3:
-        sys.exit('You must specify the path to the configuration file and the alias of the DMM')
-
-    dmm_service = DigitalMultimeter(*sys.argv[1:])
-
-    # Start the Service
+    # Initialize and start the DigitalMultimeter Service
+    dmm_service = DigitalMultimeter()
     dmm_service.start()

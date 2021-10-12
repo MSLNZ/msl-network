@@ -1,20 +1,28 @@
 """
-Example echo :class:`~msl.network.service.Service`.
+Example echo Service.
 
-Before running this module ensure that the Network :class:`~msl.network.manager.Manager`
-is running on the same computer (i.e., run ``msl-network start`` in a terminal
-to start the Network :class:`~msl.network.manager.Manager`).
+Before running this module ensure that the Network Manager is running on the
+same computer, i.e., run the following command in a terminal
 
-After the ``Echo`` :class:`~msl.network.service.Service` starts you can
-:meth:`~msl.network.client.connect` to the Network :class:`~msl.network.manager.Manager`,
-and :meth:`~msl.network.client.Client.link` with the ``Echo`` :class:`~msl.network.service.Service`.
+msl-network start
+
+then run this module to connect to the Manager as a Service.
+
+After the Echo Service starts you can connect to the Manager as a Client,
+link with the Echo Service and then send requests, e.g.,
+
+from msl.network import connect
+cxn = connect()
+e = cxn.link('Echo')
+args, kwargs = e.echo(1, 2, x='hello', y='world')
 """
 from msl.network import Service
 
 
 class Echo(Service):
 
-    def echo(self, *args, **kwargs):
+    @staticmethod
+    def echo(*args, **kwargs):
         return args, kwargs
 
 
