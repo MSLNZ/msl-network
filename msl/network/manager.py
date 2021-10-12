@@ -349,12 +349,11 @@ class Manager(Network):
             if not line:
                 return
 
-            logger.debug('%s sent %d bytes', reader_name, len(line))
             if len(line) > self._max_debug_length:
                 half = self._max_debug_length//2
-                logger.debug('%s ... %s', line[:half], line[-half:])
+                logger.debug('%s: %s ... %s', reader_name, line[:half], line[-half:])
             else:
-                logger.debug(line)
+                logger.debug('%s: %s', reader_name, line)
 
             try:
                 data = deserialize(line)
