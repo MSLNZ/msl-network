@@ -50,15 +50,12 @@ SHUTDOWN_SERVICE = 'shutdown_service'
 
 SHUTDOWN_MANAGER = 'shutdown_manager'
 
-TERMINATION = b'\r\n'
-""":class:`bytes`: The sequence of bytes that signify the end of the data being sent.
-
-.. versionadded:: 0.6
-"""
-
-ENCODING = 'utf-8'
-""":class:`str`: The encoding to use to convert :class:`str` to :class:`bytes`.
-
-.. versionadded:: 0.6
-"""
-
+LOCALHOST_ALIASES = (
+    HOSTNAME,
+    'localhost',
+    '127.0.0.1',
+    '::1',
+    '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
+    '1.0.0.127.in-addr.arpa',
+)
+""":class:`tuple` of :class:`str`: Aliases for ``localhost``."""
