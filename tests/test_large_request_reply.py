@@ -1,11 +1,20 @@
+import sys
 import concurrent.futures
+
+import pytest
 
 import conftest
 
 from msl.network import connect
 from msl.examples.network import Echo
 
+skipif_32bit = pytest.mark.skipif(
+    sys.maxsize < 2**32,
+    reason='ignore on 32-bit platform'
+)
 
+
+@skipif_32bit
 def test_synchronous():
     manager = conftest.Manager(Echo)
 
@@ -23,6 +32,7 @@ def test_synchronous():
     manager.shutdown(connection=cxn)
 
 
+@skipif_32bit
 def test_asynchronous():
     manager = conftest.Manager(Echo)
 
