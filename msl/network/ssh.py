@@ -73,7 +73,7 @@ def start_manager(host, console_script_path, *, ssh_username=None, ssh_password=
     ssh_password : :class:`str`, optional
         The password to use to establish the SSH_ connection. If :data:`None`
         then you will be asked for the `ssh_password`.
-    timeout : :class:`float`, optional
+    timeout : :class:`int` or :class:`float`, optional
         The maximum number of seconds to wait for the SSH_ connection.
     as_sudo : :class:`bool`, optional
         Whether to run the `console script <cs_>`_ as a superuser.
@@ -81,7 +81,7 @@ def start_manager(host, console_script_path, *, ssh_username=None, ssh_password=
         The policy to use when connecting to servers without a known host key. If
         :data:`None` then uses :class:`~paramiko.client.AutoAddPolicy`.
     paramiko_kwargs : :class:`dict`, optional
-        Additional keyword arguments that are passed to :func:`.connect`.
+        Additional keyword arguments that are passed to :func:`ssh.connect <.connect>`.
     kwargs
         The keyword arguments in :func:`~msl.network.manager.run_forever`, and if
         that `console script <cs>`_ also starts :class:`~msl.network.service.Service`\\s
@@ -124,9 +124,10 @@ def start_manager(host, console_script_path, *, ssh_username=None, ssh_password=
             break
 
         if time.time() - t0 > timeout:
-            # just to avoid getting stuck forever
-            # don't raise an error, maybe the Manager is running by the time a Client tries to connect
-            # if the Manager is not running then the Client will get an error when trying to connect
+            # Just to avoid getting stuck forever.
+            # Don't raise an error, maybe the Manager is running by the time
+            # a Client tries to connect if the Manager is not running then
+            # the Client will get an error when trying to connect.
             break
 
     ssh_client.close()
@@ -149,14 +150,14 @@ def connect(host, *, username=None, password=None, timeout=10, missing_host_key_
     password : :class:`str`, optional
         The password to use to establish the SSH_ connection. If :data:`None`
         then you will be asked for the `password`.
-    timeout : :class:`float`, optional
+    timeout : :class:`int` or :class:`float`, optional
         The maximum number of seconds to wait for the SSH_ connection.
     missing_host_key_policy : :class:`~paramiko.client.MissingHostKeyPolicy`, optional
         The policy to use when connecting to servers without a known host key. If
         :data:`None` then uses :class:`~paramiko.client.AutoAddPolicy`.
     kwargs
         Additional keyword arguments that are passed to
-        :meth:`~paramiko.client.SSHClient.connect`.
+        :meth:`SSHClient.connect <paramiko.client.SSHClient.connect>`.
 
     Returns
     -------
@@ -201,7 +202,7 @@ def exec_command(ssh_client, command, *, timeout=10):
         See also :func:`.connect`.
     command : :class:`str`
         The command to execute on the remote computer.
-    timeout : :class:`float`, optional
+    timeout : :class:`int` or :class:`float`, optional
         The maximum number of seconds to wait for the command to finish.
 
     Raises
