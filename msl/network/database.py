@@ -24,7 +24,7 @@ class Database(object):
     def __init__(self, database, **kwargs):
         """Base class for connecting to a SQLite database.
 
-        Automatically creates the database if does not already exist.
+        Automatically creates the database if it does not already exist.
 
         Parameters
         ----------
@@ -197,14 +197,15 @@ class ConnectionsTable(Database):
         self.connection.commit()
 
     def insert(self, peer, message):
-        """Insert a message about what happened to the connection of the device.
+        """Insert a message about what happened when a device connected.
 
         Parameters
         ----------
         peer : :class:`~msl.network.manager.Peer`
             The peer that connected to the Network :class:`~msl.network.manager.Manager`.
         message : :class:`str`
-            The message about what happened.
+            The message about what happened (e.g, the connection was successful
+            or it failed).
         """
         now = datetime.now().replace(microsecond=0).isoformat(sep='T')
         self.execute('INSERT INTO {} VALUES(NULL, ?, ?, ?, ?, ?);'.format(self.NAME),
@@ -215,7 +216,7 @@ class ConnectionsTable(Database):
         """Return the information of the devices that have connected to the
         Network :class:`~msl.network.manager.Manager`.
 
-        .. versionchanged:: 0.6
+        .. versionchanged:: 1.0
            Use ``T`` as the separator between the date and time.
            Renamed `timestamp1` to `start`.
            Renamed `timestamp2` to `end`.
@@ -274,11 +275,11 @@ class HostnamesTable(Database):
         self.connection.commit()
 
         if not self.hostnames():
-            for hostname in localhost_aliases():
+            for hostname in LOCALHOST_ALIASES:
                 self.insert(hostname)
 
     def insert(self, hostname):
-        """Insert the hostname.
+        """Insert a hostname.
 
         If the hostname is already in the table then it does not insert it again.
 
@@ -292,12 +293,12 @@ class HostnamesTable(Database):
         self.connection.commit()
 
     def delete(self, hostname):
-        """Delete the hostname.
+        """Delete a hostname.
 
         Parameters
         ----------
         hostname : :class:`str`
-            The trusted hostname.
+            A hostname in the table.
 
         Raises
         ------
@@ -323,7 +324,7 @@ class UsersTable(Database):
 
     def __init__(self, *, database=None, **kwargs):
         """The database table for keeping information about a users login credentials
-        for connecting to the Network :class:`~msl.network.manager.Manager`.
+        for connecting to a Network :class:`~msl.network.manager.Manager`.
 
         Parameters
         ----------
@@ -443,7 +444,7 @@ class UsersTable(Database):
         self.connection.commit()
 
     def delete(self, username):
-        """Delete the user.
+        """Delete a user.
 
         Parameters
         ----------
