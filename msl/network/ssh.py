@@ -3,8 +3,8 @@ Helper functions for connecting to a remote computer via SSH_.
 
 Follow these `instructions <https://winscp.net/eng/docs/guide_windows_openssh_server>`_
 to install/enable an SSH_ server on Windows. You can also create an SSH_ server using the
-`paramiko <http://docs.paramiko.org/en/2.4/api/server.html>`_ package (which is included
-when **MSL-Network** is installed).
+`paramiko <https://docs.paramiko.org/en/stable/api/server.html>`_ package (which is included
+when MSL-Network is installed).
 
 The two functions :func:`.start_manager` and :func:`.parse_console_script_kwargs`
 are meant to be used together to automatically start a Network
@@ -14,7 +14,7 @@ are meant to be used together to automatically start a Network
 See :ref:`ssh-example` for an example on how to start a :class:`~msl.network.service.Service`
 on a Raspberry Pi from another computer.
 
-.. _SSH: https://www.ssh.com/ssh/
+.. _SSH: https://www.ssh.com/academy/ssh
 """
 import sys
 import time
@@ -25,7 +25,6 @@ import warnings
 import paramiko
 from cryptography.utils import CryptographyDeprecationWarning
 
-from .exceptions import MSLNetworkError
 from .constants import NETWORK_MANAGER_RUNNING_PREFIX
 from .json import (
     serialize,
@@ -110,7 +109,7 @@ def start_manager(host, console_script_path, *, ssh_username=None, ssh_password=
     while True:
         try:
             stdout = exec_command(ssh_client, 'cat ' + logfile)  # cat is for *nix
-        except MSLNetworkError:
+        except RuntimeError:
             stdout = exec_command(ssh_client, 'type ' + logfile)  # type is for Windows
 
         for line in stdout:
@@ -119,7 +118,7 @@ def start_manager(host, console_script_path, *, ssh_username=None, ssh_password=
                 break
             if 'ERROR' in line or 'Error:' in line:
                 ssh_client.close()
-                raise MSLNetworkError('Cannot start Manager\n\n' + '\n'.join(stdout))
+                raise RuntimeError('Cannot start Manager\n\n' + '\n'.join(stdout))
 
         if success:
             break
@@ -207,7 +206,7 @@ def exec_command(ssh_client, command, *, timeout=10):
 
     Raises
     ------
-    ~msl.network.exceptions.MSLNetworkError
+    RuntimeError
         If an error occurred. Either a timeout or stderr on the remote computer
         contains text from executing the `command`.
 
@@ -221,11 +220,11 @@ def exec_command(ssh_client, command, *, timeout=10):
         lines = stdout.readlines()
     except socket.timeout:
         ssh_client.close()
-        raise MSLNetworkError('\nTimeout executing SSH command: {!r}'.format(command)) from None
+        raise RuntimeError(f'\nTimeout executing SSH command: {command!r}') from None
     else:
         error_message = ''.join(stderr.readlines())
         if error_message:
             ssh_client.close()
-            raise MSLNetworkError('\n' + error_message)
+            raise RuntimeError('\n' + error_message)
 
     return [line.rstrip('\n') for line in lines]
