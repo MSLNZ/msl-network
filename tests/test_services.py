@@ -290,7 +290,7 @@ def test_max_clients():
     manager = conftest.Manager(Echo)
     cxn = connect(**manager.kwargs)
     spawns, links = [], []
-    for i in range(40):  # pretend that 40 == infinity (approximately the limit for macOS)
+    for i in range(30):  # pretend that 30 == infinity (limit for macOS seems to be about 40)
         spawns.append(cxn.spawn('Client%d' % i))
         links.append(spawns[-1].link('Echo'))
         assert links[-1].echo(i)[0][0] == i
