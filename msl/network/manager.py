@@ -28,6 +28,7 @@ from .constants import (
     NETWORK_MANAGER_RUNNING_PREFIX,
     NOTIFICATION_UUID,
     SHUTDOWN_MANAGER,
+    LOCALHOST_ALIASES,
 )
 from .database import (
     ConnectionsTable,
@@ -38,7 +39,6 @@ from .utils import (
     logger,
     parse_terminal_input,
     ensure_root_path,
-    localhost_aliases,
     _ipv4_regex,
 )
 

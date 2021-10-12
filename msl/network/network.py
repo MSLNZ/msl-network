@@ -16,8 +16,15 @@ from .constants import (
 from .cryptography import get_ssl_context
 from .utils import (
     logger,
-    localhost_aliases,
-    si_seconds,
+    _is_manager_regex,
+)
+from .json import (
+    deserialize,
+    serialize
+)
+from .constants import (
+    LOCALHOST_ALIASES,
+    HOSTNAME
 )
 
 

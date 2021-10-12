@@ -1,15 +1,12 @@
 """
-Common functions used by **MSL-Network**.
+Common functions used by MSL-Network.
 """
 import re
 import os
 import ast
 import logging
 
-from .constants import (
-    HOSTNAME,
-    DISCONNECT_REQUEST,
-)
+from .constants import DISCONNECT_REQUEST
 
 _args_regex = re.compile(r'[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
 
@@ -152,39 +149,3 @@ def parse_terminal_input(line):
                 'uuid': '',
                 'error': False,
             }
-
-
-def localhost_aliases():
-    """:class:`tuple` of :class:`str`: Aliases for ``localhost``."""
-    return (
-        HOSTNAME,
-        'localhost',
-        '127.0.0.1',
-        '::1',
-        '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
-        '1.0.0.127.in-addr.arpa',
-    )
-
-
-def si_seconds(number, decimals=1):
-    """Convert a number, in seconds, to have an SI prefix.
-
-    Parameters
-    ----------
-    number : :class:`float`
-        A number in seconds.
-    decimals : :class:`int`, optional
-        The number of decimal places to show.
-
-    Returns
-    -------
-    :class:`str`
-        The scaled number with the appropriate SI prefix.
-    """
-    # this is really primitive implementation
-    if number < 1e-3:
-        return '{0:.{1}f} us'.format(number * 1e6, decimals)
-    elif number < 1:
-        return '{0:.{1}f} ms'.format(number * 1e3, decimals)
-    return '{0:.{1}f} s'.format(number, decimals)
-

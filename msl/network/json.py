@@ -5,16 +5,6 @@ This module is used as the JSON_ (de)serializer.
 """
 import os
 from enum import Enum
-from time import perf_counter
-
-from .utils import (
-    logger,
-    si_seconds,
-)
-from .constants import (
-    TERMINATION,
-    ENCODING,
-)
 
 
 class Package(Enum):
