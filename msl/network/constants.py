@@ -7,10 +7,10 @@ import socket
 
 PORT = 1875
 """:class:`int`: The default port number to use for the Network :class:`~msl.network.manager.Manager` 
-(the year that the `BIPM <https://www.bipm.org/en/about-us/>`_ was established)."""
+(the year that the `BIPM <https://www.bipm.org/en/home>`_ was established)."""
 
 HOSTNAME = socket.gethostname()
-""":class:`str`: The hostname of the Network :class:`~msl.network.manager.Manager`."""
+""":class:`str`: The hostname of the computer."""
 
 # If this module is run via "sudo python" on a Raspberry Pi the value of
 # os.path.expanduser('~') becomes '/root' instead of '/home/pi'. On Linux using
