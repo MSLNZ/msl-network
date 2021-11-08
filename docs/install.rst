@@ -43,7 +43,7 @@ read the documentation of :class:`msl.network.json.Package`.
 
 .. _MSL Package Manager: https://msl-package-manager.readthedocs.io/en/stable/
 .. _PEP492: https://www.python.org/dev/peps/pep-0492/
-.. _cryptography: https://cryptography.io/en/latest/
+.. _cryptography: https://cryptography.io/en/stable/
 .. _JSON: https://www.json.org/
 .. _UltraJSON: https://pypi.python.org/pypi/ujson/
 .. _RapidJSON: https://pypi.python.org/pypi/python-rapidjson/
