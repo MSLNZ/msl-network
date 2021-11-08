@@ -38,10 +38,10 @@ Dependencies
 
 Documentation
 -------------
-The documentation for MSL-Network can be found `here <https://msl-network.readthedocs.io/en/latest/index.html>`_.
+The documentation for MSL-Network can be found `here <https://msl-network.readthedocs.io/en/stable/>`_.
 
-.. |docs| image:: https://readthedocs.org/projects/msl-network/badge/?version=latest
-   :target: https://msl-network.readthedocs.io/en/latest/
+.. |docs| image:: https://readthedocs.org/projects/msl-network/badge/?version=stable
+   :target: https://msl-network.readthedocs.io/en/stable/
    :alt: Documentation Status
 
 .. |pypi| image:: https://badge.fury.io/py/msl-network.svg
