@@ -32,7 +32,7 @@ Alternatively, using the `MSL Package Manager`_ run::
 
 Dependencies
 ++++++++++++
-* Python 3.5+
+* Python 3.6+
 * cryptography_
 * paramiko_
 
