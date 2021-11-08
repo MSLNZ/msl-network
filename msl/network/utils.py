@@ -78,7 +78,7 @@ def parse_terminal_input(line):
             'attribute': 'identity',
             'args': [],
             'kwargs': {},
-            'uuid': '',
+            'uid': '',
             'error': False,
         }
     elif line_lower.startswith('client'):
@@ -97,7 +97,7 @@ def parse_terminal_input(line):
             'attribute': DISCONNECT_REQUEST,
             'args': [],
             'kwargs': {},
-            'uuid': '',
+            'uid': '',
             'error': False,
         }
     elif line_lower.startswith('link'):
@@ -106,7 +106,7 @@ def parse_terminal_input(line):
             'attribute': 'link',
             'args': [line[4:].strip().replace('"', '')],
             'kwargs': {},
-            'uuid': '',
+            'uid': '',
             'error': False,
         }
     else:
@@ -130,7 +130,7 @@ def parse_terminal_input(line):
                 'attribute': attribute,
                 'args': [],
                 'kwargs': {},
-                'uuid': '',
+                'uid': '',
                 'error': False,
             }
         else:
@@ -146,6 +146,6 @@ def parse_terminal_input(line):
                 'attribute': attribute,
                 'args': args,
                 'kwargs': kwargs,
-                'uuid': '',
+                'uid': '',
                 'error': False,
             }

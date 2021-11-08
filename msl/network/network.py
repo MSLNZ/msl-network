@@ -219,7 +219,7 @@ class Network(object):
         writer.write(f'{serialize(message)}\r\n'.encode('utf-8'))
         await writer.drain()
 
-    async def _write_result(self, result, *, requester=None, uuid='', writer=None,
+    async def _write_result(self, result, *, requester=None, uid='', writer=None,
                             **ignored):
         """Write a result message to the stream.
 
@@ -229,8 +229,8 @@ class Network(object):
             The result of a request. Must be a JSON-serializable object.
         requester : :class:`str`, optional
             The name of the device that sent the request.
-        uuid : :class:`str`, optional
-            The universally unique identifier of the request.
+        uid : :class:`str`, optional
+            The unique identifier of the request.
         writer : :class:`asyncio.StreamWriter`, optional
             The writer to use to write the data. If not specified then uses
             the writer of this class.
@@ -239,11 +239,11 @@ class Network(object):
             'error': False,
             'requester': requester,
             'result': result,
-            'uuid': uuid
+            'uid': uid
         }
         await self._write(data, writer=writer)
 
-    async def _write_error(self, error, *, requester=None, uuid='', writer=None,
+    async def _write_error(self, error, *, requester=None, uid='', writer=None,
                            **ignored):
         """Write an error message to the stream.
 
@@ -253,8 +253,8 @@ class Network(object):
             An exception object.
         requester : :class:`str`, optional
             The name of the device that sent the request.
-        uuid : :class:`str`, optional
-            The universally unique identifier of the request.
+        uid : :class:`str`, optional
+            The unique identifier of the request.
         writer : :class:`asyncio.StreamWriter`, optional
             The writer to use to write the data. If not specified then uses
             the writer of this class.
@@ -266,7 +266,7 @@ class Network(object):
             'requester': requester,
             'result': None,
             'traceback': [] if e.startswith('NoneType:') else e.splitlines(),
-            'uuid': uuid
+            'uid': uid
         }
         await self._write(data, writer=writer)
 

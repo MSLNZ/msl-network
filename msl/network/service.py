@@ -12,7 +12,7 @@ from .constants import (
     PORT,
     SHUTDOWN_SERVICE,
     DISCONNECT_REQUEST,
-    NOTIFICATION_UUID,
+    NOTIFICATION_UID,
 )
 from .utils import logger
 from .network import Device
@@ -95,9 +95,9 @@ class Service(Device):
             'error': False,
             'result': [args, kwargs],
             'service': self._name,
-            'uuid': NOTIFICATION_UUID
+            'uid': NOTIFICATION_UID
         }
-        self._queue.put_nowait((NOTIFICATION_UUID, notification))
+        self._queue.put_nowait((NOTIFICATION_UID, notification))
 
     def ignore_attributes(self, *names):
         """Ignore attributes from being added to the
@@ -309,7 +309,7 @@ class Service(Device):
     async def _send_responses(self):
         # FIFO queue to send responses to a Manager
         logger.debug('start responses loop (consumer)')
-        notification = NOTIFICATION_UUID
+        notification = NOTIFICATION_UID
         while True:
             request, response = await self._queue.get()
             if request is None:

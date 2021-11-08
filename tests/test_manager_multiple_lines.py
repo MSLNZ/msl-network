@@ -6,7 +6,7 @@ import threading
 import conftest
 
 from msl.network import connect
-from msl.network.constants import NOTIFICATION_UUID
+from msl.network.constants import NOTIFICATION_UID
 from msl.examples.network import Echo
 
 TERMINATION = b'\r\n'
@@ -47,7 +47,7 @@ def test_from_service():
                     'attributes': {'multiple': ''},
                 },
                 'requester': request['requester'],
-                'uuid': request['uuid'],
+                'uid': request['uid'],
             }).encode() + TERMINATION)
 
             # receive the request from the Client
@@ -56,18 +56,18 @@ def test_from_service():
                 'error': False,
                 'result': 'the request was a success!',
                 'requester': request['requester'],
-                'uuid': request['uuid']}).encode()
+                'uid': request['uid']}).encode()
             notify1 = json.dumps({
                 'error': False,
                 'result': [[1], {'a': 1}],
                 'service': name,
-                'uuid': NOTIFICATION_UUID,
+                'uid': NOTIFICATION_UID,
             }).encode()
             notify2 = json.dumps({
                 'error': False,
                 'result': [[2], {'b': 2}],
                 'service': name,
-                'uuid': NOTIFICATION_UUID,
+                'uid': NOTIFICATION_UID,
             }).encode()
             sock.sendall(notify1 + TERMINATION + notify2 + TERMINATION + response + TERMINATION)
 

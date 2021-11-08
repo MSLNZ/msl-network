@@ -44,7 +44,7 @@ DEFAULT_YEARS_VALID = 100 if sys.maxsize > 2**32 else 15
 
 NETWORK_MANAGER_RUNNING_PREFIX = 'Network Manager running on'
 
-NOTIFICATION_UUID = 'notification'
+NOTIFICATION_UID = 'notification'
 
 SHUTDOWN_SERVICE = 'shutdown_service'
 

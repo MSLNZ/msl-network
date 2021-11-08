@@ -39,6 +39,7 @@ Version 1.0.0.dev0 (in development)
 
 - Changed
 
+  * renamed ``uuid`` to be ``uid`` in the JSON format
   * making an asynchronous request now returns a :class:`concurrent.futures.Future` instance
     instead of an :class:`asyncio.Future` instance
   * :class:`~msl.network.client.Client` and :class:`~msl.network.service.Service`

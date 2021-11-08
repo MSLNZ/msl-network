@@ -14,7 +14,7 @@ import uuid
 
 from .constants import (
     DISCONNECT_REQUEST,
-    NOTIFICATION_UUID,
+    NOTIFICATION_UID,
     PORT,
     SHUTDOWN_MANAGER,
     SHUTDOWN_SERVICE,
@@ -412,7 +412,7 @@ class Client(Device):
             'error': False,
             'kwargs': kwargs,
             'service': service,
-            'uuid': uid
+            'uid': uid
         }
         future = Future()
         future.request = f'{service}.{attribute}'
@@ -480,7 +480,7 @@ class Client(Device):
 
             # consume response
             response = deserialize(line)
-            future = self._futures.pop(response['uuid'], None)
+            future = self._futures.pop(response['uid'], None)
 
             if response['error']:
                 message = [f'Manager[{self._address_manager}] returned '
@@ -504,16 +504,16 @@ class Client(Device):
                 future.set_exception(exception)
             elif future is not None:
                 future.set_result(response['result'])
-            elif response['uuid'] == NOTIFICATION_UUID:
+            elif response['uid'] == NOTIFICATION_UID:
                 # TODO might want to execute this in an Executor
                 for link in self._links:
                     if link.service_name == response['service']:
                         args, kwargs = response['result']
                         link.notification_handler(*args, **kwargs)
-            elif not response['uuid']:
+            elif not response['uid']:
                 # if the Manager makes a request (e.g., the username or
                 # password when a Client makes an admin request) then
-                # the uuid is an empty string
+                # the uid is an empty string
                 if 'result' in response:
                     _, future = self._futures.popitem()
                     assert future.request.startswith('Manager.')
@@ -538,7 +538,7 @@ class Client(Device):
             try:
                 await self._write(request)  # produce request
             except Exception as e:
-                future = self._futures.pop(request['uuid'])
+                future = self._futures.pop(request['uid'])
                 future.set_exception(e)
             finally:
                 self._queue.task_done()

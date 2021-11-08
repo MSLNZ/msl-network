@@ -25,7 +25,7 @@ from .constants import (
     DATABASE,
     DISCONNECT_REQUEST,
     NETWORK_MANAGER_RUNNING_PREFIX,
-    NOTIFICATION_UUID,
+    NOTIFICATION_UID,
     SHUTDOWN_MANAGER,
     LOCALHOST_ALIASES,
 )
@@ -365,7 +365,7 @@ class Manager(Network):
 
             if 'result' in data:
                 # then data is a reply or notification from a Service so send it to the Client(s)
-                if data['uuid'] == NOTIFICATION_UUID:
+                if data['uid'] == NOTIFICATION_UID:
                     # emit the notification from the Service to all linked Clients
                     logger.info('%r emitted a notification', data['service'])
                     for client_address in self.service_links[data['service']]:
@@ -386,19 +386,19 @@ class Manager(Network):
             elif data['service'] == 'Manager':
                 # then the Client is requesting something from the Manager
                 if data['attribute'] == 'identity':
-                    await self._write_result(self.identity(), requester=reader_name, uuid=data['uuid'], writer=writer)
+                    await self._write_result(self.identity(), requester=reader_name, uid=data['uid'], writer=writer)
                 elif data['attribute'] == 'link':
                     try:
-                        await self.link(writer, data.get('uuid', ''), data['args'][0])
+                        await self.link(writer, data.get('uid', ''), data['args'][0])
                     except Exception as e:
                         logger.error('%s: %s', e.__class__.__name__, e)
-                        await self._write_error(e, requester=reader_name, uuid=data.get('uuid', ''), writer=writer)
+                        await self._write_error(e, requester=reader_name, uid=data.get('uid', ''), writer=writer)
                 elif data['attribute'] == 'unlink':
                     try:
-                        await self.unlink(writer, data.get('uuid', ''), data['args'][0])
+                        await self.unlink(writer, data.get('uid', ''), data['args'][0])
                     except Exception as e:
                         logger.error('%s: %s', e.__class__.__name__, e)
-                        await self._write_error(e, requester=reader_name, uuid=data.get('uuid', ''), writer=writer)
+                        await self._write_error(e, requester=reader_name, uid=data.get('uid', ''), writer=writer)
                 else:
                     # the peer needs administrative rights to send any other request to the Manager
                     logger.info('received an admin request %r from %s', data['attribute'], reader_name)
@@ -430,7 +430,7 @@ class Manager(Network):
                             reply = attrib(*data['args'], **data['kwargs'])
                         else:
                             reply = attrib
-                        # do not include the uuid in the reply
+                        # do not include the uid in the reply
                         await self._write_result(reply, requester=reader_name, writer=writer)
                     except Exception as e:
                         logger.error('%s: %s', e.__class__.__name__, e)
@@ -529,7 +529,7 @@ class Manager(Network):
         the Network :class:`Manager`."""
         return self._identity
 
-    async def link(self, writer, uuid, service):
+    async def link(self, writer, uid, service):
         """A request from a :class:`~msl.network.client.Client` to link it
         with a :class:`~msl.network.service.Service`.
 
@@ -537,8 +537,8 @@ class Manager(Network):
         ----------
         writer : :class:`asyncio.StreamWriter`
             The stream writer of the :class:`~msl.network.client.Client`.
-        uuid : :class:`str`
-            The universally unique identifier of the request.
+        uid : :class:`str`
+            The unique identifier of the request.
         service : :class:`str`
             The name of the :class:`~msl.network.service.Service` that the
             :class:`~msl.network.client.Client` wants to link with.
@@ -549,24 +549,24 @@ class Manager(Network):
         except KeyError:
             msg = f'the {service!r} service does not exist, cannot link with {writer_name}'
             logger.info(msg)
-            await self._write_error(KeyError(msg), requester=writer_name, uuid=uuid, writer=writer)
+            await self._write_error(KeyError(msg), requester=writer_name, uid=uid, writer=writer)
         else:
             if writer_name in self.service_links[service]:
                 # a Client wants to re-link with the same Service
                 logger.info('re-linked %s with %r', writer_name, service)
-                await self._write_result(identity, requester=writer_name, uuid=uuid, writer=writer)
+                await self._write_result(identity, requester=writer_name, uid=uid, writer=writer)
             elif identity['max_clients'] <= 0 or len(self.service_links[service]) < identity['max_clients']:
                 self.service_links[service].add(writer_name)
                 logger.info('linked %s with %r', writer_name, service)
-                await self._write_result(identity, requester=writer_name, uuid=uuid, writer=writer)
+                await self._write_result(identity, requester=writer_name, uid=uid, writer=writer)
             else:
                 join = '\n  '.join(self.service_links[service])
                 msg = f'The maximum number of Clients are already linked with {service!r}\n' \
                       f'The linked Clients are:\n  {join}'
                 logger.info(msg)
-                await self._write_error(PermissionError(msg), requester=writer_name, uuid=uuid, writer=writer)
+                await self._write_error(PermissionError(msg), requester=writer_name, uid=uid, writer=writer)
 
-    async def unlink(self, writer, uuid, service):
+    async def unlink(self, writer, uid, service):
         """A request from a :class:`~msl.network.client.Client` to unlink it
         from a :class:`~msl.network.service.Service`.
 
@@ -576,8 +576,8 @@ class Manager(Network):
         ----------
         writer : :class:`asyncio.StreamWriter`
             The stream writer of the :class:`~msl.network.client.Client`.
-        uuid : :class:`str`
-            The universally unique identifier of the request.
+        uid : :class:`str`
+            The unique identifier of the request.
         service : :class:`str`
             The name of the :class:`~msl.network.service.Service` that the
             :class:`~msl.network.client.Client` wants to unlink from.
@@ -588,17 +588,17 @@ class Manager(Network):
         except KeyError:
             msg = f'{service!r} service does not exist, cannot unlink {writer_name} from it'
             logger.info(msg)
-            await self._write_error(KeyError(msg), requester=writer_name, uuid=uuid, writer=writer)
+            await self._write_error(KeyError(msg), requester=writer_name, uid=uid, writer=writer)
         else:
             try:
                 network_names.remove(writer_name)
             except KeyError:
                 msg = f'cannot unlink {writer_name}, it was not linked with {service!r}'
                 logger.info(msg)
-                await self._write_error(KeyError(msg), requester=writer_name, uuid=uuid, writer=writer)
+                await self._write_error(KeyError(msg), requester=writer_name, uid=uid, writer=writer)
             else:
                 logger.info('unlinked %s from %r', writer_name, service)
-                await self._write_result(True, requester=writer_name, uuid=uuid, writer=writer)
+                await self._write_result(True, requester=writer_name, uid=uid, writer=writer)
 
     async def write_request(self, writer, attribute, *args, **kwargs):
         """Write a request to a :class:`~msl.network.client.Client` or to a
@@ -623,7 +623,7 @@ class Manager(Network):
                 'error': False,
                 'kwargs': kwargs,
                 'requester': self._network_name,
-                'uuid': '',
+                'uid': '',
             },
             writer=writer
         )

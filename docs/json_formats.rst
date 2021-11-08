@@ -29,15 +29,16 @@ A :class:`~msl.network.client.Client` must **send a request** with the following
       "error": false
       "kwargs": name-value pairs (keyword arguments to be passed to the method of the Manager or Service)
       "service": string (the name of the Service, or "Manager" if the request is for the Manager)
-      "uuid": string (a universally unique identifier of the request)
+      "uid": string (a unique identifier of the request)
     }
 
-The `uuid <https://en.wikipedia.org/wiki/Universally_unique_identifier>`_ is only used by the
-:class:`~msl.network.client.Client`. The :class:`~msl.network.manager.Manager` simply forwards the unique id
-to the :class:`~msl.network.service.Service` which just includes the unique id in its reply. Therefore, the value
-can be anything that you want it to be (provided that it does not contain the ``"\r\n"`` sequence and it cannot
-be equal to ``"notification"`` since this is a reserved uuid). The uuid is useful when keeping track of which
-reply corresponds with which request when executing asynchronous requests.
+The unique identifier (uid) is only used by the :class:`~msl.network.client.Client`. The
+:class:`~msl.network.manager.Manager` simply forwards the unique identifier to the
+:class:`~msl.network.service.Service` which just includes the unique identifier in its reply.
+Therefore, the value can be anything that you want it to be (provided that it does not contain the
+``"\r\n"`` sequence and it cannot be equal to ``"notification"`` since this is a reserved identifier).
+The unique identifier is useful when keeping track of which reply corresponds with which request when
+executing asynchronous requests.
 
 A :class:`~msl.network.client.Client` will also have to **send a reply** to a :class:`~msl.network.manager.Manager`
 during the connection procedure (i.e., when sending the :obj:`~msl.network.network.Network.identity` of the
@@ -52,10 +53,10 @@ To send a reply to the :class:`~msl.network.manager.Manager` use the following J
       "error": false (can be omitted)
       "requester": string (can be omitted)
       "result": object (the reply from the Client)
-      "uuid": string (can be omitted)
+      "uid": string (can be omitted)
     }
 
-You only need to include the "result" name-value pair in the reply. The "error", "requester" and "uuid"
+You only need to include the "result" name-value pair in the reply. The "error", "requester" and "uid"
 name-value pairs can be omitted, or anything you want, since they are not used by the
 :class:`~msl.network.manager.Manager` to process the reply from a :class:`~msl.network.client.Client`.
 However, including these additional name-value pairs provides symmetry with the way a
@@ -80,7 +81,7 @@ will be:
       "error": false
       "kwargs": name-value pairs (keyword arguments to be passed to the method of the Client)
       "requester": string (the address of the Network Manager)
-      "uuid": string (an empty string)
+      "uid": string (an empty string)
     }
 
 If the bytes received represent a reply from a :class:`~msl.network.service.Service` then the JSON_ object will be:
@@ -91,7 +92,7 @@ If the bytes received represent a reply from a :class:`~msl.network.service.Serv
       "error": false
       "requester": string (the address of the Client that made the request)
       "result": object (the reply from the Service)
-      "uuid": string (the universally unique identifier of the request)
+      "uid": string (the unique identifier of the request)
     }
 
 If the bytes received represent an error then the JSON_ object will be:
@@ -104,7 +105,7 @@ If the bytes received represent an error then the JSON_ object will be:
       "requester": string (the address of the device that made the request)
       "result": null
       "traceback": array of strings (a detailed stack trace of the error)
-      "uuid": string
+      "uid": string
     }
 
 A :class:`~msl.network.service.Service` can also emit a notification to all
@@ -118,7 +119,7 @@ A :class:`~msl.network.service.Service` can also emit a notification to all
       "error": false
       "result": array (a 2-element list of [args, kwargs], e.g., [[1, 2, 3], {"x": 4, "y": 5}])
       "service": string (the name of the Service that emitted the notification)
-      "uuid": "notification"
+      "uid": "notification"
     }
 
 .. _service-format:
@@ -139,7 +140,7 @@ object will be:
       "requester": string (the address of the Manager)
       "result": null
       "traceback": array of strings (a detailed stack trace of the error)
-      "uuid": string (an empty string)
+      "uid": string (an empty string)
     }
 
 If the bytes received represent a request from the :class:`~msl.network.manager.Manager` or a
@@ -153,7 +154,7 @@ If the bytes received represent a request from the :class:`~msl.network.manager.
       "error": false
       "kwargs": name-value pairs (keyword arguments to be passed to the method of the Service)
       "requester": string (the address of the device that made the request)
-      "uuid": string (the universally unique identifier of the request)
+      "uid": string (the unique identifier of the request)
     }
 
 A :class:`~msl.network.service.Service` will **send a response** in 1 of 2 JSON_ representations.
@@ -168,7 +169,7 @@ If the :class:`~msl.network.service.Service` raised an exception then the JSON_ 
       "requester": string (the address of the device that made the request)
       "result": null
       "traceback": array of strings (a detailed stack trace of the error)
-      "uuid": string (the universally unique identifier of the request)
+      "uid": string (the unique identifier of the request)
     }
 
 If the :class:`~msl.network.service.Service` successfully executed the request then the JSON_ object will be:
@@ -179,7 +180,7 @@ If the :class:`~msl.network.service.Service` successfully executed the request t
       "error": false
       "requester": string (the address of the device that made the request)
       "result": object (the reply from the Service)
-      "uuid": string (the universally unique identifier of the request)
+      "uid": string (the unique identifier of the request)
     }
 
 A :class:`~msl.network.service.Service` can also emit a notification to all
@@ -193,7 +194,7 @@ A :class:`~msl.network.service.Service` can also emit a notification to all
       "error": false
       "result": array (a 2-element list of [args, kwargs], e.g., [[1, 2, 3], {"x": 4, "y": 5}])
       "service": string (the name of the Service that emitted the notification)
-      "uuid": "notification"
+      "uid": "notification"
     }
 
 .. _JSON: https://www.json.org/
