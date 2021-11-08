@@ -50,13 +50,13 @@ The documentation for MSL-Network can be found `here <https://msl-network.readth
 .. |github tests| image:: https://github.com/MSLNZ/msl-network/actions/workflows/run-tests.yml/badge.svg
    :target: https://github.com/MSLNZ/msl-network/actions/workflows/run-tests.yml
 
-.. _Manager: https://msl-network.readthedocs.io/en/latest/_api/msl.network.manager.html
-.. _Client: https://msl-network.readthedocs.io/en/latest/_api/msl.network.client.html#msl.network.client.Client
-.. _Service: https://msl-network.readthedocs.io/en/latest/_api/msl.network.service.html
-.. _Concurrency and Asynchronous Programming: https://msl-network.readthedocs.io/en/latest/concurrency_async.html#concurrent-asynchronous
+.. _Manager: https://msl-network.readthedocs.io/en/stable/_api/msl.network.manager.html
+.. _Client: https://msl-network.readthedocs.io/en/stable/_api/msl.network.client.html#msl.network.client.Client
+.. _Service: https://msl-network.readthedocs.io/en/stable/_api/msl.network.service.html
+.. _Concurrency and Asynchronous Programming: https://msl-network.readthedocs.io/en/stable/concurrency_async.html#concurrent-asynchronous
 .. _JSON: https://www.json.org/
-.. _JSON Formats: https://msl-network.readthedocs.io/en/latest/json_formats.html#json-formats
-.. _Connecting from a Terminal: https://msl-network.readthedocs.io/en/latest/terminal_input.html#terminal-input
-.. _MSL Package Manager: https://msl-package-manager.readthedocs.io/en/latest/
-.. _cryptography: https://cryptography.io/en/latest/
-.. _paramiko: http://www.paramiko.org/
+.. _JSON Formats: https://msl-network.readthedocs.io/en/stable/json_formats.html#json-formats
+.. _Connecting from a Terminal: https://msl-network.readthedocs.io/en/stable/terminal_input.html#terminal-input
+.. _MSL Package Manager: https://msl-package-manager.readthedocs.io/en/stable/
+.. _cryptography: https://cryptography.io/en/stable/
+.. _paramiko: https://www.paramiko.org/
