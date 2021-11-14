@@ -97,10 +97,8 @@ class Database(object):
             Only required if the `sql` command is parameterized.
         """
         if parameters is None:
-            logger.debug(sql)
             self._cursor.execute(sql)
         else:
-            logger.debug('%s %s', sql, parameters)
             self._cursor.execute(sql, parameters)
 
     def tables(self):
