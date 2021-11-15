@@ -425,8 +425,8 @@ class Device(Network):
 
         # authenticate
         try:
-            loop.run_until_complete(
-                asyncio.wait_for(self._authenticate(), kwargs['timeout']))
+            line = loop.run_until_complete(
+                asyncio.wait_for(self._reader.readline(), kwargs['timeout']))
         except asyncio.TimeoutError:
             msg = 'The connection to {host}:{port} was not established after ' \
                   '{timeout} second(s)'.format(**kwargs)
@@ -434,6 +434,8 @@ class Device(Network):
                 msg += '\nYou have TLS disabled. Perhaps the Manager is ' \
                        'using TLS for the connection.'
             raise ConnectionError(msg) from None
+        else:
+            loop.run_until_complete(self._authenticate(line))
 
         return loop
 
@@ -459,17 +461,18 @@ class Device(Network):
             self._loop.close()
             logger.info('disconnected from Manager[%s]', self._address_manager)
 
-    async def _authenticate(self):
+    async def _authenticate(self, line):
         # The Manager may ask for a username/password and will always request
         # the identity of the connecting device
         logger.debug('start authentication')
         while True:
-            request = deserialize(await self._reader.readline())
+            request = deserialize(line)
             if request['error']:
                 raise ValueError(request['message'])
             identified = await self._handle_manager_request(request)
             if identified:
                 break
+            line = await self._reader.readline()
         logger.debug('finish authentication')
 
     async def _gather(self):
