@@ -34,7 +34,7 @@ The following shows how to send a request to the :ref:`myarray-service-source`. 
 
 .. code-block:: console
 
-   python -c "from msl.examples.network import MyArray; MyArray().start()"
+   python -c "from msl.examples.network import MyArray; MyArray().start(disable_tls=True)"
 
 On the front panel of ``MyArray_client.vi`` you need to enter the *address* and *port* values that the
 Network :class:`~msl.network.manager.Manager` is running on (see above). The *Service name* and *function name* values
