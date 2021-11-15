@@ -459,7 +459,13 @@ class Device(Network):
             self._loop.run_until_complete(self._queue.join())
             self._writer.close()
             self._loop.close()
-            logger.info('disconnected from Manager[%s]', self._address_manager)
+            try:
+                logger.info('disconnected from Manager[%s]', self._address_manager)
+            except (NameError, ValueError):
+                # These errors could occur when Python is exiting
+                #   ValueError: I/O operation on closed file
+                #   NameError: name 'open' is not defined
+                pass
 
     async def _authenticate(self, line):
         # The Manager may ask for a username/password and will always request

@@ -81,8 +81,9 @@ class Database(object):
             self._connection = None
             try:
                 logger.debug('closed %s', self._path)
-            except NameError:
-                # This error could occur when Python is exiting
+            except (NameError, ValueError):
+                # These errors could occur when Python is exiting
+                #   ValueError: I/O operation on closed file
                 #   NameError: name 'open' is not defined
                 pass
 
