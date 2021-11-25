@@ -19,12 +19,12 @@ examples below, do not use any authentication, i.e., run
 
    msl-network start --disable-tls
 
-The *address* and *port* number that the Network :class:`~msl.network.manager.Manager` is running on will
+The *hostname* and *port* number that the Network :class:`~msl.network.manager.Manager` is running on will
 be displayed. These values will need to be entered in the front panel of the VI's shown below.
 
 .. code-block:: console
 
-   ... [INFO ] msl.network - Network Manager running on <address>:<port> (TLS DISABLED)
+   ... [INFO ] msl.network - Network Manager running on <hostname>:<port> (TLS DISABLED)
 
 Client
 ------
@@ -36,7 +36,7 @@ The following shows how to send a request to the :ref:`myarray-service-source`. 
 
    python -c "from msl.examples.network import MyArray; MyArray().start(disable_tls=True)"
 
-On the front panel of ``MyArray_client.vi`` you need to enter the *address* and *port* values that the
+On the front panel of ``MyArray_client.vi`` you need to enter the *hostname* and *port* values that the
 Network :class:`~msl.network.manager.Manager` is running on (see above). The *Service name* and *function name* values
 on the front panel do not need to be changed for this example. By changing the values of the *start*, *stop* and *n*
 parameters the *result* array will be populated when you run the VI.
@@ -54,7 +54,7 @@ Service
 The ``service_template.vi`` file is a template to use for creating a new Service. The controls on the front panel
 of the VI are as follows:
 
-* *Network Manager IP Address or Hostname* and *Network Manager port*: The *address* and *port* values that
+* *Network Manager IP Address or Hostname* and *Network Manager port*: The *hostname* and *port* values that
   the Network :class:`~msl.network.manager.Manager` is running on (see above).
 
 * *timeout ms*: The maximum number of milliseconds to wait to connect to the Network
