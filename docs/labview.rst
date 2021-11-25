@@ -105,7 +105,7 @@ to the *Adder* Service
 .. code-block:: pycon
 
    >>> from msl.network import connect
-   >>> cxn = connect(host='the hostname or IP address of the computer that the Manager is running on')
+   >>> cxn = connect(host='the hostname or IP address of the Manager', disable_tls=True)
 
 establish a link with the *Adder* Service
 
