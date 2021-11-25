@@ -68,11 +68,7 @@ def test_defaults():
      {'password': 'ss', 'size': 2048, 'algorithm': 'SHA256', 'years_valid': 2},
      {'password': None, 'size': 1024, 'algorithm': 'SHA384', 'years_valid': 3},
      {'password': None, 'size': 4096, 'algorithm': 'SHA512', 'years_valid': 4},
-     {'password': None, 'size': 2048, 'algorithm': 'MD5', 'years_valid': 5},
-     {'password': None, 'size': 2048, 'algorithm': 'SHA3_224', 'years_valid': 6},
-     {'password': 'abc', 'size': 512, 'algorithm': 'SHA3_256', 'years_valid': 7},
-     {'password': None, 'size': 2048, 'algorithm': 'SHA3_384', 'years_valid': 8},
-     {'password': None, 'size': 2048, 'algorithm': 'SHA3_512', 'years_valid': 9}]
+     {'password': None, 'size': 2048, 'algorithm': 'MD5', 'years_valid': 5}]
 )
 def test_rsa(kwargs):
     key_file, cert_file = remove_files()
