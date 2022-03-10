@@ -65,8 +65,6 @@ class Service(Device):
             else:
                 self.ignore_attributes(*ignore_attributes)
 
-        self._identity = self._generate_identity()
-
     @property
     def max_clients(self):
         """:class:`int`: The maximum number of :class:`~msl.network.client.Client`\\s
@@ -149,6 +147,7 @@ class Service(Device):
                 'A Manager cannot be started using multiple authentication methods.'
             )
 
+        self._identity = self._generate_identity()
         self._loop = self._create_connection(**kwargs)
         if self._loop is None:
             # then the user chose to not accept the SSL certificate
