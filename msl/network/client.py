@@ -497,9 +497,7 @@ class Client(Device):
                     # to a Manager's request. Since an admin_request cannot
                     # be sent asynchronously the last future must be a
                     # request for a Manager
-                    print(response)
                     _, future = self._futures.popitem()
-                    print(future.request)
                     assert future.request.startswith('Manager.')
                 future.set_exception(exception)
             elif future is not None:
