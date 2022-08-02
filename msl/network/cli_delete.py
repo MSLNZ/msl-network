@@ -106,7 +106,7 @@ def execute(args):
         # returns a bool for whether to proceed with the deletion
         if args.yes:
             return True
-        yn = input('Proceed ([y]/n)? ')
+        yn = input('Proceed (Y/n)? ')
         if not yn or yn.lower() in ['y', 'yes']:
             return True
         stdout('Okay, not deleting')
@@ -126,9 +126,9 @@ def execute(args):
         # try to delete the file
         try:
             os.remove(path)
-            stdout('Deleted: {}'.format(path))
+            stdout('[Deleted] {}'.format(path))
         except OSError as e:
-            stdout('OSError: {} -- Cannot delete {}'.format(e, path))
+            stdout('[OSError] {} -- Cannot delete {}'.format(e, path))
 
     def search(directory, extn):
         # find all files in a directory
