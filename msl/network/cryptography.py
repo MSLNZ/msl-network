@@ -145,7 +145,7 @@ def generate_certificate(*, path=None, key_path=None, key_password=None,
     key_password : :class:`str`, optional
         The password to use to decrypt the private key.
     algorithm : :class:`str` or :class:`~cryptography.hazmat.primitives.hashes.HashAlgorithm`, optional
-        The hash algorithm to use. See :doc:`hazmat/primitives/cryptographic-hashes`
+        The hash algorithm to use. See :ref:`hazmat/primitives/cryptographic-hashes:message digests (hashing)`
         for allowed hash algorithms.
     years_valid : :class:`int` or :class:`float`, optional
         The number of years that the certificate is valid for. If you want to
@@ -265,7 +265,7 @@ def get_fingerprint(cert, *, algorithm='SHA1', digest_size=None):
     cert : :class:`~cryptography.x509.Certificate`
         The PEM certificate.
     algorithm : :class:`str` or :class:`~cryptography.hazmat.primitives.hashes.HashAlgorithm`, optional
-        The hash algorithm to use. See :doc:`hazmat/primitives/cryptographic-hashes`
+        The hash algorithm to use. See :ref:`hazmat/primitives/cryptographic-hashes:message digests (hashing)`
         for allowed hash algorithms.
     digest_size : :class:`int`, optional
         The digest size (if the hash `algorithm` requires one).
