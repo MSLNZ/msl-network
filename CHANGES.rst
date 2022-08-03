@@ -7,6 +7,7 @@ Version 1.0.0.dev0 (in development)
 
 - Added
 
+  * ability to specify the `host` to use when starting a :class:`~msl.network.manager.Manager`
   * support for Python 3.9 and 3.10
   * :func:`~msl.network.network.Network.set_logging_level` to be able to set the
     logging level at runtime
@@ -31,14 +32,15 @@ Version 1.0.0.dev0 (in development)
   * the ``digest_size`` keyword argument to
     :func:`~msl.network.cryptography.generate_certificate` and
     :func:`~msl.network.cryptography.get_fingerprint`
-  * the ``name`` keyword argument to
+  * the ``name`` and ``extensions`` keyword arguments to
     :func:`~msl.network.cryptography.generate_certificate`,
-  * the ``algorithm`` keyword argument in
-    :func:`~msl.network.cryptography.get_fingerprint`
-    can now also be of type :class:`str`
+  * ``**kwargs`` to :func:`~msl.network.cryptography.get_ssl_context`
 
 - Changed
 
+  * the value of the ``algorithm`` keyword argument in
+    :func:`~msl.network.cryptography.get_fingerprint`
+    can now also be of type :class:`str`
   * renamed ``uuid`` to be ``uid`` in the JSON format
   * making an asynchronous request now returns a :class:`concurrent.futures.Future` instance
     instead of an :class:`asyncio.Future` instance
@@ -61,6 +63,8 @@ Version 1.0.0.dev0 (in development)
     a :class:`~msl.network.database.ConnectionsTable`
   * rename the keyword arguments ``timestamp1`` to ``start`` and ``timestamp2``
     to ``end`` in :meth:`~msl.network.database.ConnectionsTable.connections`
+  * the default filename for the certificate and key files now use ``'localhost'``
+    instead of the value of `HOSTNAME`
 
 - Fixed
 
