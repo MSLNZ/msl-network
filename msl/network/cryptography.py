@@ -457,7 +457,7 @@ def get_metadata_as_string(cert):
     return '\n'.join(details)
 
 
-def get_ssl_context(*, cert_file=None, host=None, port=None, auto_save=False):
+def get_ssl_context(*, cert_file=None, host=None, port=None, auto_save=False, **kwargs):
     """Get the SSL context.
 
     Gets the context either from connecting to a remote server or from loading
@@ -471,7 +471,7 @@ def get_ssl_context(*, cert_file=None, host=None, port=None, auto_save=False):
 
     .. versionchanged:: 1.0
        Renamed `certfile` to `cert_file`.
-       Added the `auto_save` keyword argument.
+       Added the `auto_save` keyword argument and `**kwargs`.
 
     Parameters
     ----------
@@ -485,6 +485,9 @@ def get_ssl_context(*, cert_file=None, host=None, port=None, auto_save=False):
     auto_save : :class:`bool`, optional
         Whether to automatically save the certificate from the server.
         Default is to ask before saving.
+    **kwargs
+        All additional keyword arguments are passed to
+        :func:`ssl.get_server_certificate`.
 
     Returns
     -------
@@ -503,10 +506,7 @@ def get_ssl_context(*, cert_file=None, host=None, port=None, auto_save=False):
     if host is None or port is None:
         raise ValueError('Must specify the host and port or the cert_file')
 
-    # TODO Starting from Python 3.10 the ssl.get_server_certificate()
-    #  function will accept a timeout argument so a `timeout` kwarg
-    #  could be added to get_ssl_context()
-    cert_data = ssl.get_server_certificate((host, port)).encode()
+    cert_data = ssl.get_server_certificate((host, port), **kwargs).encode()
 
     cert = load_certificate(cert_data)
     fingerprint = get_fingerprint(cert)

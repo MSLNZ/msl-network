@@ -347,12 +347,15 @@ class Device(Network):
         # get SSL context
         context = None
         if not kwargs['disable_tls']:
+            # In Python 3.10, ssl.get_server_certificate() accepts a timeout parameter
+            kws = {'timeout': kwargs['timeout']} if sys.version_info[:2] >= (3, 10) else {}
             try:
                 cert_file, context = get_ssl_context(
                     cert_file=kwargs['cert_file'],
                     host=kwargs['host'],
                     port=kwargs['port'],
-                    auto_save=kwargs['auto_save']
+                    auto_save=kwargs['auto_save'],
+                    **kws
                 )
             except OSError as error:
                 e = str(error)
