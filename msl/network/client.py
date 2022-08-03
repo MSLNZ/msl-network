@@ -618,7 +618,7 @@ class Link(object):
         .. invisible-code-block: pycon
 
            >>> import pytest
-           >>> pytest.skip(reason='skip notification_handler example')
+           >>> pytest.skip('skip notification_handler example')
 
         The following assumes that the :ref:`heartbeat-service-source` is running
         on the same computer
