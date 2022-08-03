@@ -621,7 +621,7 @@ class Link(object):
            >>> pytest.skip('skip notification_handler example')
 
         The following assumes that the :ref:`heartbeat-service-source` is running
-        on the same computer. Using :class:`types.MethodType` allows for the
+        on the same computer. Using :obj:`types.MethodType` allows for the
         `print_notification` function to access the `self` attribute of `heartbeat`.
 
         >>> import types
