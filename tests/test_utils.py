@@ -204,3 +204,8 @@ def test_ipv4_regex():
     assert search('1.2.3.4') is not None
     assert search('localhost') is None
     assert search('en.wikipedia.org') is None
+    assert search('1111.2.3.4') is None
+    assert search('1.2222.3.4') is None
+    assert search('1.2.3333.4') is None
+    assert search('1.2.3.4444') is None
+    assert search('1.2.3.4.5') is None
