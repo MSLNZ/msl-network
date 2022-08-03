@@ -14,7 +14,7 @@ _kwargs_regex = re.compile(r'(\w+)[\s]*=[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
 
 _is_manager_regex = re.compile(r'^Manager\[\S+:\d+]$')
 
-_ipv4_regex = re.compile(r'\d+\.\d+\.\d+\.\d+')
+_ipv4_regex = re.compile(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}')
 
 _oid_regex = re.compile(r'oid=(.+), name=(.+)\)')
 
