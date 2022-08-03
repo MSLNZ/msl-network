@@ -220,7 +220,7 @@ class Network(object):
         await writer.drain()
 
     async def _write_result(self, result, *, requester=None, uid='', writer=None,
-                            **ignored):
+                            **ignored):  # noqa
         """Write a result message to the stream.
 
         Parameters
@@ -244,7 +244,7 @@ class Network(object):
         await self._write(data, writer=writer)
 
     async def _write_error(self, error, *, requester=None, uid='', writer=None,
-                           **ignored):
+                           **ignored):  # noqa
         """Write an error message to the stream.
 
         Parameters

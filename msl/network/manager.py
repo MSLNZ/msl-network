@@ -159,40 +159,40 @@ class Manager(Network):
         :class:`bool`
             Whether the login credentials are valid.
         """
-        logger.info('%s verifying login credentials from %s', self, writer.peer.address)
-        logger.debug('%s verifying login username from %s', self, writer.peer.address)
+        logger.info('%s verifying login credentials from %s', self, writer.peer.address)  # noqa
+        logger.debug('%s verifying login username from %s', self, writer.peer.address)  # noqa
         await self.write_request(writer, 'username', self._network_name)
         username = await self.get_handshake_data(reader)
         if not username:  # then the connection closed prematurely
-            logger.info('%s connection closed before receiving the username', reader.peer.address)
-            self.connections_table.insert(reader.peer, 'connection closed before receiving the username')
+            logger.info('%s connection closed before receiving the username', reader.peer.address)  # noqa
+            self.connections_table.insert(reader.peer, 'connection closed before receiving the username')  # noqa
             return False
 
         user = self.users_table.is_user_registered(username)
         if not user:
-            logger.error('%s sent an unregistered username, closing connection', reader.peer.address)
-            self.connections_table.insert(reader.peer, 'rejected: unregistered user')
+            logger.error('%s sent an unregistered username, closing connection', reader.peer.address)  # noqa
+            self.connections_table.insert(reader.peer, 'rejected: unregistered user')  # noqa
             await self._write_error(ValueError('Unregistered user'), requester=self._network_name, writer=writer)
             await self.close_writer(writer)
             return False
 
-        logger.debug('%s verifying login password from %s', self, writer.peer.address)
+        logger.debug('%s verifying login password from %s', self, writer.peer.address)  # noqa
         await self.write_request(writer, 'password', username)
         password = await self.get_handshake_data(reader)
 
         if not password:  # then the connection closed prematurely
-            logger.info('%s connection closed before receiving the password', reader.peer.address)
-            self.connections_table.insert(reader.peer, 'connection closed before receiving the password')
+            logger.info('%s connection closed before receiving the password', reader.peer.address)  # noqa
+            self.connections_table.insert(reader.peer, 'connection closed before receiving the password')  # noqa
             return False
 
         if self.users_table.is_password_valid(username, password):
-            logger.debug('%s sent the correct login password', reader.peer.address)
+            logger.debug('%s sent the correct login password', reader.peer.address)  # noqa
             # writer.peer.is_admin points to the same location in memory so its value also gets updated
-            reader.peer.is_admin = self.users_table.is_admin(username)
+            reader.peer.is_admin = self.users_table.is_admin(username)  # noqa
             return True
 
-        logger.info('%s sent the wrong login password, closing connection', reader.peer.address)
-        self.connections_table.insert(reader.peer, 'rejected: wrong login password')
+        logger.info('%s sent the wrong login password, closing connection', reader.peer.address)  # noqa
+        self.connections_table.insert(reader.peer, 'rejected: wrong login password')  # noqa
         await self._write_error(ValueError('Wrong login password'), requester=self._network_name, writer=writer)
         await self.close_writer(writer)
         return False
@@ -212,20 +212,20 @@ class Manager(Network):
         :class:`bool`
             Whether the correct password was received.
         """
-        logger.info('%s requesting password from %s', self, writer.peer.address)
+        logger.info('%s requesting password from %s', self, writer.peer.address)  # noqa
         await self.write_request(writer, 'password', self._network_name)
         password = await self.get_handshake_data(reader)
         if not password:  # then the connection closed prematurely
-            logger.info('%s connection closed before receiving the password', reader.peer.address)
-            self.connections_table.insert(reader.peer, 'connection closed before receiving the password')
+            logger.info('%s connection closed before receiving the password', reader.peer.address)  # noqa
+            self.connections_table.insert(reader.peer, 'connection closed before receiving the password')  # noqa
             return False
 
         if password == self.password:
-            logger.debug('%s sent the correct password', reader.peer.address)
+            logger.debug('%s sent the correct password', reader.peer.address)  # noqa
             return True
 
-        logger.info('%s sent the wrong Manager password, closing connection', reader.peer.address)
-        self.connections_table.insert(reader.peer, 'rejected: wrong Manager password')
+        logger.info('%s sent the wrong Manager password, closing connection', reader.peer.address)  # noqa
+        self.connections_table.insert(reader.peer, 'rejected: wrong Manager password')  # noqa
         await self._write_error(ValueError('Wrong Manager password'),
                                 requester=self._network_name, writer=writer)
         await self.close_writer(writer)
@@ -247,7 +247,7 @@ class Manager(Network):
             If the identity check was successful then returns the connection type,
             either ``'client'`` or ``'service'``, otherwise returns :data:`None`.
         """
-        logger.info('%s requesting identity from %s', self, writer.peer.address)
+        logger.info('%s requesting identity from %s', self, writer.peer.address)  # noqa
         await self.write_request(writer, 'identity')
         identity = await self.get_handshake_data(reader)
 
@@ -256,44 +256,44 @@ class Manager(Network):
         elif isinstance(identity, str):
             identity = parse_terminal_input(identity)
 
-        logger.debug('%s has identity %s', reader.peer.address, identity)
+        logger.debug('%s has identity %s', reader.peer.address, identity)  # noqa
 
         try:
             # writer.peer.network_name points to the same location in memory so its value also gets updated
-            reader.peer.network_name = f'{identity["name"]}[{reader.peer.address}]'
+            reader.peer.network_name = f'{identity["name"]}[{reader.peer.address}]'  # noqa
 
             typ = identity['type'].lower()
             if typ == 'client':
-                self.clients[reader.peer.network_name] = {
+                self.clients[reader.peer.network_name] = {  # noqa
                     'name': identity['name'],
-                    'address': reader.peer.address,
+                    'address': reader.peer.address,  # noqa
                     'language': identity.get('language', 'unknown'),
                     'os': identity.get('os', 'unknown'),
                 }
-                self.client_writers[reader.peer.network_name] = writer
-                logger.info('%s is a new Client connection', reader.peer.network_name)
+                self.client_writers[reader.peer.network_name] = writer  # noqa
+                logger.info('%s is a new Client connection', reader.peer.network_name)  # noqa
             elif typ == 'service':
                 if identity['name'] in self.services:
                     raise NameError(f'A {identity["name"]!r} service is already running on the Manager')
                 self.services[identity['name']] = {
                     'attributes': identity['attributes'],
-                    'address': reader.peer.address,
+                    'address': reader.peer.address,  # noqa
                     'language': identity.get('language', 'unknown'),
                     'os': identity.get('os', 'unknown'),
                     'max_clients': identity.get('max_clients', -1),
                 }
                 self.service_writers[identity['name']] = writer
                 self.service_links[identity['name']] = set()
-                logger.info('%s is a new Service connection', reader.peer.network_name)
+                logger.info('%s is a new Service connection', reader.peer.network_name)  # noqa
             else:
                 raise TypeError(f'Unknown connection type {typ!r}. Must be "client" or "service"')
 
-            self.connections_table.insert(reader.peer, f'connected as a {typ}')
+            self.connections_table.insert(reader.peer, f'connected as a {typ}')  # noqa
             return typ
 
         except (TypeError, KeyError, NameError) as e:
-            logger.info('%s sent an invalid identity, closing connection', reader.peer.address)
-            self.connections_table.insert(reader.peer, 'rejected: invalid identity')
+            logger.info('%s sent an invalid identity, closing connection', reader.peer.address)  # noqa
+            self.connections_table.insert(reader.peer, 'rejected: invalid identity')  # noqa
             await self._write_error(e, requester=self._network_name, writer=writer)
             await self.close_writer(writer)
             return None
@@ -316,15 +316,15 @@ class Manager(Network):
         except (ConnectionError, UnicodeDecodeError):
             # then most likely the connection was for a certificate request, or,
             # the connection is trying to use a certificate and the Manage has TLS disabled
-            logger.info('%s connection closed prematurely', reader.peer.address)
-            self.connections_table.insert(reader.peer, 'connection closed prematurely')
+            logger.info('%s connection closed prematurely', reader.peer.address)  # noqa
+            self.connections_table.insert(reader.peer, 'connection closed prematurely')  # noqa
             return None
 
         try:
             # ideally the response from the connected device will be in
             # the required JSON format
             return deserialize(data)['result']
-        except:
+        except:  # noqa
             # however, if connecting via a terminal, e.g. openssl s_client, then it is convenient
             # to not manually type the JSON format and let the Manager parse the raw input
             return data
@@ -340,8 +340,8 @@ class Manager(Network):
         writer : :class:`asyncio.StreamWriter`
             The stream writer.
         """
-        reader_name = reader.peer.network_name
-        writer_name = writer.peer.network_name
+        reader_name = reader.peer.network_name  # noqa
+        writer_name = writer.peer.network_name  # noqa
         while True:
             try:
                 line = await reader.readline()
@@ -374,7 +374,7 @@ class Manager(Network):
                         try:
                             self.client_writers[client_address].write(line)
                             await self.client_writers[client_address].drain()
-                        except:
+                        except:  # noqa
                             logger.info('%s is no longer available to send the notification to',
                                         client_address)
                 elif data['requester'] is None:
@@ -383,7 +383,7 @@ class Manager(Network):
                     try:
                         self.client_writers[data['requester']].write(line)
                         await self.client_writers[data['requester']].drain()
-                    except:
+                    except:  # noqa
                         logger.info('%s is no longer available to send the reply to', data['requester'])
             elif data['service'] == 'Manager':
                 # then the Client is requesting something from the Manager
@@ -404,9 +404,9 @@ class Manager(Network):
                 else:
                     # the peer needs administrative rights to send any other request to the Manager
                     logger.info('received an admin request %r from %s', data['attribute'], reader_name)
-                    if not reader.peer.is_admin:
+                    if not reader.peer.is_admin:  # noqa
                         await self.check_user(reader, writer)
-                        if not reader.peer.is_admin:
+                        if not reader.peer.is_admin:  # noqa
                             await self._write_error(
                                 ValueError('You must be an administrator to send this request to the Manager'),
                                 requester=reader_name,
@@ -429,7 +429,7 @@ class Manager(Network):
                     try:
                         # send the reply back to the Client
                         if callable(attrib):
-                            reply = attrib(*data['args'], **data['kwargs'])
+                            reply = attrib(*data['args'], **data['kwargs'])  # noqa
                         else:
                             reply = attrib
                         # do not include the uid in the reply
@@ -462,7 +462,7 @@ class Manager(Network):
         writer : :class:`asyncio.StreamWriter`
             The stream writer of the peer.
         """
-        name = writer.peer.network_name
+        name = writer.peer.network_name  # noqa
         if id_type == 'client':
             try:
                 del self.clients[name]
@@ -476,11 +476,11 @@ class Manager(Network):
                 if name in client_addresses:
                     try:
                         await self.unlink(writer, '', service_name)
-                    except:
+                    except:  # noqa
                         pass
         else:
             for service in self.services:
-                if self.services[service]['address'] == writer.peer.address:
+                if self.services[service]['address'] == writer.peer.address:  # noqa
                     try:
                         del self.service_links[service]
                         del self.services[service]
@@ -509,8 +509,8 @@ class Manager(Network):
             writer.close()
         except ConnectionResetError:
             pass
-        logger.info('%s connection closed', writer.peer.network_name)
-        self.connections_table.insert(writer.peer, 'disconnected')
+        logger.info('%s connection closed', writer.peer.network_name)  # noqa
+        self.connections_table.insert(writer.peer, 'disconnected')  # noqa
 
     async def shutdown_manager(self):
         """
@@ -545,7 +545,7 @@ class Manager(Network):
             The name of the :class:`~msl.network.service.Service` that the
             :class:`~msl.network.client.Client` wants to link with.
         """
-        writer_name = writer.peer.network_name
+        writer_name = writer.peer.network_name  # noqa
         try:
             identity = self.services[service]
         except KeyError:
@@ -584,7 +584,7 @@ class Manager(Network):
             The name of the :class:`~msl.network.service.Service` that the
             :class:`~msl.network.client.Client` wants to unlink from.
         """
-        writer_name = writer.peer.network_name
+        writer_name = writer.peer.network_name  # noqa
         try:
             network_names = self.service_links[service]
         except KeyError:
@@ -986,7 +986,7 @@ def _create_manager_and_loop(
         elif cert_file is not None and key_file is None:
             pass  # assume that the certificate file also contains the private key
 
-        context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
+        context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)  # noqa
         context.load_cert_chain(cert_file, keyfile=key_file, password=key_file_password)
         logger.info('loaded certificate %s', cert_file)
 

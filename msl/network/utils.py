@@ -67,7 +67,7 @@ def parse_terminal_input(line):
         else:
             try:
                 return ast.literal_eval(val)
-            except:
+            except:  # noqa
                 return val
 
     line = line.strip()

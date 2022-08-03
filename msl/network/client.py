@@ -98,7 +98,7 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=10,
     """
     kwargs = locals()
     client = Client(name)
-    client._start(**kwargs)
+    client._start(**kwargs)  # noqa
     return client
 
 
@@ -201,7 +201,7 @@ class Client(Device):
            >>> ut.insert('Charlie', 'charlie', False)
            >>> ut.insert('Eve', 'eve', False)
            >>> ut.close()
-           >>> kwargs = manager.kwargs
+           >>> kwargs = manager.kwargs  # noqa
 
         >>> from msl.network import connect
         >>> cxn = connect(**kwargs)
@@ -556,7 +556,7 @@ class Link(object):
         self._client = client
         self._service_name = service
         self._service_identity = identity
-        self._request = client._new_request
+        self._request = client._new_request  # noqa
         logger.debug('linked with %s[%s]', service, identity['address'])
 
     @property
@@ -686,7 +686,7 @@ class Link(object):
         Whatever the ``shutdown_service`` method of the :class:`~msl.network.service.Service` returns.
         """
         out = self._request(self._service_name, SHUTDOWN_SERVICE, *args, **kwargs)
-        self._client._links.remove(self)
+        self._client._links.remove(self)  # noqa
         self._client = None
         return out
 
@@ -711,7 +711,7 @@ class Link(object):
             return f'<Un-Linked from {self.service_name}[{self.service_address}]>'
         else:
             return f'<Link with {self.service_name}[{self.service_address}] ' \
-                   f'at Manager[{self._client._address_manager}]>'
+                   f'at Manager[{self._client._address_manager}]>'  # noqa
 
     def __getattr__(self, item):
         if self._client is None:
@@ -924,7 +924,7 @@ class LinkedClient(object):
         def request(*args, **kwargs):
             try:
                 return getattr(self._link, item)(*args, **kwargs)
-            except:
+            except:  # noqa
                 self.service_error_handler()
                 raise
         return request

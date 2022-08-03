@@ -72,7 +72,7 @@ def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve=
         key = dsa.generate_private_key(size)
     elif algorithm_u == 'ECC':
         curve_u = curve.upper()
-        types = {k.upper(): v for k, v in ec._CURVE_TYPES.items()}  # yep, access the private dict
+        types = {k.upper(): v for k, v in ec._CURVE_TYPES.items()}  # noqa yep, access the private dict
         try:
             curve_class = types[curve_u]
         except KeyError:
@@ -335,7 +335,7 @@ def get_metadata(cert):
 
     meta = dict()
     meta['version'] = cert.version.name
-    meta['serial_number'] = to_hex_string(cert.serial_number)
+    meta['serial_number'] = to_hex_string(cert.serial_number)  # noqa
     meta['valid_from'] = cert.not_valid_before
     meta['valid_to'] = cert.not_valid_after
     meta['fingerprint'] = get_fingerprint(cert)
@@ -349,7 +349,7 @@ def get_metadata(cert):
         meta['key']['curve'] = key.curve.name
         meta['key']['size'] = key.curve.key_size
         try:
-            # This try..except block fixes the following::
+            # This try-except block fixes the following::
             #   CryptographyDeprecationWarning: encode_point has been deprecated on ElliptcCurvePublicNumbers
             #   and will be removed in a future version. Please use EllipticCurvePublicKey.public_bytes to
             #   obtain both compressed and uncompressed point encoding.
@@ -363,14 +363,14 @@ def get_metadata(cert):
         meta['key']['encryption'] = 'RSA'
         meta['key']['exponent'] = key.public_numbers().e
         meta['key']['size'] = key.key_size
-        meta['key']['modulus'] = to_hex_string(key.public_numbers().n)
+        meta['key']['modulus'] = to_hex_string(key.public_numbers().n)  # noqa
     elif issubclass(key.__class__, dsa.DSAPublicKey):
         meta['key']['encryption'] = 'DSA'
         meta['key']['size'] = key.key_size
-        meta['key']['y'] = to_hex_string(key.public_numbers().y)
-        meta['key']['p'] = to_hex_string(key.public_numbers().parameter_numbers.p)
-        meta['key']['q'] = to_hex_string(key.public_numbers().parameter_numbers.q)
-        meta['key']['g'] = to_hex_string(key.public_numbers().parameter_numbers.g)
+        meta['key']['y'] = to_hex_string(key.public_numbers().y)  # noqa
+        meta['key']['p'] = to_hex_string(key.public_numbers().parameter_numbers.p)  # noqa
+        meta['key']['q'] = to_hex_string(key.public_numbers().parameter_numbers.q)  # noqa
+        meta['key']['g'] = to_hex_string(key.public_numbers().parameter_numbers.g)  # noqa
     else:
         raise NotImplementedError('Unsupported public key {}'.format(key.__class__.__name__))
 
@@ -510,7 +510,7 @@ def get_ssl_context(*, cert_file=None, host=None, port=None, auto_save=False):
 
     cert = load_certificate(cert_data)
     fingerprint = get_fingerprint(cert)
-    name = cert.signature_algorithm_oid._name
+    name = cert.signature_algorithm_oid._name  # noqa
 
     if not auto_save:
         p1 = 'The certificate for {host} is not cached in the registry. ' \

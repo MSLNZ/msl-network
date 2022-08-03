@@ -173,7 +173,7 @@ def test_ensure_root():
     assert not os.path.isdir(dirname)
 
     # these should not raise an error (nor create any directories)
-    utils.ensure_root_path(None)
+    utils.ensure_root_path(None)  # noqa
     utils.ensure_root_path('')
 
 

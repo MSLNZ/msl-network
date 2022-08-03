@@ -17,7 +17,7 @@ home = os.path.join(root_dir, 'network')
 os.makedirs(home)
 os.environ['MSL_NETWORK_HOME'] = home
 
-from msl.network import (
+from msl.network import (  # noqa
     connect,
     constants,
     cryptography,
