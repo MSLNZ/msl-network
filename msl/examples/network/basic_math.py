@@ -33,29 +33,29 @@ class BasicMath(Service):
     def pi(self) -> float:
         return 3.141592653589793
 
-    def add(self, x:number, y:number) -> number:
+    def add(self, x: number, y: number) -> number:
         time.sleep(1)
         return x + y
 
-    def subtract(self, x:number, y:number) -> number:
+    def subtract(self, x: number, y: number) -> number:
         time.sleep(2)
         return x - y
 
-    def multiply(self, x:number, y:number) -> number:
+    def multiply(self, x: number, y: number) -> number:
         time.sleep(3)
         return x * y
 
-    def divide(self, x:number, y:number) -> number:
+    def divide(self, x: number, y: number) -> number:
         time.sleep(4)
         return x / float(y)
 
-    def ensure_positive(self, x:number) -> bool:
+    def ensure_positive(self, x: number) -> bool:
         time.sleep(5)
         if x < 0:
             raise ValueError('The value is < 0')
         return True
 
-    def power(self, x:number, n=2) -> number:
+    def power(self, x: number, n=2) -> number:
         time.sleep(6)
         return x ** n
 
