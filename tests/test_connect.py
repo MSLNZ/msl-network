@@ -132,7 +132,7 @@ def test_tls_enabled():
 
 @pytest.mark.parametrize(
     'host',
-    [constants.HOSTNAME, 'localhost', '127.0.0.1', *constants.IPV4_ADDRESSES]
+    {constants.HOSTNAME, 'localhost', '127.0.0.1', *constants.IPV4_ADDRESSES}
 )
 def test_hostname_mismatch(host):
     a = cryptography.x509.NameAttribute
