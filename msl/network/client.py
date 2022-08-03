@@ -621,7 +621,8 @@ class Link(object):
            >>> pytest.skip('skip notification_handler example')
 
         The following assumes that the :ref:`heartbeat-service-source` is running
-        on the same computer
+        on the same computer. Using :class:`types.MethodType` allows for the
+        `print_notification` function to access the `self` attribute of `heartbeat`.
 
         >>> import types
         >>> from msl.network import connect
