@@ -339,10 +339,6 @@ class Device(Network):
         pass
 
     def _create_connection(self, **kwargs):
-        # Connect to a Manager
-        if kwargs['host'] in LOCALHOST_ALIASES:
-            kwargs['host'] = HOSTNAME
-
         self._address_manager = '{host}:{port}'.format(**kwargs)
         self._username = kwargs['username']
         self._password = kwargs['password']

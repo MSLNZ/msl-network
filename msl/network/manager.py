@@ -28,6 +28,8 @@ from .constants import (
     NOTIFICATION_UID,
     SHUTDOWN_MANAGER,
     LOCALHOST_ALIASES,
+    KEY_DIR,
+    CERT_DIR,
 )
 from .database import (
     ConnectionsTable,
@@ -662,9 +664,9 @@ class Peer(object):
 
 
 def run_forever(
-        *, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
-        database=None, disable_tls=False, cert_file=None, key_file=None,
-        key_file_password=None, log_level='INFO', log_file=None):
+        *, host=None, port=PORT, auth_hostname=False, auth_login=False,
+        auth_password=None, database=None, disable_tls=False, cert_file=None,
+        key_file=None, key_file_password=None, log_level='INFO', log_file=None):
     """Start the event loop for the Network :class:`.Manager`.
 
     This is a blocking call and it will not return until the event loop of
@@ -679,9 +681,13 @@ def run_forever(
        Renamed `logfile` to `log_file`.
        Removed the `debug` keyword argument.
        Added the `log_level` keyword argument.
+       Added the `host` keyword argument.
 
     Parameters
     ----------
+    host : :class:`str`, optional
+        The hostname or IP address to run the Network :class:`Manager` on.
+        If unspecified then all network interfaces are used.
     port : :class:`int`, optional
         The port number to run the Network :class:`Manager` on.
     auth_hostname : :class:`bool`, optional
@@ -730,7 +736,7 @@ def run_forever(
         the default file path.
     """
     output = _create_manager_and_loop(
-        port=port, auth_hostname=auth_hostname, auth_login=auth_login,
+        host=host, port=port, auth_hostname=auth_hostname, auth_login=auth_login,
         auth_password=auth_password, database=database,
         disable_tls=disable_tls, cert_file=cert_file, key_file=key_file,
         key_file_password=key_file_password, log_level=log_level, log_file=log_file
@@ -895,9 +901,9 @@ def filter_run_forever_kwargs(**kwargs):
 
 
 def _create_manager_and_loop(
-        *, port=PORT, auth_hostname=False, auth_login=False, auth_password=None,
-        database=None, disable_tls=False, cert_file=None, key_file=None,
-        key_file_password=None, log_level='INFO', log_file=None):
+        *, host=None, port=PORT, auth_hostname=False, auth_login=False,
+        auth_password=None, database=None, disable_tls=False, cert_file=None,
+        key_file=None, key_file_password=None, log_level='INFO', log_file=None):
 
     # set up logging -- FileHandler and StreamHandler
     if log_file is None:
@@ -957,17 +963,26 @@ def _create_manager_and_loop(
 
         # get the path to the certificate and to the private key
         if cert_file is None and key_file is None:
-            key_file = cryptography.get_default_key_path()
+            if host is None:
+                key_file = cryptography.get_default_key_path()
+                cert_file = cryptography.get_default_cert_path()
+            else:
+                key_file = os.path.join(KEY_DIR, f'{host}.key')
+                cert_file = os.path.join(CERT_DIR, f'{host}.crt')
+
             if not os.path.isfile(key_file):
                 cryptography.generate_key(path=key_file, password=key_file_password)
-            cert_file = cryptography.get_default_cert_path()
+
             if not os.path.isfile(cert_file):
-                cryptography.generate_certificate(path=cert_file, key_path=key_file,
-                                                  key_password=key_file_password)
+                cryptography.generate_certificate(
+                    path=cert_file, key_path=key_file, key_password=key_file_password
+                )
+
         elif cert_file is None and key_file is not None:
             # create (or overwrite) the default certificate to match the key
-            cert_file = cryptography.generate_certificate(key_path=key_file,
-                                                          key_password=key_file_password)
+            cert_file = cryptography.generate_certificate(
+                key_path=key_file, key_password=key_file_password)
+
         elif cert_file is not None and key_file is None:
             pass  # assume that the certificate file also contains the private key
 
@@ -1052,7 +1067,7 @@ def _create_manager_and_loop(
 
     try:
         server = loop.run_until_complete(
-            asyncio.start_server(manager.new_connection, port=port,
+            asyncio.start_server(manager.new_connection, host=host, port=port,
                                  ssl=context, limit=sys.maxsize)
         )
     except OSError as err:
@@ -1064,7 +1079,11 @@ def _create_manager_and_loop(
         return
 
     state = 'ENABLED' if context else 'DISABLED'
-    logger.info('%s %s:%d (TLS %s)', NETWORK_MANAGER_RUNNING_PREFIX, HOSTNAME, port, state)
+    logger.info('%s %s:%d (TLS %s)',
+                NETWORK_MANAGER_RUNNING_PREFIX,
+                host or HOSTNAME,
+                port,
+                state)
 
     return {
         'manager': manager,

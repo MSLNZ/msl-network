@@ -6,6 +6,13 @@ import conftest
 
 from msl.network import cli
 from msl.network.database import UsersTable
+from msl.network.constants import (
+    HOSTNAME,
+    IPV4_ADDRESSES,
+    NETWORK_MANAGER_RUNNING_PREFIX,
+    CERT_DIR,
+    KEY_DIR,
+)
 
 
 def process(command):
@@ -57,3 +64,38 @@ def test_invalid_log_level(capsys):
     process('start --log-level INVALID')
     _, err = capsys.readouterr()
     assert err.rstrip().endswith("ValueError: Cannot set logging level to 'INVALID'")
+
+
+@pytest.mark.parametrize('host', [None, HOSTNAME, 'localhost', '127.0.0.1', *IPV4_ADDRESSES])
+def test_host(host):
+    filename = host or 'localhost'
+    cert_file = os.path.join(CERT_DIR, f'{filename}.crt')
+    key_file = os.path.join(KEY_DIR, f'{filename}.key')
+
+    if os.path.isfile(cert_file):
+        os.remove(cert_file)
+    if os.path.isfile(key_file):
+        os.remove(key_file)
+
+    manager = conftest.Manager(host=host)
+    with open(manager.log_file, mode='rt') as fp:
+        lines = [line.rstrip() for line in fp.readlines()]
+
+    assert os.path.isfile(cert_file)
+    assert os.path.isfile(key_file)
+
+    manager.kwargs['cert_file'] = cert_file
+    manager.shutdown()
+
+    if host is None or host == 'localhost':
+        # the manager.shutdown() automatically deleted the files
+        assert not os.path.isfile(cert_file)
+        assert not os.path.isfile(key_file)
+    else:
+        os.remove(cert_file)
+        os.remove(key_file)
+
+    _host = host or HOSTNAME
+    text = f'{NETWORK_MANAGER_RUNNING_PREFIX} {_host}:{manager.port} (TLS ENABLED)'
+    assert lines[0].endswith(cert_file)
+    assert lines[-1].endswith(text)

@@ -102,6 +102,11 @@ def add_parser_start(parser):
         help='Start the Network Manager without using the TLS protocol.'
     )
     p.add_argument(
+        '-H', '--host',
+        help='The hostname or IP address to use for the Network Manager.\n'
+             'If unspecified then all network interfaces are used.'
+    )
+    p.add_argument(
         '-k', '--key-file',
         help='The path to the private key which was used to digitally\n'
              'sign the certificate. If omitted then the default key is\n'

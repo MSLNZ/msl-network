@@ -2,8 +2,10 @@
 Constants that are used by the MSL-Network package.
 """
 import os
+import re
 import sys
 import socket
+import subprocess
 
 PORT = 1875
 """:class:`int`: The default port number to use for the Network :class:`~msl.network.manager.Manager` 
@@ -50,6 +52,15 @@ SHUTDOWN_SERVICE = 'shutdown_service'
 
 SHUTDOWN_MANAGER = 'shutdown_manager'
 
+try:
+    IPV4_ADDRESSES = re.findall(
+        (r'IPv4\sAddress.+:\s+' if IS_WINDOWS else r'inet\s+') +
+        r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})',
+        subprocess.check_output('ipconfig' if IS_WINDOWS else 'ip -4 address').decode()
+    )
+except (subprocess.CalledProcessError, OSError):
+    IPV4_ADDRESSES = []
+
 LOCALHOST_ALIASES = (
     HOSTNAME,
     'localhost',
@@ -57,5 +68,6 @@ LOCALHOST_ALIASES = (
     '::1',
     '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
     '1.0.0.127.in-addr.arpa',
+    *IPV4_ADDRESSES,
 )
 """:class:`tuple` of :class:`str`: Aliases for ``localhost``."""

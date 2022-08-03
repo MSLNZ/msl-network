@@ -45,7 +45,7 @@ class Manager(object):
 
     def __init__(self, *service_classes, disable_tls=False, password_manager=None,
                  auth_login=True, auth_hostname=False, cert_common_name=None,
-                 add_heartbeat_task=False, read_limit=None, **kwargs):
+                 add_heartbeat_task=False, read_limit=None, host=None, **kwargs):
         """Starts the Network Manager and all specified Services to use for testing.
 
         Parameters
@@ -88,10 +88,16 @@ class Manager(object):
 
         # start the Network Manager in a subprocess
         command = [sys.executable, '-c', 'from msl.network import cli; cli.main()', 'start',
-                   '-p', str(self.port), '-c', self.cert_file, '-k', self.key_file, '-D', key_pw,
-                   '-d', self.database, '-l', self.log_file]
+                   '-p', str(self.port), '-d', self.database, '-l', self.log_file, '-D', key_pw]
         if disable_tls:
             command.append('--disable-tls')
+
+        if host is not None:
+            command.extend(['--host', host])
+            self.kwargs['host'] = host
+        else:
+            command.extend(['-c', self.cert_file, '-k', self.key_file])
+
         if password_manager:
             command.extend(['-P', password_manager])
         elif auth_hostname:

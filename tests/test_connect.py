@@ -12,7 +12,6 @@ from msl.network import (
     cryptography,
     constants,
 )
-from msl.network.constants import LOCALHOST_ALIASES
 
 
 def test_no_manager_no_certificate_localhost():
@@ -35,8 +34,7 @@ def test_no_manager_no_certificate_remotehost():
 def test_no_manager_timeout_asyncio():
     timeout = 0.5
     port = conftest.Manager.get_available_port()
-    match = r'Cannot connect to {}:{} within {} seconds$'.format(
-        constants.HOSTNAME, port, timeout)
+    match = f'Cannot connect to localhost:{port} within {timeout} seconds$'
     t0 = perf_counter()
     with pytest.raises(TimeoutError, match=match):
         connect(port=port, disable_tls=True, timeout=timeout)
@@ -45,14 +43,14 @@ def test_no_manager_timeout_asyncio():
 
 def test_no_manager_no_timeout_localhost():
     port = conftest.Manager.get_available_port()
-    match = r'Cannot connect to {}:{}$'.format(constants.HOSTNAME, port)
+    match = f'Cannot connect to localhost:{port}$'
     with pytest.raises(ConnectionError, match=match):
         connect(port=port, disable_tls=True, timeout=None)
 
 
 def test_no_manager_no_timeout_remotehost():
     host = 'MSLNZ12345'
-    match = r'Cannot connect to {}:{}$'.format(host, constants.PORT)
+    match = f'Cannot connect to {host}:{constants.PORT}$'
     with pytest.raises(ConnectionError, match=match):
         connect(host=host, disable_tls=True, timeout=None)
 
@@ -72,7 +70,7 @@ def test_no_certificate_tls_disabled():
 def test_no_certificate():
     # calling connect() will automatically get the certificate from the server
     manager = conftest.Manager(disable_tls=False)
-    cert_file = os.path.join(constants.CERT_DIR, constants.HOSTNAME + '.crt')
+    cert_file = os.path.join(constants.CERT_DIR, 'localhost.crt')
     assert manager.cert_file == cert_file
     os.remove(manager.cert_file)
     assert not os.path.isfile(manager.cert_file)
@@ -90,7 +88,7 @@ def test_wrong_port():
     manager = conftest.Manager()
     kwargs = manager.kwargs.copy()
     kwargs['port'] = manager.get_available_port()
-    match = r'Cannot connect to {}:{}$'.format(constants.HOSTNAME, kwargs['port'])
+    match = f'Cannot connect to localhost:{kwargs["port"]}$'
     with pytest.raises(ConnectionError, match=match):
         connect(timeout=100, **kwargs)
     manager.shutdown()
@@ -108,7 +106,7 @@ def test_wrong_certificate():
         connect(**kwargs)
     msg = str(e.value)
     assert 'Perhaps the Network Manager is using a new certificate' in msg
-    assert '{}:{}'.format(constants.HOSTNAME, kwargs['port']) in msg
+    assert f'localhost:{kwargs["port"]}' in msg
     assert 'wrong-certificate.crt' in msg
     os.remove(key)
     os.remove(cert)
@@ -133,7 +131,10 @@ def test_tls_enabled():
     manager.shutdown()
 
 
-@pytest.mark.parametrize('host', LOCALHOST_ALIASES)
+@pytest.mark.parametrize(
+    'host',
+    [constants.HOSTNAME, 'localhost', '127.0.0.1', *constants.IPV4_ADDRESSES]
+)
 def test_hostname_mismatch(host):
     a = cryptography.x509.NameAttribute
     o = cryptography.x509.NameOID

@@ -287,6 +287,10 @@ def test_get_ssl_context(monkeypatch, capsys):
     assert isinstance(context3, ssl.SSLContext)
     assert context.check_hostname
 
+    default_cert_path = cryptography.get_default_cert_path()
+    if os.path.isfile(default_cert_path):
+        os.remove(default_cert_path)
+
     for kws in [{}, {'host': 'localhost'}, {'port': 12345}]:
         with pytest.raises(ValueError, match=r'Must specify the host and port or the cert_file'):
             cryptography.get_ssl_context(**kws)

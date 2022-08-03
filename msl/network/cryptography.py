@@ -6,6 +6,7 @@ import ssl
 import inspect
 import datetime
 import textwrap
+from ipaddress import IPv4Address
 
 from cryptography import x509
 from cryptography.x509.oid import NameOID
@@ -27,6 +28,7 @@ from .constants import (
     CERT_DIR,
     HOSTNAME,
     DEFAULT_YEARS_VALID,
+    IPV4_ADDRESSES,
 )
 
 hash_map = {}
@@ -127,11 +129,12 @@ def load_key(path, *, password=None):
 
 
 def generate_certificate(*, path=None, key_path=None, key_password=None,
-                         algorithm='SHA256', years_valid=None, digest_size=None, name=None):
+                         algorithm='SHA256', years_valid=None,
+                         digest_size=None, name=None, extensions=None):
     """Generate a self-signed certificate.
 
     .. versionchanged:: 1.0
-       Added the `digest_size` and `name` keyword arguments.
+       Added the `digest_size`, `name` and `extensions` keyword arguments.
 
     Parameters
     ----------
@@ -152,13 +155,15 @@ def generate_certificate(*, path=None, key_path=None, key_password=None,
         specify that the certificate is valid for 3 months then set `years_valid`
         to be 0.25. Default is 100 years for 64-bit platforms and 15
         years for 32-bit platforms.
+    digest_size : :class:`int`, optional
+        The digest size (if the hash `algorithm` requires one).
     name : :class:`~cryptography.x509.Name`, optional
         The object to use for the
         :meth:`~cryptography.x509.CertificateBuilder.subject_name` and the
         :meth:`~cryptography.x509.CertificateBuilder.issuer_name`. If not
         specified then a default `name` is used.
-    digest_size : :class:`int`, optional
-        The digest size (if the hash `algorithm` requires one).
+    extensions : :class:`list` of :class:`~cryptography.x509.ExtensionType`, optional
+        The extensions to add to the certificate.
 
     Returns
     -------
@@ -188,6 +193,15 @@ def generate_certificate(*, path=None, key_path=None, key_password=None,
             a(NameOID.EMAIL_ADDRESS, 'info@measurement.govt.nz'),
         ])
 
+    if extensions is None:
+        extensions = []
+
+    names = name.get_attributes_for_oid(NameOID.COMMON_NAME)
+    if not extensions and any(cn.value == HOSTNAME for cn in names):
+        dns = [x509.DNSName(domain) for domain in (HOSTNAME, 'localhost')]
+        ips = [x509.IPAddress(IPv4Address(ip)) for ip in ('127.0.0.1', *IPV4_ADDRESSES)]
+        extensions.append(x509.SubjectAlternativeName(dns + ips))  # noqa
+
     now = datetime.datetime.utcnow()
 
     years_valid = DEFAULT_YEARS_VALID if years_valid is None else max(0, years_valid)
@@ -204,6 +218,8 @@ def generate_certificate(*, path=None, key_path=None, key_password=None,
     cert = cert.serial_number(x509.random_serial_number())
     cert = cert.not_valid_before(now)
     cert = cert.not_valid_after(expires)
+    for ext in extensions:
+        cert = cert.add_extension(ext, critical=False)
     cert = cert.sign(key, hash_class)
 
     with open(path, mode='wb') as f:
@@ -245,12 +261,12 @@ def load_certificate(cert):
 
 def get_default_cert_path():
     """:class:`str`: Returns the default certificate path."""
-    return os.path.join(CERT_DIR, HOSTNAME + '.crt')
+    return os.path.join(CERT_DIR, 'localhost.crt')
 
 
 def get_default_key_path():
     """:class:`str`: Returns the default key path."""
-    return os.path.join(KEY_DIR, HOSTNAME + '.key')
+    return os.path.join(KEY_DIR, 'localhost.key')
 
 
 def get_fingerprint(cert, *, algorithm='SHA1', digest_size=None):

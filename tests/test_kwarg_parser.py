@@ -42,6 +42,7 @@ def test_filter_service_start_kwargs():
 
 def test_filter_run_forever_kwargs():
     kwargs = {
+        'host': 'hostname',
         'port': 'a',
         'auth_hostname': 'b',
         'auth_login': 'c',
@@ -60,7 +61,8 @@ def test_filter_run_forever_kwargs():
         'auto_save': 'ignored',
     }
     k = filter_run_forever_kwargs(**kwargs)
-    assert len(k) == 11
+    assert len(k) == 12
+    assert k['host'] == 'hostname'
     assert k['port'] == 'a'
     assert k['auth_hostname'] == 'b'
     assert k['auth_login'] == 'c'
