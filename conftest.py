@@ -24,7 +24,7 @@ from msl.network import (
     UsersTable,
 )
 
-# suppress all logging message from being displayed
+# suppress all logging messages from being displayed
 logging.basicConfig(level=logging.CRITICAL+10)
 
 # For Python 3.8 on Windows the default event loop became ProactorEventLoop.
@@ -51,7 +51,7 @@ class Manager(object):
         Parameters
         ----------
         service_classes
-            The Service sub-classes to start (they have NOT been instantiated).
+            The Service subclasses to start (they have NOT been instantiated).
         **kwargs
             These are all sent to Service.__init__ for all `service_classes`.
         """
@@ -63,13 +63,13 @@ class Manager(object):
 
         self.remove_files()
 
-        key_pw = 'dummy pw!'  # use a password for the key.. just for fun
+        key_pw = 'dummy pw!'  # use a password for the key (just for fun)
         cryptography.generate_key(path=self.key_file, password=key_pw, algorithm='ecc')
         cryptography.generate_certificate(
             path=self.cert_file, key_path=self.key_file, key_password=key_pw, name=cert_common_name
         )
 
-        # need a UsersTable with an administrator to be able to shutdown the Manager
+        # need a UsersTable with an administrator to be able to shut down the Manager
         ut = UsersTable(database=self.database)
         self.admin_username, self.admin_password = 'admin', 'whatever'
         ut.insert(self.admin_username, self.admin_password, True)
