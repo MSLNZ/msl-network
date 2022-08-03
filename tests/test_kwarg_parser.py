@@ -58,7 +58,7 @@ def test_filter_run_forever_kwargs():
         'log_file': 'k',
         'foo': 'bar',  # ignored
         'debug': 'f',  # ignored
-        'auto_save': 'ignored',
+        'auto_save': False,  # ignored
     }
     k = filter_run_forever_kwargs(**kwargs)
     assert len(k) == 12
