@@ -958,7 +958,7 @@ def _create_manager_and_loop(
         if isinstance(key_file_password, (list, tuple)):
             key_file_password = ' '.join(key_file_password)
         if key_file_password is not None and os.path.isfile(key_file_password):
-            with open(key_file_password, 'r') as fp:
+            with open(key_file_password, mode='rt') as fp:
                 key_file_password = fp.readline().strip()
 
         # get the path to the certificate and to the private key
