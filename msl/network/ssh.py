@@ -85,7 +85,7 @@ def start_manager(host, console_script_path, *, ssh_username=None, ssh_password=
     kwargs
         The keyword arguments in :func:`~msl.network.manager.run_forever`, and if
         that `console script <cs>`_ also starts :class:`~msl.network.service.Service`\\s
-        on the remote computer as well then the keyword arguments also found in
+        on the remote computer as well, then the keyword arguments also found in
         :meth:`~msl.network.service.Service.start`. The `kwargs` should be parsed
         by :func:`.parse_console_script_kwargs` on the remote computer.
     """

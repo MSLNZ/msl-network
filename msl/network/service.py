@@ -101,7 +101,7 @@ class Service(Device):
         """Ignore attributes from being added to the
         :obj:`~msl.network.network.Network.identity` of the :class:`Service`.
 
-        The are a few reasons why you may want to call this method:
+        There are a few reasons why you may want to call this method:
 
         * If you see warnings that an object is not JSON serializable or that
           the signature of an attribute cannot be found when starting the

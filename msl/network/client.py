@@ -59,18 +59,18 @@ def connect(*, name='Client', host='localhost', port=PORT, timeout=10,
         :class:`~msl.network.manager.Manager`. You need to specify a username
         to connect to a :class:`~msl.network.manager.Manager` only if the
         :class:`~msl.network.manager.Manager` was started using the
-        ``--auth-login`` flag. If a username is required and you have not
+        ``--auth-login`` flag. If a username is required, and you have not
         specified a value then you will be asked for a username. See
         :mod:`~msl.network.cli_start` for more details.
     password : :class:`str`, optional
         The password that is associated with `username`. If a password is
-        required and you have not specified a value then you will be asked
+        required, and you have not specified a value then you will be asked
         for the password.
     password_manager : :class:`str`, optional
         The password that is associated with the Network
         :class:`~msl.network.manager.Manager`. You need to specify the password
         only if the Network :class:`~msl.network.manager.Manager` was started
-        using the ``--auth-password`` flag. If a password is required and you
+        using the ``--auth-password`` flag. If a password is required, and you
         have not specified a value then you will be asked for the password.
     read_limit : :class:`int`, optional
         The buffer size limit when reading bytes from a network stream.
@@ -210,7 +210,7 @@ class Client(Device):
         >>> cxn.admin_request('users_table.is_user_registered', 'N.Bohr')
         False
 
-        An admin can also shutdown the :class:`~msl.network.manager.Manager`
+        An admin can also shut down the :class:`~msl.network.manager.Manager`
 
         >>> from msl.network.constants import SHUTDOWN_MANAGER
         >>> cxn.admin_request(SHUTDOWN_MANAGER)
@@ -813,7 +813,7 @@ class LinkedClient(object):
         a :exc:`RuntimeError` is raised.
 
         The :class:`~msl.network.service.Service` remains running. This is to
-        cleanup the :class:`.Client` instance.
+        clean up the :class:`.Client` instance.
         """
         pass
 

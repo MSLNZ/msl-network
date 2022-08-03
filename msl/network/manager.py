@@ -669,7 +669,7 @@ def run_forever(
         key_file=None, key_file_password=None, log_level='INFO', log_file=None):
     """Start the event loop for the Network :class:`.Manager`.
 
-    This is a blocking call and it will not return until the event loop of
+    This is a blocking function. It will not return until the event loop of
     the :class:`.Manager` has stopped.
 
     .. versionadded:: 0.4
@@ -762,7 +762,7 @@ def run_services(*services, **kwargs):
     connected to the :class:`.Manager`. Once all :class:`~msl.network.service.Service`\\s
     disconnect from the :class:`.Manager` then the :class:`.Manager` shuts down.
 
-    This is a blocking call and it will not return until the event loop of
+    This is a blocking call. It will not return until the event loop of
     the :class:`.Manager` has stopped.
 
     .. versionadded:: 0.4

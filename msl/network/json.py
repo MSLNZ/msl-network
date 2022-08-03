@@ -13,7 +13,7 @@ class Package(Enum):
     By default, the builtin :mod:`json` module is used.
 
     To change which JSON_ package to use you can call :func:`.use` to set
-    the backend during runtime or you can specify an ``MSL_NETWORK_JSON``
+    the backend during runtime, or you can specify an ``MSL_NETWORK_JSON``
     environment variable as the default backend. For example, creating an
     environment variable named ``MSL_NETWORK_JSON`` and setting its value
     to be ``ULTRA`` would use UltraJSON_ to (de)serialize JSON_ objects.

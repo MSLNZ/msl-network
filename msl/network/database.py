@@ -123,9 +123,9 @@ class Database(object):
             * 0 - id number of the column
             * 1 - the name of the column
             * 2 - the datatype of the column
-            * 3 - whether or not a value in the column can be NULL (0 or 1)
+            * 3 - whether a value in the column can be NULL (0 or 1)
             * 4 - the default value for the column
-            * 5 - whether or not the column is used as a primary key (0 or 1)
+            * 5 - whether the column is used as a primary key (0 or 1)
         """
         self.execute('PRAGMA table_info({!r});'.format(name))
         return self._cursor.fetchall()
@@ -203,7 +203,7 @@ class ConnectionsTable(Database):
         peer : :class:`~msl.network.manager.Peer`
             The peer that connected to the Network :class:`~msl.network.manager.Manager`.
         message : :class:`str`
-            The message about what happened (e.g, the connection was successful
+            The message about what happened (e.g, the connection was successful,
             or it failed).
         """
         now = datetime.now().replace(microsecond=0).isoformat(sep='T')
