@@ -52,7 +52,7 @@ def test_database(capsys):
     args.func(args)
 
     out, _ = capsys.readouterr()
-    assert 'Deleted: {}'.format(os.path.join(ROOT_DIR, 'manager.sqlite3')) in out
+    assert '[Deleted] {}'.format(os.path.join(ROOT_DIR, 'manager.sqlite3')) in out
 
     # the database file is gone, but all other files remain
     assert not os.path.isfile(os.path.join(ROOT_DIR, 'manager.sqlite3'))
@@ -200,7 +200,7 @@ def test_all(capsys):
     args.func(args)
 
     out, _ = capsys.readouterr()
-    assert 'Deleted: {}'.format(os.path.join(ROOT_DIR, 'manager.sqlite3')) in out
+    assert '[Deleted] {}'.format(os.path.join(ROOT_DIR, 'manager.sqlite3')) in out
     assert '{} log file(s) will be deleted'.format(N) in out
     assert '{} certificate(s) will be deleted'.format(N) in out
     assert '{} key(s) will be deleted'.format(N) in out
@@ -278,7 +278,7 @@ def test_database_certs(capsys):
     args.func(args)
 
     out, _ = capsys.readouterr()
-    assert 'Deleted: {}'.format(os.path.join(ROOT_DIR, 'manager.sqlite3')) in out
+    assert '[Deleted] {}'.format(os.path.join(ROOT_DIR, 'manager.sqlite3')) in out
     assert '{} certificate(s) will be deleted'.format(N) in out
 
     # all .crt files are gone as well as the database
