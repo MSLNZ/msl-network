@@ -1021,7 +1021,7 @@ def _create_manager_and_loop(
         else:
             password = auth_password
         if os.path.isfile(password):
-            with open(password, 'r') as fp:
+            with open(password, mode='rt') as fp:
                 password = fp.readline().strip()
     elif not auth_password and auth_hostname and not auth_login:
         # then the authentication is based on a list of trusted hosts
