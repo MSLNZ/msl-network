@@ -25,7 +25,7 @@ def test_invalid_certificate(capsys):
 def test_file(capsys):
     tmp = os.path.join(tempfile.gettempdir(), 'out.tmp')
     path = generate_certificate()
-    process('certdump {} --out {}'.format(path, tmp))
+    process(f'certdump {path} --out {tmp}')
     out, err = capsys.readouterr()
     assert out.rstrip() == 'Dumped the certificate details to ' + tmp
     assert not err
@@ -33,7 +33,7 @@ def test_file(capsys):
     with open(tmp, mode='rt') as fp:
         lines = [line.rstrip() for line in fp.readlines()]
 
-    assert lines[0] == 'Certificate details for {}'.format(path)
+    assert lines[0] == f'Certificate details for {path}'
     assert lines[1] == 'Version: v3'
     assert lines[-2] == 'Fingerprint (SHA1):'
     assert lines[-1] == get_fingerprint(load_certificate(path))
@@ -43,7 +43,7 @@ def test_file(capsys):
 
 def test_stdout(capsys):
     path = generate_certificate()
-    process('certdump {}'.format(path))
+    process(f'certdump {path}')
     out, err = capsys.readouterr()
     out_lines = out.splitlines()
     assert not err

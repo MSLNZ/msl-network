@@ -24,8 +24,7 @@ def test_no_manager_no_certificate_localhost():
 def test_no_manager_no_certificate_remotehost():
     conftest.Manager.remove_files()
     host = 'MSLNZ12345'
-    match = r'Cannot connect to {}:{} to get the certificate$'.format(
-        host, constants.PORT)
+    match = fr'Cannot connect to {host}:{constants.PORT} to get the certificate$'
     with pytest.raises(ConnectionError, match=match):
         connect(host=host, disable_tls=False)
 

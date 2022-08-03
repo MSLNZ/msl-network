@@ -36,7 +36,7 @@ def test_path():
     assert not os.path.isfile(conftest.Manager.database)
     os.remove(DATABASE)
 
-    process('hostname list --database {}'.format(conftest.Manager.database))
+    process(f'hostname list --database {conftest.Manager.database}')
     assert os.path.isfile(conftest.Manager.database)
     assert not os.path.isfile(DATABASE)
     os.remove(conftest.Manager.database)
@@ -47,7 +47,7 @@ def test_list(capsys):
     out, err = capsys.readouterr()
     assert not err
     out_lines = out.splitlines()
-    assert out_lines[0] == 'Trusted devices in {}'.format(DATABASE)
+    assert out_lines[0] == f'Trusted devices in {DATABASE}'
     assert not out_lines[1]
     assert out_lines[2] == 'Hostnames:'
     for i, alias in enumerate(sorted(LOCALHOST_ALIASES)):
@@ -62,7 +62,7 @@ def test_list(capsys):
 def test_no_hostnames(action, verb, capsys):
     process('hostname ' + action)
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'No hostnames were {}'.format(verb)
+    assert out.rstrip() == f'No hostnames were {verb}'
     assert not err
 
 
@@ -73,13 +73,13 @@ def test_no_hostnames(action, verb, capsys):
 def test_add(action, verb, capsys):
     remove_default()
 
-    process('hostname {} HOSTNAME1 abc123 MSLNZ-12345'.format(action))
+    process(f'hostname {action} HOSTNAME1 abc123 MSLNZ-12345')
     out, err = capsys.readouterr()
     assert not err
     assert out.splitlines() == [
-        '{} HOSTNAME1'.format(verb),
-        '{} abc123'.format(verb),
-        '{} MSLNZ-12345'.format(verb)
+        f'{verb} HOSTNAME1',
+        f'{verb} abc123',
+        f'{verb} MSLNZ-12345'
     ]
 
     table = HostnamesTable()
@@ -98,13 +98,13 @@ def test_add(action, verb, capsys):
 def test_remove(action, verb, capsys):
     remove_default()
 
-    process('hostname {} 127.0.0.1 ::1 localhost'.format(action))
+    process(f'hostname {action} 127.0.0.1 ::1 localhost')
     out, err = capsys.readouterr()
     assert not err
     assert out.splitlines() == [
-        '{} 127.0.0.1'.format(verb),
-        '{} ::1'.format(verb),
-        '{} localhost'.format(verb)
+        f'{verb} 127.0.0.1',
+        f'{verb} ::1',
+        f'{verb} localhost'
     ]
 
     table = HostnamesTable()
@@ -121,13 +121,13 @@ def test_remove(action, verb, capsys):
     [('remove', 'Removed'), ('delete', 'Deleted')]
 )
 def test_remove_invalid(action, verb, capsys):
-    process('hostname {} mslnz ::1 abc'.format(action))
+    process(f'hostname {action} mslnz ::1 abc')
     out, err = capsys.readouterr()
     out_lines = out.splitlines()
     assert out_lines == [
-        "Cannot {} 'mslnz'. This hostname is not in the table.".format(action),
-        '{} ::1'.format(verb),
-        "Cannot {} 'abc'. This hostname is not in the table.".format(action),
+        f"Cannot {action} 'mslnz'. This hostname is not in the table.",
+        f'{verb} ::1',
+        f"Cannot {action} 'abc'. This hostname is not in the table.",
     ]
     assert not err
     remove_default()

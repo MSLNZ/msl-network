@@ -119,15 +119,15 @@ def execute(args):
         width = len('Username')
         for name, _ in users:
             width = max(width, len(name))
-        print('Users in ' + db.path + '\n')
+        print(f'Users in {db.path}\n')
         print('Username'.ljust(width) + ' Administrator')
         print('='*width + ' =============')
         for name, admin in users:
-            print(name.ljust(width) + ' ' + str(admin))
+            print(f'{name.ljust(width)} {admin}')
         return
 
     if args.username is None:
-        print('ValueError: You must specify a username to ' + args.action)
+        print(f'ValueError: You must specify a username to {args.action}')
         return
 
     password = None if args.password is None else ' '.join(args.password)
@@ -140,23 +140,23 @@ def execute(args):
         try:
             db.insert(args.username, password, args.admin)
         except ValueError as e:
-            print('ValueError: {}'.format(e))
+            print(f'ValueError: {e}')
         else:
-            print(args.username + ' has been ' + args.action + 'ed')
+            print(f'{args.username} has been {args.action}ed')
     elif args.action in ['remove', 'delete']:
         try:
             db.delete(args.username)
         except ValueError:
-            print('ValueError: Cannot {} {!r}. This user is not in '
-                  'the table.'.format(args.action, args.username))
+            print(f'ValueError: Cannot {args.action} {args.username!r}. '
+                  f'This user is not in the table.')
         else:
-            print(args.username + ' has been ' + args.action + 'd')
+            print(f'{args.username} has been {args.action}d')
     elif args.action == 'update':
         try:
             db.update(args.username, password=password, is_admin=args.admin)
         except ValueError as e:
-            print('ValueError: {}'.format(e))
+            print(f'ValueError: {e}')
         else:
-            print('Updated ' + args.username)
+            print(f'Updated {args.username}')
     else:
-        assert False, 'No action {!r} is implemented'.format(args.action)
+        assert False, f'No action {args.action!r} is implemented'

@@ -20,7 +20,7 @@ def process(command):
 
 @pytest.mark.parametrize('years', [-1, '1.3j', None])
 def test_bad_years_valid(years, capsys):
-    process('certgen --years-valid {}'.format(years))
+    process(f'certgen --years-valid {years}')
     out, err = capsys.readouterr()
     assert out.rstrip() == 'ValueError: The --years-valid value must be a positive number'
     assert not err
@@ -29,7 +29,7 @@ def test_bad_years_valid(years, capsys):
 def test_no_args(capsys):
     process('certgen')
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'Created the self-signed certificate {!r}'.format(get_default_cert_path())
+    assert out.rstrip() == f'Created the self-signed certificate {get_default_cert_path()!r}'
     assert not err
 
 
@@ -37,9 +37,9 @@ def test_password(capsys):
     key_file = os.path.join(tempfile.gettempdir(), 'key.private')
     generate_key(path=key_file, password='the password')
 
-    process('certgen --key-file {} --key-file-password the password'.format(key_file))
+    process(f'certgen --key-file {key_file} --key-file-password the password')
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'Created the self-signed certificate {!r}'.format(get_default_cert_path())
+    assert out.rstrip() == f'Created the self-signed certificate {get_default_cert_path()!r}'
     assert not err
 
     os.remove(key_file)
@@ -49,7 +49,7 @@ def test_password_invalid(capsys):
     key_file = os.path.join(tempfile.gettempdir(), 'key.private')
     generate_key(path=key_file, password='the password')
 
-    process('certgen --key-file {} --key-file-password invalid'.format(key_file))
+    process(f'certgen --key-file {key_file} --key-file-password invalid')
     out, err = capsys.readouterr()
     # an error message from the cryptography developers
     assert out.startswith('ValueError: ')
@@ -67,12 +67,12 @@ def test_password_file(capsys):
     key_file = os.path.join(tempfile.gettempdir(), 'key.private')
     generate_key(path=key_file, password=pw)
 
-    process('certgen --key-file {} --key-file-password {}'.format(key_file, pw_file))
+    process(f'certgen --key-file {key_file} --key-file-password {pw_file}')
     out, err = capsys.readouterr()
     assert not err
     assert out.splitlines() == [
         'Reading the key password from the file',
-        'Created the self-signed certificate {!r}'.format(get_default_cert_path())
+        f'Created the self-signed certificate {get_default_cert_path()!r}'
     ]
 
     os.remove(pw_file)
@@ -84,7 +84,7 @@ def test_show(capsys):
     out, err = capsys.readouterr()
     assert not err
     out_lines = out.splitlines()
-    assert out_lines[0] == 'Created the self-signed certificate {!r}'.format(get_default_cert_path())
+    assert out_lines[0] == f'Created the self-signed certificate {get_default_cert_path()!r}'
     assert not out_lines[1]
     assert out_lines[2] == 'Version: v3'
     assert out_lines[-2] == 'Fingerprint (SHA1):'
@@ -94,7 +94,7 @@ def test_show(capsys):
 def test_algorithm(capsys):
     process('certgen --algorithm SHA512')
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'Created the self-signed certificate {!r}'.format(get_default_cert_path())
+    assert out.rstrip() == f'Created the self-signed certificate {get_default_cert_path()!r}'
     assert not err
 
 
@@ -113,9 +113,9 @@ def test_out_path(capsys):
         pass
 
     assert not os.path.isfile(cert_path)
-    process('certgen {}'.format(cert_path))
+    process(f'certgen {cert_path}')
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'Created the self-signed certificate {!r}'.format(cert_path)
+    assert out.rstrip() == f'Created the self-signed certificate {cert_path!r}'
     assert not err
     assert os.path.isfile(cert_path)
 

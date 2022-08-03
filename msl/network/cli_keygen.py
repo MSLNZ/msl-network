@@ -114,7 +114,7 @@ def execute(args):
             curve=args.curve
         )
     except Exception as e:
-        print('{}: {}'.format(e.__class__.__name__, e))
+        print(f'{e.__class__.__name__}: {e}')
         return
 
-    print('Created private {} key {!r}'.format(args.algorithm.upper(), path))
+    print(f'Created private {args.algorithm.upper()} key {path!r}')

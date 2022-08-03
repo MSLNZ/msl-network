@@ -35,7 +35,7 @@ def test_multiple_auth_methods(flag, capsys):
 
 @pytest.mark.parametrize('port', [-1, '1234x'])
 def test_invalid_port(port, capsys):
-    process('start --port {}'.format(port))
+    process(f'start --port {port}')
     _, err = capsys.readouterr()
     assert err.rstrip().endswith('ValueError: The port must be a positive integer')
 
@@ -48,7 +48,7 @@ def test_cannot_use_auth_login_with_empty_table(capsys):
         pass
 
     table = UsersTable(database=db)
-    process('start --auth-login --database ' + db)
+    process(f'start --auth-login --database {db}')
     table.close()
     out, err = capsys.readouterr()
     out_lines = out.splitlines()

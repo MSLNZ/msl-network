@@ -127,7 +127,7 @@ class Database(object):
             * 4 - the default value for the column
             * 5 - whether the column is used as a primary key (0 or 1)
         """
-        self.execute('PRAGMA table_info({!r});'.format(name))
+        self.execute(f'PRAGMA table_info({name!r});')
         return self._cursor.fetchall()
 
     def column_names(self, table_name):
@@ -186,13 +186,13 @@ class ConnectionsTable(Database):
             kwargs['detect_types'] = sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
 
         super(ConnectionsTable, self).__init__(database, **kwargs)
-        self.execute('CREATE TABLE IF NOT EXISTS {} ('
-                     'pid INTEGER PRIMARY KEY AUTOINCREMENT, '
-                     'datetime DATETIME NOT NULL, '
-                     'ip_address TEXT NOT NULL, '
-                     'domain TEXT NOT NULL, '
-                     'port INTEGER NOT NULL, '
-                     'message TEXT NOT NULL);'.format(self.NAME))
+        self.execute(f'CREATE TABLE IF NOT EXISTS {self.NAME} ('
+                     f'pid INTEGER PRIMARY KEY AUTOINCREMENT, '
+                     f'datetime DATETIME NOT NULL, '
+                     f'ip_address TEXT NOT NULL, '
+                     f'domain TEXT NOT NULL, '
+                     f'port INTEGER NOT NULL, '
+                     f'message TEXT NOT NULL);')
         self.connection.commit()
 
     def insert(self, peer, message):
@@ -207,7 +207,7 @@ class ConnectionsTable(Database):
             or it failed).
         """
         now = datetime.now().replace(microsecond=0).isoformat(sep='T')
-        self.execute('INSERT INTO {} VALUES(NULL, ?, ?, ?, ?, ?);'.format(self.NAME),
+        self.execute(f'INSERT INTO {self.NAME} VALUES(NULL, ?, ?, ?, ?, ?);',
                      (now, peer.ip_address, peer.domain, peer.port, message))
         self.connection.commit()
 
@@ -236,16 +236,15 @@ class ConnectionsTable(Database):
         :class:`list` of :class:`tuple`
             The connection records.
         """
-        pre = 'SELECT * FROM {}'.format(self.NAME)
+        pre = f'SELECT * FROM {self.NAME}'
         if start is None and end is None:
-            self.execute('{};'.format(pre))
+            self.execute(f'{pre};')
         elif start is not None and end is None:
-            self.execute('{} WHERE timestamp >= ?;'.format(pre), (start,))
+            self.execute(f'{pre} WHERE timestamp >= ?;', (start,))
         elif start is None and end is not None:
-            self.execute('{} WHERE timestamp <= ?;'.format(self.NAME), (end,))
+            self.execute(f'{self.NAME} WHERE timestamp <= ?;', (end,))
         else:
-            self.execute('{} WHERE timestamp >= ? AND timestamp <= ?;'.format(pre),
-                         (start, end))
+            self.execute(f'{pre} WHERE timestamp >= ? AND timestamp <= ?;', (start, end))
         return self.cursor.fetchall()
 
 
@@ -268,9 +267,8 @@ class HostnamesTable(Database):
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
        """
         super(HostnamesTable, self).__init__(database, **kwargs)
-        self.execute('CREATE TABLE IF NOT EXISTS {} ('
-                     'hostname TEXT NOT NULL, UNIQUE(hostname)'
-                     ');'.format(self.NAME))
+        self.execute(f'CREATE TABLE IF NOT EXISTS {self.NAME} '
+                     f'(hostname TEXT NOT NULL, UNIQUE(hostname));')
         self.connection.commit()
 
         if not self.hostnames():
@@ -287,8 +285,7 @@ class HostnamesTable(Database):
         hostname : :class:`str`
             The trusted hostname.
         """
-        self.execute('INSERT OR IGNORE INTO {} VALUES(?);'.format(self.NAME),
-                     (hostname,))
+        self.execute(f'INSERT OR IGNORE INTO {self.NAME} VALUES(?);', (hostname,))
         self.connection.commit()
 
     def delete(self, hostname):
@@ -306,13 +303,13 @@ class HostnamesTable(Database):
         """
         # want to know if this hostname is not in the table
         if hostname not in self.hostnames():
-            raise ValueError('Cannot delete {!r}. This hostname is not in the table.'.format(hostname))
-        self.execute('DELETE FROM {} WHERE hostname = ?;'.format(self.NAME), (hostname,))
+            raise ValueError(f'Cannot delete {hostname!r}. This hostname is not in the table.')
+        self.execute(f'DELETE FROM {self.NAME} WHERE hostname = ?;', (hostname,))
         self.connection.commit()
 
     def hostnames(self):
         """:class:`list` of :class:`str`: Returns all the trusted hostnames."""
-        self.execute('SELECT * FROM {};'.format(self.NAME))
+        self.execute(f'SELECT * FROM {self.NAME};')
         return sorted([item[0] for item in self.cursor.fetchall()])
 
 
@@ -335,13 +332,13 @@ class UsersTable(Database):
             Optional keyword arguments to pass to :func:`sqlite3.connect`.
         """
         super(UsersTable, self).__init__(database, **kwargs)
-        self.execute('CREATE TABLE IF NOT EXISTS {} ('
-                     'pid INTEGER PRIMARY KEY AUTOINCREMENT, '
-                     'username TEXT NOT NULL, '
-                     'key BLOB NOT NULL, '
-                     'salt BLOB NOT NULL, '
-                     'is_admin BOOLEAN NOT NULL, '
-                     'UNIQUE(username));'.format(self.NAME))
+        self.execute(f'CREATE TABLE IF NOT EXISTS {self.NAME} ('
+                     f'pid INTEGER PRIMARY KEY AUTOINCREMENT, '
+                     f'username TEXT NOT NULL, '
+                     f'key BLOB NOT NULL, '
+                     f'salt BLOB NOT NULL, '
+                     f'is_admin BOOLEAN NOT NULL, '
+                     f'UNIQUE(username));')
         self.connection.commit()
 
         self._salt_size = 16
@@ -375,7 +372,7 @@ class UsersTable(Database):
         if _is_username_invalid_regex.search(username) is not None:
             raise ValueError('A username cannot end with ":<integer>"')
         if not password:
-            raise ValueError('You must specify a password for {!r}'.format(username))
+            raise ValueError(f'You must specify a password for {username!r}')
 
         salt = os.urandom(self._salt_size)
         kdf = PBKDF2HMAC(
@@ -386,10 +383,10 @@ class UsersTable(Database):
         )
         key = kdf.derive(password.encode())
         try:
-            self.execute('INSERT INTO {} VALUES(NULL, ?, ?, ?, ?);'.format(self.NAME),
+            self.execute(f'INSERT INTO {self.NAME} VALUES(NULL, ?, ?, ?, ?);',
                          (username, key, salt, bool(is_admin)))
         except sqlite3.IntegrityError:
-            raise ValueError('A user with the name {!r} already exists'.format(username)) from None
+            raise ValueError(f'A user with the name {username!r} already exists') from None
         self.connection.commit()
 
     def update(self, username, *, password=None, is_admin=None):
@@ -417,13 +414,13 @@ class UsersTable(Database):
             raise ValueError('Must specify either the password and/or the admin rights when updating')
 
         if password is None:
-            self.execute('UPDATE {} SET is_admin=? WHERE username=?;'.format(self.NAME),
+            self.execute(f'UPDATE {self.NAME} SET is_admin=? WHERE username=?;',
                          (bool(is_admin), username))
             self.connection.commit()
             return
 
         if not password:
-            raise ValueError('You must specify a password for {!r}'.format(username))
+            raise ValueError(f'You must specify a password for {username!r}')
 
         salt = os.urandom(self._salt_size)
         key = PBKDF2HMAC(
@@ -434,10 +431,10 @@ class UsersTable(Database):
         ).derive(password.encode())
 
         if is_admin is None:
-            self.execute('UPDATE {} SET key=?, salt=? WHERE username=?;'.format(self.NAME),
+            self.execute(f'UPDATE {self.NAME} SET key=?, salt=? WHERE username=?;',
                          (key, salt, username))
         else:
-            self.execute('UPDATE {} SET key=?, salt=?, is_admin=? WHERE username=?;'.format(self.NAME),
+            self.execute(f'UPDATE {self.NAME} SET key=?, salt=?, is_admin=? WHERE username=?;',
                          (key, salt, bool(is_admin), username))
 
         self.connection.commit()
@@ -456,8 +453,7 @@ class UsersTable(Database):
             If `username` is not in the table.
         """
         self._ensure_user_exists(username, 'delete')
-        self.execute('DELETE FROM {} WHERE username = ?;'.format(self.NAME),
-                     (username,))
+        self.execute(f'DELETE FROM {self.NAME} WHERE username = ?;', (username,))
         self.connection.commit()
 
     def get_user(self, username):
@@ -473,30 +469,28 @@ class UsersTable(Database):
         :class:`tuple`
             Returns (pid, username, key, salt, is_admin) for the specified `username`.
         """
-        self.execute('SELECT * FROM {} WHERE username = ?;'.format(self.NAME),
-                     (username,))
+        self.execute(f'SELECT * FROM {self.NAME} WHERE username = ?;', (username,))
         return self.cursor.fetchone()
 
     def records(self):
         """:class:`list` of :class:`tuple`: Returns [(pid, username, key, salt, is_admin), ...]
         for all users."""
-        self.execute('SELECT * FROM {};'.format(self.NAME))
+        self.execute(f'SELECT * FROM {self.NAME};')
         return self.cursor.fetchall()
 
     def usernames(self):
         """:class:`list` of :class:`str`: Returns the names of all registered users."""
-        self.execute('SELECT username FROM {};'.format(self.NAME))
+        self.execute(f'SELECT username FROM {self.NAME};')
         return [item[0] for item in self.cursor.fetchall()]
 
     def users(self):
         """:class:`list` of :class:`tuple`: Returns [(username, is_admin), ... ] for all users."""
-        self.execute('SELECT username,is_admin FROM {};'.format(self.NAME))
+        self.execute(f'SELECT username,is_admin FROM {self.NAME};')
         return sorted([(item[0], bool(item[1])) for item in self.cursor.fetchall()])
 
     def is_user_registered(self, username):
         """:class:`bool`: Whether `username` is a registered user."""
-        self.execute('SELECT count(*) FROM {} WHERE username = ?;'.format(self.NAME),
-                     (username,))
+        self.execute(f'SELECT count(*) FROM {self.NAME} WHERE username = ?;', (username,))
         return bool(self.cursor.fetchone()[0])
 
     def is_password_valid(self, username, password):
@@ -514,8 +508,7 @@ class UsersTable(Database):
         :class:`bool`
             Whether `password` matches the password in the database for the user.
         """
-        self.execute('SELECT key,salt FROM {} WHERE username = ?;'.format(self.NAME),
-                     (username,))
+        self.execute(f'SELECT key,salt FROM {self.NAME} WHERE username = ?;', (username,))
         key_salt = self._cursor.fetchone()
         if not key_salt:
             return False
@@ -544,8 +537,7 @@ class UsersTable(Database):
         :class:`bool`
             Whether the user has admin rights.
         """
-        self.execute('SELECT is_admin FROM {} WHERE username = ?;'.format(self.NAME),
-                     (username,))
+        self.execute(f'SELECT is_admin FROM {self.NAME} WHERE username = ?;', (username,))
         user = self.cursor.fetchone()
         if user:
             return bool(user[0])
@@ -555,8 +547,8 @@ class UsersTable(Database):
         # want to know if this user is not in the table
         if username not in self.usernames():
             raise ValueError(
-                'Cannot {} {!r}. '
-                'This user is not in the table.'.format(action, username)
+                f'Cannot {action} {username!r}. '
+                f'This user is not in the table.'
             )
 
 
@@ -583,7 +575,7 @@ def convert_datetime(value):
         timepart_full = timepart.split(b'.')
         hours, minutes, seconds = map(int, timepart_full[0].split(b':'))
         if len(timepart_full) == 2:
-            microseconds = int('{:0<6.6}'.format(timepart_full[1].decode()))
+            microseconds = int(f'{timepart_full[1].decode():0<6.6}')
         else:
             microseconds = 0
         return datetime(year, month, day, hours, minutes, seconds, microseconds)

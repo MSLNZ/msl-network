@@ -76,14 +76,14 @@ def generate_key(*, path=None, algorithm='RSA', password=None, size=2048, curve=
         try:
             curve_class = types[curve_u]
         except KeyError:
-            msg = 'Invalid curve name {!r}. Allowed curves are\n{}'.format(
-                curve_u, ', '.join(sorted(types.keys())))
+            curves = ', '.join(sorted(types.keys()))
+            msg = f'Invalid curve name {curve_u!r}. Allowed curves are\n{curves}'
             raise ValueError(msg) from None
         key = ec.generate_private_key(curve_class)
     else:
         raise ValueError(
-            'The encryption algorithm must be '
-            'RSA, DSA or ECC. Got {}'.format(algorithm_u)
+            f'The encryption algorithm must be '
+            f'RSA, DSA or ECC. Got {algorithm_u}'
         )
 
     if path is None:
@@ -372,7 +372,7 @@ def get_metadata(cert):
         meta['key']['q'] = to_hex_string(key.public_numbers().parameter_numbers.q)  # noqa
         meta['key']['g'] = to_hex_string(key.public_numbers().parameter_numbers.g)  # noqa
     else:
-        raise NotImplementedError('Unsupported public key {}'.format(key.__class__.__name__))
+        raise NotImplementedError(f'Unsupported public key {key.__class__.__name__}')
 
     meta['algorithm'] = oid_to_dict(cert.signature_algorithm_oid)
     meta['algorithm']['signature'] = to_hex_string(cert.signature)
@@ -420,7 +420,7 @@ def get_metadata_as_string(cert):
 
     details.append('Issuer:')
     for key, value in meta['issuer'].items():
-        details.append('  {}: {}'.format(to_title(key), value))
+        details.append(f'  {to_title(key)}: {value}')
 
     details.append('Validity:')
     details.append('  Not Before: ' + meta['valid_from'].strftime('%d %B %Y %H:%M:%S GMT'))
@@ -428,22 +428,22 @@ def get_metadata_as_string(cert):
 
     details.append('Subject:')
     for key, value in meta['subject'].items():
-        details.append('  {}: {}'.format(to_title(key), value))
+        details.append(f'  {to_title(key)}: {value}')
 
     details.append('Subject Public Key Info:')
     for key, value in meta['key'].items():
         if key in ['key', 'modulus', 'y', 'p', 'q', 'g']:
-            details.append('  {}:'.format(key.title()))
+            details.append(f'  {key.title()}:')
             details.append(justify(value))
         else:
-            details.append('  {}: {}'.format(to_title(key), value))
+            details.append(f'  {to_title(key)}: {value}')
 
     if meta['extensions']:
         details.append('Extensions:')
         details.append('  ' + str(meta['extensions']['value']).replace('<', '').replace('>', '') + ':')
         for key, value in meta['extensions'].items():
             if key != 'value':
-                details.append('    {}: {}'.format(key, value))
+                details.append(f'    {key}: {value}')
 
     details.append('Signature Algorithm:')
     details.append('  oid: ' + meta['algorithm']['oid'])
@@ -496,7 +496,7 @@ def get_ssl_context(*, cert_file=None, host=None, port=None, auto_save=False, **
     :class:`ssl.SSLContext`
         The SSL context.
     """
-    ca_file = cert_file or os.path.join(CERT_DIR, '{}.crt'.format(host))
+    ca_file = cert_file or os.path.join(CERT_DIR, f'{host}.crt')
     try:
         return ca_file, ssl.create_default_context(cafile=ca_file)
     except FileNotFoundError:
@@ -513,11 +513,10 @@ def get_ssl_context(*, cert_file=None, host=None, port=None, auto_save=False, **
     name = cert.signature_algorithm_oid._name  # noqa
 
     if not auto_save:
-        p1 = 'The certificate for {host} is not cached in the registry. ' \
-             'You have no guarantee that the server is the computer that ' \
-             'you think it is.'.format(host=host)
-        p2 = '\nThe server\'s {name} key fingerprint is\n{fingerprint}\n'.format(
-            name=name, fingerprint=fingerprint)
+        p1 = f'The certificate for {host} is not cached in the registry. ' \
+             f'You have no guarantee that the server is the computer that ' \
+             f'you think it is.'
+        p2 = f'\nThe server\'s {name} key fingerprint is\n{fingerprint}\n'
         p3 = 'If you trust this host you can save the certificate in the registry ' \
              'and continue to connect, otherwise this is your final chance to abort.'
 
@@ -571,6 +570,5 @@ def _hash_class(*, algorithm='', digest_size=None):
         return hash_map[algorithm_u](digest_size)
     except KeyError:
         allowed = ', '.join(hash_map.keys())
-        msg = 'Invalid hash algorithm {!r}. Allowed algorithms are\n{}'.format(
-            algorithm_u, allowed)
+        msg = f'Invalid hash algorithm {algorithm_u!r}. Allowed algorithms are\n{allowed}'
         raise ValueError(msg) from None

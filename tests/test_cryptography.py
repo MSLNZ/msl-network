@@ -182,11 +182,11 @@ def test_raises():
         with pytest.raises(ValueError, match=match):
             cryptography.generate_key(algorithm=value)
 
-        match = r'Invalid curve name {!r}'.format(value.upper())
+        match = f'Invalid curve name {value.upper()!r}'
         with pytest.raises(ValueError, match=match):
             cryptography.generate_key(algorithm='ECC', curve=value)
 
-        match = r'Invalid hash algorithm {!r}'.format(value.upper())
+        match = f'Invalid hash algorithm {value.upper()!r}'
         with pytest.raises(ValueError, match=match):
             cryptography.generate_certificate(algorithm=value)
 
@@ -226,7 +226,7 @@ def test_get_metadata_as_string():
     string = cryptography.get_metadata_as_string(cert)
     assert re.search(r'Encryption: RSA', string)
     assert re.search(r'Size: 2048', string)
-    assert re.search(r'Common Name: {}'.format(HOSTNAME), string)
+    assert re.search(f'Common Name: {HOSTNAME}', string)
     assert re.search(cryptography.get_fingerprint(cert), string)
 
 

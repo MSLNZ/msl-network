@@ -130,10 +130,10 @@ class Manager(object):
                         in_use = self.is_port_in_use(service.port)
                         self.shutdown(cxn)
                         raise RuntimeError(
-                            'Cannot start {0} service.\n'
-                            'Is Service port in use? {1}\n'
-                            '{0}.start kwargs: {2}\n'
-                            'Services: {3}'.format(name, in_use, self.kwargs, services)
+                            f'Cannot start {name} service.\n'
+                            f'Is Service port in use? {in_use}\n'
+                            f'{name}.start kwargs: {self.kwargs}\n'
+                            f'Services: {services}'
                         )
                 self._service_threads[service] = thread
             cxn.disconnect()
@@ -146,9 +146,9 @@ class Manager(object):
         connection.admin_request('shutdown_manager')
         self._manager_proc.communicate(timeout=5)
 
-        # self.wait_shutdown(connection.port, '{} will not shutdown'.format(connection))
+        # self.wait_shutdown(connection.port, f'{connection} will not shutdown')
         # for service, thread in self._service_threads.items():
-        #     self.wait_shutdown(service.port, '{} will not shutdown'.format(service))
+        #     self.wait_shutdown(service.port, f'{service} will not shutdown')
 
         self.remove_files()
 

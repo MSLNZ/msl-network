@@ -21,7 +21,7 @@ def create_files():
         directory = os.path.join(ROOT_DIR, folder)
         os.makedirs(directory)
         for i in range(N):
-            file = os.path.join(directory, '{}{}'.format(i, ext))
+            file = os.path.join(directory, f'{i}{ext}')
             with open(file, mode='w') as fp:
                 fp.write('whatever')
         with open(os.path.join(directory, 'remains.txt'), mode='w') as fp:
@@ -52,14 +52,14 @@ def test_database(capsys):
     args.func(args)
 
     out, _ = capsys.readouterr()
-    assert '[Deleted] {}'.format(os.path.join(ROOT_DIR, 'manager.sqlite3')) in out
+    assert f"[Deleted] {os.path.join(ROOT_DIR, 'manager.sqlite3')}" in out
 
     # the database file is gone, but all other files remain
     assert not os.path.isfile(os.path.join(ROOT_DIR, 'manager.sqlite3'))
     for i in range(N):
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'certs', '{}.crt'.format(i)))
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'keys', '{}.key'.format(i)))
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'logs', '{}.log'.format(i)))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'certs', f'{i}.crt'))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'keys', f'{i}.key'))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'logs', f'{i}.log'))
 
     # the remains.txt files still exist
     assert os.path.isfile(os.path.join(ROOT_DIR, 'remains.txt'))
@@ -89,14 +89,14 @@ def test_logs(capsys):
     args.func(args)
 
     out, _ = capsys.readouterr()
-    assert '{} log file(s) will be deleted'.format(N) in out
+    assert f'{N} log file(s) will be deleted' in out
 
     # the .log files are gone, but all other files remain
     assert os.path.isfile(os.path.join(ROOT_DIR, 'manager.sqlite3'))
     for i in range(N):
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'certs', '{}.crt'.format(i)))
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'keys', '{}.key'.format(i)))
-        assert not os.path.isfile(os.path.join(ROOT_DIR, 'logs', '{}.log'.format(i)))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'certs', f'{i}.crt'))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'keys', f'{i}.key'))
+        assert not os.path.isfile(os.path.join(ROOT_DIR, 'logs', f'{i}.log'))
 
     # the remains.txt files still exist
     assert os.path.isfile(os.path.join(ROOT_DIR, 'remains.txt'))
@@ -126,14 +126,14 @@ def test_certs(capsys):
     args.func(args)
 
     out, _ = capsys.readouterr()
-    assert '{} certificate(s) will be deleted'.format(N) in out
+    assert f'{N} certificate(s) will be deleted' in out
 
     # the .crt files are gone, but all other files remain
     assert os.path.isfile(os.path.join(ROOT_DIR, 'manager.sqlite3'))
     for i in range(N):
-        assert not os.path.isfile(os.path.join(ROOT_DIR, 'certs', '{}.crt'.format(i)))
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'keys', '{}.key'.format(i)))
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'logs', '{}.log'.format(i)))
+        assert not os.path.isfile(os.path.join(ROOT_DIR, 'certs', f'{i}.crt'))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'keys', f'{i}.key'))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'logs', f'{i}.log'))
 
     # the remains.txt files still exist
     assert os.path.isfile(os.path.join(ROOT_DIR, 'remains.txt'))
@@ -163,14 +163,14 @@ def test_keys(capsys):
     args.func(args)
 
     out, _ = capsys.readouterr()
-    assert '{} key(s) will be deleted'.format(N) in out
+    assert f'{N} key(s) will be deleted' in out
 
     # the .key files are gone, but all other files remain
     assert os.path.isfile(os.path.join(ROOT_DIR, 'manager.sqlite3'))
     for i in range(N):
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'certs', '{}.crt'.format(i)))
-        assert not os.path.isfile(os.path.join(ROOT_DIR, 'keys', '{}.key'.format(i)))
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'logs', '{}.log'.format(i)))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'certs', f'{i}.crt'))
+        assert not os.path.isfile(os.path.join(ROOT_DIR, 'keys', f'{i}.key'))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'logs', f'{i}.log'))
 
     # the remains.txt files still exist
     assert os.path.isfile(os.path.join(ROOT_DIR, 'remains.txt'))
@@ -200,17 +200,17 @@ def test_all(capsys):
     args.func(args)
 
     out, _ = capsys.readouterr()
-    assert '[Deleted] {}'.format(os.path.join(ROOT_DIR, 'manager.sqlite3')) in out
-    assert '{} log file(s) will be deleted'.format(N) in out
-    assert '{} certificate(s) will be deleted'.format(N) in out
-    assert '{} key(s) will be deleted'.format(N) in out
+    assert f"[Deleted] {os.path.join(ROOT_DIR, 'manager.sqlite3')}" in out
+    assert f'{N} log file(s) will be deleted' in out
+    assert f'{N} certificate(s) will be deleted' in out
+    assert f'{N} key(s) will be deleted' in out
 
     # all files are gone
     assert not os.path.isfile(os.path.join(ROOT_DIR, 'manager.sqlite3'))
     for i in range(N):
-        assert not os.path.isfile(os.path.join(ROOT_DIR, 'certs', '{}.crt'.format(i)))
-        assert not os.path.isfile(os.path.join(ROOT_DIR, 'keys', '{}.key'.format(i)))
-        assert not os.path.isfile(os.path.join(ROOT_DIR, 'logs', '{}.log'.format(i)))
+        assert not os.path.isfile(os.path.join(ROOT_DIR, 'certs', f'{i}.crt'))
+        assert not os.path.isfile(os.path.join(ROOT_DIR, 'keys', f'{i}.key'))
+        assert not os.path.isfile(os.path.join(ROOT_DIR, 'logs', f'{i}.log'))
 
     # but the remains.txt files still exist
     assert os.path.isfile(os.path.join(ROOT_DIR, 'remains.txt'))
@@ -240,15 +240,15 @@ def test_keys_logs(capsys):
     args.func(args)
 
     out, _ = capsys.readouterr()
-    assert '{} key(s) will be deleted'.format(N) in out
-    assert '{} log file(s) will be deleted'.format(N) in out
+    assert f'{N} key(s) will be deleted' in out
+    assert f'{N} log file(s) will be deleted' in out
 
     # all .key and .log files are gone
     assert os.path.isfile(os.path.join(ROOT_DIR, 'manager.sqlite3'))
     for i in range(N):
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'certs', '{}.crt'.format(i)))
-        assert not os.path.isfile(os.path.join(ROOT_DIR, 'keys', '{}.key'.format(i)))
-        assert not os.path.isfile(os.path.join(ROOT_DIR, 'logs', '{}.log'.format(i)))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'certs', f'{i}.crt'))
+        assert not os.path.isfile(os.path.join(ROOT_DIR, 'keys', f'{i}.key'))
+        assert not os.path.isfile(os.path.join(ROOT_DIR, 'logs', f'{i}.log'))
 
     # but the remains.txt files still exist
     assert os.path.isfile(os.path.join(ROOT_DIR, 'remains.txt'))
@@ -278,15 +278,15 @@ def test_database_certs(capsys):
     args.func(args)
 
     out, _ = capsys.readouterr()
-    assert '[Deleted] {}'.format(os.path.join(ROOT_DIR, 'manager.sqlite3')) in out
-    assert '{} certificate(s) will be deleted'.format(N) in out
+    assert f"[Deleted] {os.path.join(ROOT_DIR, 'manager.sqlite3')}" in out
+    assert f'{N} certificate(s) will be deleted' in out
 
     # all .crt files are gone as well as the database
     assert not os.path.isfile(os.path.join(ROOT_DIR, 'manager.sqlite3'))
     for i in range(N):
-        assert not os.path.isfile(os.path.join(ROOT_DIR, 'certs', '{}.crt'.format(i)))
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'keys', '{}.key'.format(i)))
-        assert os.path.isfile(os.path.join(ROOT_DIR, 'logs', '{}.log'.format(i)))
+        assert not os.path.isfile(os.path.join(ROOT_DIR, 'certs', f'{i}.crt'))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'keys', f'{i}.key'))
+        assert os.path.isfile(os.path.join(ROOT_DIR, 'logs', f'{i}.log'))
 
     # but the remains.txt files still exist
     assert os.path.isfile(os.path.join(ROOT_DIR, 'remains.txt'))
@@ -328,7 +328,7 @@ def test_not_a_directory(capsys):
     args.func(args)
 
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'The {!r} directory does not exist'.format(ROOT_DIR)
+    assert out.rstrip() == f'The {ROOT_DIR!r} directory does not exist'
     assert not err
 
 

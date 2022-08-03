@@ -18,7 +18,7 @@ def process(command):
 
 @pytest.mark.parametrize('size', [-1, '1.3j', None])
 def test_bad_size_valid(size, capsys):
-    process('keygen --size {}'.format(size))
+    process(f'keygen --size {size}')
     out, err = capsys.readouterr()
     assert out.rstrip() == 'ValueError: The --size value must be a positive integer'
     assert not err
@@ -27,7 +27,7 @@ def test_bad_size_valid(size, capsys):
 def test_no_args(capsys):
     process('keygen')
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'Created private RSA key {!r}'.format(get_default_key_path())
+    assert out.rstrip() == f'Created private RSA key {get_default_key_path()!r}'
     assert not err
     load_key(get_default_key_path())
 
@@ -35,7 +35,7 @@ def test_no_args(capsys):
 def test_password(capsys):
     process('keygen --password the password')
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'Created private RSA key {!r}'.format(get_default_key_path())
+    assert out.rstrip() == f'Created private RSA key {get_default_key_path()!r}'
     assert not err
 
     load_key(get_default_key_path(), password='the password')
@@ -46,12 +46,12 @@ def test_password_file(capsys):
     with open(pw_file, mode='wt') as fp:
         fp.write('the password')
 
-    process('keygen --password {}'.format(pw_file))
+    process(f'keygen --password {pw_file}')
     out, err = capsys.readouterr()
     assert not err
     assert out.splitlines() == [
         'Reading the key password from the file',
-        'Created private RSA key {!r}'.format(get_default_key_path())
+        f'Created private RSA key {get_default_key_path()!r}'
     ]
 
     load_key(get_default_key_path(), password='the password')
@@ -61,9 +61,9 @@ def test_password_file(capsys):
 
 @pytest.mark.parametrize('algorithm', ['rsa', 'dsa', 'ecc'])
 def test_algorithm(algorithm, capsys):
-    process('keygen {}'.format(algorithm))
+    process(f'keygen {algorithm}')
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'Created private {} key {!r}'.format(algorithm.upper(), get_default_key_path())
+    assert out.rstrip() == f'Created private {algorithm.upper()} key {get_default_key_path()!r}'
     assert not err
     load_key(get_default_key_path())
 
@@ -91,9 +91,9 @@ def test_out_path(capsys):
         pass
 
     assert not os.path.isfile(key_path)
-    process('keygen --out {}'.format(key_path))
+    process(f'keygen --out {key_path}')
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'Created private RSA key {!r}'.format(key_path)
+    assert out.rstrip() == f'Created private RSA key {key_path!r}'
     assert not err
     assert os.path.isfile(key_path)
     load_key(key_path)

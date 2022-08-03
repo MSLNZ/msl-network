@@ -173,7 +173,7 @@ class _Backend(object):
             self.kwargs_loads = {}
             self.kwargs_dumps = {}
         else:
-            assert False, 'Unhandled JSON backend {!r}'.format(value)
+            assert False, f'Unhandled JSON backend {value!r}'
 
 
 # initialize the default backend

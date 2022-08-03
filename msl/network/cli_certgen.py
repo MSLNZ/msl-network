@@ -126,10 +126,10 @@ def execute(args):
             years_valid=years
         )
     except Exception as e:
-        print('{}: {}'.format(e.__class__.__name__, e))
+        print(f'{e.__class__.__name__}: {e}')
         return
 
-    print('Created the self-signed certificate {!r}'.format(path))
+    print(f'Created the self-signed certificate {path!r}')
     if args.show:
         print('')
         print(cryptography.get_metadata_as_string(cryptography.load_certificate(path)))

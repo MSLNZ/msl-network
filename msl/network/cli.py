@@ -39,7 +39,7 @@ def configure_parser():
     PARSER.add_argument(
         '-V', '--version',
         action='version',
-        version='{}'.format(__version__),
+        version=f'{__version__}',
         help='Show the version number and exit.'
     )
 

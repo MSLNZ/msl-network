@@ -115,20 +115,20 @@ def execute(args):
     def human_size(file_size):
         # returns a file size as a human-readable string
         if file_size < 1e3:
-            return '{} B'.format(file_size)
+            return f'{file_size} B'
         if file_size < 1e6:
-            return '{} kB'.format(round(file_size/1e3))
+            return f'{round(file_size/1e3)} kB'
         if file_size < 1e9:
-            return '{} MB'.format(round(file_size/1e6))
-        return '{} GB'.format(round(file_size/1e9))
+            return f'{round(file_size/1e6)} MB'
+        return f'{round(file_size/1e9)} GB'
 
     def delete(path):
         # try to delete the file
         try:
             os.remove(path)
-            stdout('[Deleted] {}'.format(path))
+            stdout(f'[Deleted] {path}')
         except OSError as e:
-            stdout('[OSError] {} -- Cannot delete {}'.format(e, path))
+            stdout(f'[OSError] {e} -- Cannot delete {path}')
 
     def search(directory, extn):
         # find all files in a directory
@@ -150,7 +150,7 @@ def execute(args):
 
     root_dir = args.root or HOME_DIR
     if not os.path.isdir(root_dir):
-        stdout('The {!r} directory does not exist'.format(root_dir))
+        stdout(f'The {root_dir!r} directory does not exist')
         return
 
     if args.all or args.database:
@@ -158,7 +158,7 @@ def execute(args):
         if os.path.isfile(database):
             size = os.path.getsize(database)
             stdout('\nThe following database will be deleted:')
-            stdout('  {} [{}]'.format(database, human_size(size)))
+            stdout(f'  {database} [{human_size(size)}]')
             if proceed():
                 delete(database)
         else:
@@ -168,7 +168,7 @@ def execute(args):
         stdout('\nSearching for certificates ... ', end='')
         certs, human = search(os.path.join(root_dir, 'certs'), '.crt')
         if certs:
-            stdout('\n  {} certificate(s) will be deleted [{}]'.format(len(certs), human))
+            stdout(f'\n  {len(certs)} certificate(s) will be deleted [{human}]')
             if proceed():
                 for file in certs:
                     delete(file)
@@ -179,7 +179,7 @@ def execute(args):
         stdout('\nSearching for keys ... ', end='')
         keys, human = search(os.path.join(root_dir, 'keys'), '.key')
         if keys:
-            stdout('\n  {} key(s) will be deleted [{}]'.format(len(keys), human))
+            stdout(f'\n  {len(keys)} key(s) will be deleted [{human}]')
             if proceed():
                 for file in keys:
                     delete(file)
@@ -190,7 +190,7 @@ def execute(args):
         stdout('\nSearching for log files ... ', end='')
         logs, human = search(os.path.join(root_dir, 'logs'), '.log')
         if logs:
-            stdout('\n  {} log file(s) will be deleted [{}]'.format(len(logs), human))
+            stdout(f'\n  {len(logs)} log file(s) will be deleted [{human}]')
             if proceed():
                 for file in logs:
                     delete(file)

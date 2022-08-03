@@ -67,7 +67,7 @@ def execute(args):
     """Executes the ``certdump`` command."""
 
     if not os.path.isfile(args.certfile):
-        print('Cannot find ' + args.certfile)
+        print(f'Cannot find {args.certfile}')
         return
 
     meta = get_metadata_as_string(load_certificate(args.certfile))
@@ -77,6 +77,6 @@ def execute(args):
     else:
         ensure_root_path(args.out)
         with open(args.out, mode='wt') as fp:
-            fp.write('Certificate details for {}\n'.format(args.certfile))
+            fp.write(f'Certificate details for {args.certfile}\n')
             fp.write(meta)
-        print('Dumped the certificate details to ' + args.out)
+        print(f'Dumped the certificate details to {args.out}')

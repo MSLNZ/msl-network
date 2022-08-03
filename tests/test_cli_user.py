@@ -52,7 +52,7 @@ def test_path():
     assert not os.path.isfile(conftest.Manager.database)
     os.remove(DATABASE)
 
-    process('user list --database {}'.format(conftest.Manager.database))
+    process(f'user list --database {conftest.Manager.database}')
     assert os.path.isfile(conftest.Manager.database)
     assert not os.path.isfile(DATABASE)
     os.remove(conftest.Manager.database)
@@ -62,7 +62,7 @@ def test_path():
 def test_no_username(action, capsys):
     process('user ' + action)
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'ValueError: You must specify a username to {}'.format(action)
+    assert out.rstrip() == f'ValueError: You must specify a username to {action}'
     assert not err
 
 
@@ -80,7 +80,7 @@ def test_list(capsys):
     out, err = capsys.readouterr()
     out_lines = out.splitlines()
     assert not err
-    assert out_lines[0] == 'Users in {}'.format(DATABASE)
+    assert out_lines[0] == f'Users in {DATABASE}'
     assert not out_lines[1]
     assert out_lines[2] == 'Username     Administrator'
     assert out_lines[3] == '============ ============='
@@ -94,7 +94,7 @@ def test_list(capsys):
 
 @pytest.mark.parametrize('action', ['add', 'insert'])
 def test_add_no_password(action, capsys):
-    process('user {} the.person'.format(action))
+    process(f'user {action} the.person')
     out, err = capsys.readouterr()
     assert out.rstrip() == "ValueError: You must specify a password for 'the.person'"
     assert not err
@@ -103,15 +103,15 @@ def test_add_no_password(action, capsys):
 @pytest.mark.parametrize('action', ['add', 'insert'])
 def test_add(action, capsys):
     remove_default()
-    process('user {} the.person --password pw'.format(action))
+    process(f'user {action} the.person --password pw')
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'the.person has been {}ed'.format(action)
+    assert out.rstrip() == f'the.person has been {action}ed'
     assert not err
 
 
 @pytest.mark.parametrize('action', ['add', 'insert'])
 def test_add_already_exists(action, capsys):
-    process('user {} the.person --password pw'.format(action))
+    process(f'user {action} the.person --password pw')
     out, err = capsys.readouterr()
     assert out.rstrip() == "ValueError: A user with the name 'the.person' already exists"
     assert not err
@@ -119,7 +119,7 @@ def test_add_already_exists(action, capsys):
 
 @pytest.mark.parametrize('action', ['add', 'insert'])
 def test_add_bad_username(action, capsys):
-    process('user {} person:1234 --password pw'.format(action))
+    process(f'user {action} person:1234 --password pw')
     out, err = capsys.readouterr()
     assert out.rstrip() == 'ValueError: A username cannot end with ":<integer>"'
     assert not err
@@ -132,12 +132,12 @@ def test_add_use_password_file(action, capsys):
     with open(pw_file, mode='wt') as fp:
         fp.write('a password in a file')
 
-    process('user {} person --password {}'.format(action, pw_file))
+    process(f'user {action} person --password {pw_file}')
     out, err = capsys.readouterr()
     assert not err
     assert out.splitlines() == [
-        'Reading the password from the file',
-        'person has been {}ed'.format(action),
+        f'Reading the password from the file',
+        f'person has been {action}ed',
     ]
 
     os.remove(pw_file)
@@ -146,20 +146,20 @@ def test_add_use_password_file(action, capsys):
 @pytest.mark.parametrize('action', ['remove', 'delete'])
 def test_remove(action, capsys):
     create_default()
-    process('user {} Alice'.format(action))
+    process(f'user {action} Alice')
     out, err = capsys.readouterr()
-    assert out.rstrip() == 'Alice has been {}d'.format(action)
+    assert out.rstrip() == f'Alice has been {action}d'
     assert not err
 
 
 @pytest.mark.parametrize('action', ['remove', 'delete'])
 def test_remove_not_exist(action, capsys):
     create_default()
-    process('user {} Dirac'.format(action))
+    process(f'user {action} Dirac')
     out, err = capsys.readouterr()
     assert not err
-    assert out.rstrip() == "ValueError: Cannot {} 'Dirac'. This " \
-                           "user is not in the table.".format(action)
+    assert out.rstrip() == f"ValueError: Cannot {action} 'Dirac'. This " \
+                           f"user is not in the table."
 
 
 def test_update(capsys):
@@ -192,7 +192,7 @@ def test_update_password_file(capsys):
     with open(pw_file, mode='wt') as fp:
         fp.write('a password in a file')
 
-    process('user update Alice --password {}'.format(pw_file))
+    process(f'user update Alice --password {pw_file}')
     out, err = capsys.readouterr()
     assert out.splitlines() == [
         'Reading the password from the file',

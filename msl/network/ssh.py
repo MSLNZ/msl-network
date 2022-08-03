@@ -92,7 +92,7 @@ def start_manager(host, console_script_path, *, ssh_username=None, ssh_password=
     logfile = console_script_path + '.log'
 
     command = 'sudo ' + console_script_path if as_sudo else console_script_path
-    command += ' --kwargs {!r} > {!r} 2>&1 &'.format(serialize(kwargs), logfile)
+    command += f' --kwargs {serialize(kwargs)!r} > {logfile!r} 2>&1 &'
 
     if paramiko_kwargs is None:
         paramiko_kwargs = {}
@@ -174,7 +174,7 @@ def connect(host, *, username=None, password=None, timeout=10, missing_host_key_
         raise ValueError('You must specify the SSH username')
 
     if password is None:
-        password = getpass.getpass('{}@{}\'s password: '.format(username, host))
+        password = getpass.getpass(f'{username}@{host}\'s password: ')
 
     if not password:
         raise ValueError('You must specify the SSH password')

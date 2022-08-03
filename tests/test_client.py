@@ -47,7 +47,7 @@ def test_manager_identity():
 
     cxn = connect(name='A.B.C', **manager.kwargs)
 
-    os = '{} {} {}'.format(platform.system(), platform.release(), platform.machine())
+    os = f'{platform.system()} {platform.release()} {platform.machine()}'
     language = 'Python ' + platform.python_version()
 
     identities = cxn.identities()
@@ -59,24 +59,24 @@ def test_manager_identity():
     }
     assert identities['language'] == language
     assert identities['os'] == os
-    assert 'A.B.C[{}:{}]'.format(HOSTNAME, cxn.port) in identities['clients']
+    assert f'A.B.C[{HOSTNAME}:{cxn.port}]' in identities['clients']
     assert 'BasicMath' in identities['services']
     assert 'Echo' in identities['services']
     assert 'MyArray' in identities['services']
 
     identities = cxn.identities(as_string=True)
-    expected = r'''Manager\[{hostname}:\d+]
+    expected = fr'''Manager\[{HOSTNAME}:\d+]
   attributes:
     identity\(\) -> dict
     link\(service: str\) -> bool
   language: {language}
   os: {os}
 Clients \[1]:
-  A.B.C\[{hostname}:\d+]
+  A.B.C\[{HOSTNAME}:\d+]
     language: {language}
     os: {os}
 Services \[3]:
-  BasicMath\[{hostname}:\d+]
+  BasicMath\[{HOSTNAME}:\d+]
     attributes:
       add\(x:\s?Union\[int, float], y:\s?Union\[int, float]\) -> Union\[int, float]
       divide\(x:\s?Union\[int, float], y:\s?Union\[int, float]\) -> Union\[int, float]
@@ -90,14 +90,14 @@ Services \[3]:
     language: {language}
     max_clients: -1
     os: {os}
-  Echo\[{hostname}:\d+]
+  Echo\[{HOSTNAME}:\d+]
     attributes:
       echo\(\*args, \*\*kwargs\)
       set_logging_level\(level:\s?Union\[str, int]\) -> bool
     language: {language}
     max_clients: -1
     os: {os}
-  MyArray\[{hostname}:\d+]
+  MyArray\[{HOSTNAME}:\d+]
     attributes:
       linspace\(start:\s?Union\[int, float], stop:\s?Union\[int, float], n=100\) -> List\[float]
       scalar_multiply\(scalar:\s?Union\[int, float], data:\s?List\[float]\) -> List\[float]
@@ -105,7 +105,7 @@ Services \[3]:
     language: {language}
     max_clients: -1
     os: {os}
-'''.format(hostname=HOSTNAME, language=language, os=os).splitlines()
+'''.splitlines()
 
     id_lines = identities.splitlines()
     assert len(id_lines) == len(expected)
