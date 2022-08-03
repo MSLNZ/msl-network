@@ -40,6 +40,9 @@ DATABASE = os.path.join(HOME_DIR, 'manager.sqlite3')
 IS_WINDOWS = sys.platform == 'win32'
 """:class:`bool`: Whether the operating system is Windows."""
 
+IS_LINUX = sys.platform.startswith('linux')
+""":class:`bool`: Whether the operating system is Linux."""
+
 DISCONNECT_REQUEST = '__disconnect__'
 
 DEFAULT_YEARS_VALID = 100 if sys.maxsize > 2**32 else 15
@@ -56,7 +59,10 @@ try:
     IPV4_ADDRESSES = re.findall(
         (r'IPv4\sAddress.+:\s+' if IS_WINDOWS else r'inet\s+') +
         r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})',
-        subprocess.check_output('ipconfig' if IS_WINDOWS else 'ip -4 address').decode()
+        subprocess.check_output(
+            'ipconfig' if IS_WINDOWS else
+            (['ip', '-4', 'address'] if IS_LINUX else 'ifconfig')
+        ).decode()
     )
 except (subprocess.CalledProcessError, OSError):
     IPV4_ADDRESSES = []
