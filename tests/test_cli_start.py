@@ -66,7 +66,7 @@ def test_invalid_log_level(capsys):
     assert err.rstrip().endswith("ValueError: Cannot set logging level to 'INVALID'")
 
 
-@pytest.mark.parametrize('host', [None, HOSTNAME, 'localhost', '127.0.0.1', *IPV4_ADDRESSES])
+@pytest.mark.parametrize('host', {None, HOSTNAME, 'localhost', '127.0.0.1', *IPV4_ADDRESSES})
 def test_host(host):
     filename = host or 'localhost'
     cert_file = os.path.join(CERT_DIR, f'{filename}.crt')
