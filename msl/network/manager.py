@@ -40,7 +40,7 @@ from .utils import (
     logger,
     parse_terminal_input,
     ensure_root_path,
-    _ipv4_regex,
+    _numeric_address_regex,
 )
 
 
@@ -649,7 +649,7 @@ class Peer(object):
         self.ip_address, self.port = writer.get_extra_info('peername')[:2]
         self.domain = socket.getfqdn(self.ip_address)
 
-        if _ipv4_regex.search(self.domain):
+        if _numeric_address_regex.search(self.domain):
             self.hostname = self.domain
         else:
             self.hostname = self.domain.split('.')[0]

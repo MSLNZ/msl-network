@@ -198,14 +198,30 @@ def test_is_manager_regex():
     assert search('Manager[name:1875] ') is None
 
 
-def test_ipv4_regex():
-    search = utils._ipv4_regex.search
-    assert search('1.2.3') is None
+def test_numeric_address_regex():
+    # the regex pattern is not meant to be an IPv4 parser
+    search = utils._numeric_address_regex.search
+
+    # valid
     assert search('1.2.3.4') is not None
+    assert search('999.999.999.999') is not None
+    assert search('1.2.3.4.5') is not None
+    assert search('1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa') is not None
+    assert search('1.0.0.127.in-addr.arpa') is not None
+    assert search('1.2.3.4444') is not None
+    assert search('1.2.3.4x') is not None
+
+    # invalid
+    assert search('1.2.3') is None
     assert search('localhost') is None
     assert search('en.wikipedia.org') is None
     assert search('1111.2.3.4') is None
     assert search('1.2222.3.4') is None
     assert search('1.2.3333.4') is None
-    assert search('1.2.3.4444') is None
-    assert search('1.2.3.4.5') is None
+    assert search('x1.2.3.4') is None
+    assert search('1x.2.3.4') is None
+    assert search('1.x2.3.4') is None
+    assert search('1.2x.3.4') is None
+    assert search('1.2.x3.4') is None
+    assert search('1.2.3x.4') is None
+    assert search('1.2.3.x4') is None
