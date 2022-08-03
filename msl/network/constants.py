@@ -67,13 +67,13 @@ try:
 except (subprocess.CalledProcessError, OSError):
     IPV4_ADDRESSES = []
 
-LOCALHOST_ALIASES = (
+LOCALHOST_ALIASES = {
     HOSTNAME,
     'localhost',
     '127.0.0.1',
     '::1',
     '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
     '1.0.0.127.in-addr.arpa',
-    *IPV4_ADDRESSES,
-)
-""":class:`tuple` of :class:`str`: Aliases for ``localhost``."""
+    *IPV4_ADDRESSES
+}
+""":class:`set` of :class:`str`: Aliases for ``localhost``."""
