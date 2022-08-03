@@ -8,9 +8,9 @@ import logging
 
 from .constants import DISCONNECT_REQUEST
 
-_args_regex = re.compile(r'[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
+_args_regex = re.compile(r'\s*([^\"\s]+|\"[^\"]*\")')
 
-_kwargs_regex = re.compile(r'(\w+)[\s]*=[\s]*((?:[^\"\s]+)|\"(?:[^\"]*)\")')
+_kwargs_regex = re.compile(r'(\w+)\s*=\s*([^\"\s]+|\"[^\"]*\")')
 
 _is_manager_regex = re.compile(r'^Manager\[\S+:\d+]$')
 
