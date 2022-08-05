@@ -40,7 +40,7 @@ Documentation
 -------------
 The documentation for MSL-Network can be found `here <https://msl-network.readthedocs.io/en/stable/>`_.
 
-.. |docs| image:: https://readthedocs.org/projects/msl-network/badge/?version=stable
+.. |docs| image:: https://readthedocs.org/projects/msl-network/badge/?version=latest
    :target: https://msl-network.readthedocs.io/en/stable/
    :alt: Documentation Status
 
