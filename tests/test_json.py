@@ -1,5 +1,4 @@
 import os
-import sys
 
 from msl.network import json
 
@@ -94,10 +93,8 @@ def test_use_orjson(backend):
     json.use(backend)
     assert json.backend.name == 'orjson'
     assert json.backend.enum == json.Package.ORJSON
-    if sys.version_info[:2] > (3, 5):
-        # __module__ returns None for Python 3.5
-        assert json.backend.loads.__module__ == 'orjson'
-        assert json.backend.dumps.__module__ == 'orjson'
+    assert json.backend.loads.__module__ == 'orjson'
+    assert json.backend.dumps.__module__ == 'orjson'
 
 
 @pytest.mark.parametrize(
