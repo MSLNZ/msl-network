@@ -165,18 +165,13 @@ start the Network :class:`~msl.network.manager.Manager` on the Raspberry Pi, sta
 the ``RPiService``, connect to the :class:`~msl.network.manager.Manager`
 and :meth:`~msl.network.client.Client.link` with ``RPiService``.
 
-You will have to change the value of *host* below for your Raspberry Pi. The reason for including
-``assert_hostname=False`` is because we specify an IP address for the value of `host` instead of its
-hostname. The hostname of the Raspberry Pi is (most likely) ``'raspberrypi'`` and so ``'192.168.1.65'``
-does not equal ``'raspberrypi'`` when the security of the connection is checked behind the scenes.
-If you specify the hostname of the Raspberry Pi then you can do hostname verification and not include
-the ``assert_hostname`` keyword argument. In general, use ``assert_hostname=False`` at your own risk
-if there is a possibility of a man-in-the-middle attack in your connection to the Pi.
+You may have to change the value of *host* for your Raspberry Pi. The following example
+assumes that the hostname of the Raspberry Pi is ``raspberrypi``.
 
 .. code-block:: pycon
 
     >>> from mypackage import connect
-    >>> rpi = connect(host='192.168.1.65', assert_hostname=False)
+    >>> rpi = connect(host='raspberrypi')
     >>> rpi.add_numbers(1, 2, 3, 4)
     10
     >>> rpi.power(4)
@@ -198,7 +193,7 @@ running on the Raspberry Pi and disconnect ``MyClient`` from the Pi.
 
    .. code-block:: pycon
 
-      >>> rpi = connect(host='192.168.1.65', assert_hostname=False)
+      >>> rpi = connect(host='raspberrypi')
       ...
       [Errno 98] error while attempting to bind on address ('::', 1875, 0, 0): address already in use
 
@@ -209,7 +204,7 @@ running on the Raspberry Pi and disconnect ``MyClient`` from the Pi.
 
    .. code-block:: pycon
 
-      >>> rpi = connect(host='192.168.1.65', assert_hostname=False, port=1876)
+      >>> rpi = connect(host='raspberrypi', port=1876)
 
    (2) Connect to the :class:`~msl.network.manager.Manager` and shut it down gracefully;
        however, this requires that you are an administrator of that :class:`~msl.network.manager.Manager`.
@@ -219,7 +214,7 @@ running on the Raspberry Pi and disconnect ``MyClient`` from the Pi.
    .. code-block:: pycon
 
       >>> from msl.network import connect, constants
-      >>> cxn = connect(host='192.168.1.65', assert_hostname=False)
+      >>> cxn = connect(host='raspberrypi')
       >>> cxn.admin_request(constants.SHUTDOWN_MANAGER)
 
    (3) Kill the :class:`~msl.network.manager.Manager`
@@ -227,7 +222,7 @@ running on the Raspberry Pi and disconnect ``MyClient`` from the Pi.
    .. code-block:: pycon
 
       >>> from msl.network import ssh
-      >>> ssh_client = ssh.connect('pi@192.168.1.65')
+      >>> ssh_client = ssh.connect('pi@raspberrypi')
       >>> out = ssh.exec_command(ssh_client, 'ps aux | grep mypackage')
       >>> print('\n'.join(out))
       pi  1367  0.1  2.2  63164 21380 pts/0  Sl+  12:21  0:01 /usr/bin/python3 .local/bin/mypackage
@@ -242,7 +237,7 @@ running on the Raspberry Pi and disconnect ``MyClient`` from the Pi.
    .. code-block:: pycon
 
       >>> from msl.network import ssh
-      >>> ssh_client = ssh.connect('pi@192.168.1.65')
+      >>> ssh_client = ssh.connect('pi@raspberrypi')
       >>> ssh.exec_command(ssh_client, 'sudo reboot')
       []
       >>> ssh_client.close()
