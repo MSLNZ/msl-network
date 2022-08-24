@@ -220,7 +220,8 @@ class Network(object):
         Parameters
         ----------
         result
-            The result of a request. Must be a JSON-serializable object.
+            The result of a request. Must be a JSON-serializable object, or
+            have a to_json() method.
         requester : :class:`str`, optional
             The name of the device that sent the request.
         uid : :class:`str`, optional
@@ -235,7 +236,14 @@ class Network(object):
             'result': result,
             'uid': uid
         }
-        await self._write(data, writer=writer)
+        try:
+            await self._write(data, writer=writer)
+        except TypeError as error:
+            try:
+                data['result'] = result.to_json()
+                await self._write(data, writer=writer)
+            except AttributeError:
+                raise error from None
 
     async def _write_error(self, error, *, requester=None, uid='', writer=None,
                            **ignored):  # noqa

@@ -38,8 +38,8 @@ Version 1.0.0.dev0 (in development)
 
 - Changed
 
-  * the object passed to :func:`~msl.network.json.serialize` can now have a
-    callable ``to_json`` attribute
+  * the `result` object that is returned by a :class:`~msl.network.service.Service`
+    response can implement a callable ``to_json()`` method
   * the value of the ``algorithm`` keyword argument in
     :func:`~msl.network.cryptography.get_fingerprint`
     can now also be of type :class:`str`

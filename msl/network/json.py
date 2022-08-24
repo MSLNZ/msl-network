@@ -74,29 +74,17 @@ def use(value):
 def serialize(obj):
     """Serialize an object as a JSON-formatted string.
 
-    .. versionchanged:: 1.0
-       `obj` can have a callable attribute named `to_json`.
-
     Parameters
     ----------
     obj
-        A JSON-serializable object. If `obj` is not natively JSON serializable
-        but has a callable attribute named `to_json` then `obj.to_json()` will
-        be called and the returned value will be passed to the `dumps` function
-        of the JSON backend.
+        A JSON-serializable object.
 
     Returns
     -------
     :class:`str`
         The JSON-formatted string.
     """
-    try:
-        out = backend.dumps(obj, **backend.kwargs_dumps)
-    except TypeError as error:
-        try:
-            out = backend.dumps(obj.to_json(), **backend.kwargs_dumps)
-        except AttributeError:
-            raise error from None
+    out = backend.dumps(obj, **backend.kwargs_dumps)
     if isinstance(out, bytes):
         return out.decode()
     return out
