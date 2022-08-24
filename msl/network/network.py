@@ -185,7 +185,7 @@ class Network(object):
         """
         if isinstance(level, str):
             try:
-                level = int(level)  # allow for '20' (as a string)
+                level = int(level)  # allow for "20" (as a string)
             except ValueError:
                 level = level.upper()
 
