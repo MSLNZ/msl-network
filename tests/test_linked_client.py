@@ -1,9 +1,8 @@
-import conftest
-
 import pytest
 
-from msl.network import LinkedClient
+import conftest
 from msl.examples.network import Echo
+from msl.network import LinkedClient
 
 
 def test_linked_echo():

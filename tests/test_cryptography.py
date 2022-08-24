@@ -7,11 +7,9 @@ import tempfile
 import pytest
 
 from msl.network import cryptography
-from msl.network.constants import (
-    CERT_DIR,
-    HOSTNAME,
-    DEFAULT_YEARS_VALID,
-)
+from msl.network.constants import CERT_DIR
+from msl.network.constants import DEFAULT_YEARS_VALID
+from msl.network.constants import HOSTNAME
 
 
 def remove_files():

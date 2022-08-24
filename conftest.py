@@ -1,11 +1,11 @@
-import os
-import sys
-import time
-import shutil
-import logging
 import asyncio
-import tempfile
+import logging
+import os
+import shutil
 import subprocess
+import sys
+import tempfile
+import time
 from socket import socket
 from threading import Thread
 
@@ -17,12 +17,10 @@ home = os.path.join(root_dir, 'network')
 os.makedirs(home)
 os.environ['MSL_NETWORK_HOME'] = home
 
-from msl.network import (  # noqa
-    connect,
-    constants,
-    cryptography,
-    UsersTable,
-)
+from msl.network import connect
+from msl.network import constants
+from msl.network import cryptography
+from msl.network import UsersTable
 
 # suppress all logging messages from being displayed
 logging.basicConfig(level=logging.CRITICAL+10)

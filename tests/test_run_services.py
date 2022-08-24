@@ -1,12 +1,13 @@
-import time
 import threading
-
-import conftest
+import time
 
 import pytest
 
-from msl.network import connect, Service, LinkedClient
+import conftest
 from msl.examples.network import Echo
+from msl.network import LinkedClient
+from msl.network import Service
+from msl.network import connect
 from msl.network.manager import run_services
 
 

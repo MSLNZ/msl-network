@@ -3,16 +3,13 @@ import os
 import pytest
 
 import conftest
-
 from msl.network import cli
+from msl.network.constants import CERT_DIR
+from msl.network.constants import HOSTNAME
+from msl.network.constants import IPV4_ADDRESSES
+from msl.network.constants import KEY_DIR
+from msl.network.constants import NETWORK_MANAGER_RUNNING_PREFIX
 from msl.network.database import UsersTable
-from msl.network.constants import (
-    HOSTNAME,
-    IPV4_ADDRESSES,
-    NETWORK_MANAGER_RUNNING_PREFIX,
-    CERT_DIR,
-    KEY_DIR,
-)
 
 
 def process(command):

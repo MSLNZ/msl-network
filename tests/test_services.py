@@ -1,13 +1,16 @@
-import time
-import math
 import concurrent.futures
+import math
+import time
 
-from pytest import approx, raises
+from pytest import approx
+from pytest import raises
 
 import conftest
-
-from msl.network import connect, Service
-from msl.examples.network import BasicMath, MyArray, Echo
+from msl.examples.network import BasicMath
+from msl.examples.network import Echo
+from msl.examples.network import MyArray
+from msl.network import Service
+from msl.network import connect
 
 
 def test_echo():

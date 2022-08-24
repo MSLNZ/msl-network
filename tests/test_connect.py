@@ -3,15 +3,12 @@ import sys
 import tempfile
 from time import perf_counter
 
-import conftest
-
 import pytest
 
-from msl.network import (
-    connect,
-    cryptography,
-    constants,
-)
+import conftest
+from msl.network import connect
+from msl.network import constants
+from msl.network import cryptography
 
 
 def test_no_manager_no_certificate_localhost():

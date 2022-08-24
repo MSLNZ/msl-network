@@ -4,13 +4,14 @@ Run the tests in conda environments.
 For more information see:
   https://msl-package-manager.readthedocs.io/en/latest/new_package_readme.html#create-readme-condatests
 """
+import argparse
+import collections
+import json
 import os
 import re
-import sys
-import json
-import argparse
 import subprocess
-import collections
+import sys
+
 try:
     import configparser
 except ImportError:

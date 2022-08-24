@@ -2,11 +2,9 @@ import os
 import tempfile
 
 from msl.network import cli
-from msl.network.cryptography import (
-    generate_certificate,
-    load_certificate,
-    get_fingerprint,
-)
+from msl.network.cryptography import generate_certificate
+from msl.network.cryptography import get_fingerprint
+from msl.network.cryptography import load_certificate
 
 
 def process(command):

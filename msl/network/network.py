@@ -9,19 +9,13 @@ import sys
 import traceback
 from typing import Union
 
+from .constants import HOSTNAME
+from .constants import LOCALHOST_ALIASES
 from .cryptography import get_ssl_context
-from .utils import (
-    logger,
-    _is_manager_regex,
-)
-from .json import (
-    deserialize,
-    serialize
-)
-from .constants import (
-    LOCALHOST_ALIASES,
-    HOSTNAME
-)
+from .json import deserialize
+from .json import serialize
+from .utils import _is_manager_regex
+from .utils import logger
 
 
 class Network(object):

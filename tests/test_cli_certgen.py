@@ -4,12 +4,10 @@ import tempfile
 import pytest
 
 from msl.network import cli
-from msl.network.cryptography import (
-    load_certificate,
-    get_fingerprint,
-    generate_key,
-    get_default_cert_path,
-)
+from msl.network.cryptography import generate_key
+from msl.network.cryptography import get_default_cert_path
+from msl.network.cryptography import get_fingerprint
+from msl.network.cryptography import load_certificate
 
 
 def process(command):

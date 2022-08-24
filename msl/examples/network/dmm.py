@@ -2,11 +2,10 @@
 Example showing how a digital multimeter that has a non-Ethernet interface
 (e.g., GPIB or RS232) can be controlled from any computer that is on the network.
 """
+from msl.equipment import ConnectionRecord
+from msl.equipment import EquipmentRecord
+
 from msl.network import Service
-from msl.equipment import (
-    EquipmentRecord,
-    ConnectionRecord,
-)
 
 
 class DigitalMultimeter(Service):

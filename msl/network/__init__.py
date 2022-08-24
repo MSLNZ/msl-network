@@ -4,24 +4,16 @@ Concurrent and asynchronous network I/O.
 import re
 from collections import namedtuple
 
-from .client import (
-    connect,
-    LinkedClient,
-    filter_client_connect_kwargs,
-)
-from .service import (
-    Service,
-    filter_service_start_kwargs,
-)
-from .database import (
-    ConnectionsTable,
-    HostnamesTable,
-    UsersTable,
-)
-from .manager import (
-    run_services,
-    filter_run_forever_kwargs,
-)
+from .client import LinkedClient
+from .client import connect
+from .client import filter_client_connect_kwargs
+from .database import ConnectionsTable
+from .database import HostnamesTable
+from .database import UsersTable
+from .manager import filter_run_forever_kwargs
+from .manager import run_services
+from .service import Service
+from .service import filter_service_start_kwargs
 
 __author__ = 'Measurement Standards Laboratory of New Zealand'
 __copyright__ = '\xa9 2017 - 2022, ' + __author__

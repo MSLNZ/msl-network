@@ -1,6 +1,6 @@
-from msl.network.service import filter_service_start_kwargs
-from msl.network.manager import filter_run_forever_kwargs
 from msl.network.client import filter_client_connect_kwargs
+from msl.network.manager import filter_run_forever_kwargs
+from msl.network.service import filter_service_start_kwargs
 
 
 def test_filter_service_start_kwargs():

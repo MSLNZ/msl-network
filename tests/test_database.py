@@ -1,5 +1,5 @@
-import socket
 import datetime
+import socket
 
 import pytest
 

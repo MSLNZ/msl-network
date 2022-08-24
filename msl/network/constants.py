@@ -3,9 +3,9 @@ Constants that are used by the MSL-Network package.
 """
 import os
 import re
-import sys
 import socket
 import subprocess
+import sys
 
 PORT = 1875
 """:class:`int`: The default port number to use for the Network :class:`~msl.network.manager.Manager` 

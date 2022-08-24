@@ -1,35 +1,29 @@
 """
 Functions to create a self-signed certificate for the secure SSL/TLS protocol.
 """
+import datetime
+import inspect
 import os
 import ssl
-import inspect
-import datetime
 import textwrap
 from ipaddress import IPv4Address
 
 from cryptography import x509
-from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import (
-    ec,
-    rsa,
-    dsa,
-)
+from cryptography.hazmat.primitives.asymmetric import dsa
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
 
-from .utils import (
-    logger,
-    ensure_root_path,
-    _oid_regex,
-)
-from .constants import (
-    KEY_DIR,
-    CERT_DIR,
-    HOSTNAME,
-    DEFAULT_YEARS_VALID,
-    IPV4_ADDRESSES,
-)
+from .constants import CERT_DIR
+from .constants import DEFAULT_YEARS_VALID
+from .constants import HOSTNAME
+from .constants import IPV4_ADDRESSES
+from .constants import KEY_DIR
+from .utils import _oid_regex
+from .utils import ensure_root_path
+from .utils import logger
 
 hash_map = {}
 

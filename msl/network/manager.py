@@ -1,47 +1,33 @@
 """
 The Network :class:`Manager`.
 """
-import os
-import sys
-import ssl
-import socket
-import inspect
 import asyncio
+import inspect
 import logging
+import os
 import platform
+import socket
+import ssl
+import sys
 from datetime import datetime
 
+from . import constants
 from . import cryptography
-from .network import Network
+from .constants import DISCONNECT_REQUEST
+from .constants import HOSTNAME
+from .constants import NOTIFICATION_UID
+from .constants import SHUTDOWN_MANAGER
+from .database import ConnectionsTable
+from .database import HostnamesTable
+from .database import UsersTable
 from .json import deserialize
-from .service import (
-    Service,
-    filter_service_start_kwargs,
-)
-from .constants import (
-    HOSTNAME,
-    PORT,
-    HOME_DIR,
-    DATABASE,
-    DISCONNECT_REQUEST,
-    NETWORK_MANAGER_RUNNING_PREFIX,
-    NOTIFICATION_UID,
-    SHUTDOWN_MANAGER,
-    LOCALHOST_ALIASES,
-    KEY_DIR,
-    CERT_DIR,
-)
-from .database import (
-    ConnectionsTable,
-    UsersTable,
-    HostnamesTable,
-)
-from .utils import (
-    logger,
-    parse_terminal_input,
-    ensure_root_path,
-    _numeric_address_regex,
-)
+from .network import Network
+from .service import Service
+from .service import filter_service_start_kwargs
+from .utils import _numeric_address_regex
+from .utils import ensure_root_path
+from .utils import logger
+from .utils import parse_terminal_input
 
 
 class Manager(Network):
@@ -654,7 +640,7 @@ class Peer(object):
         else:
             self.hostname = self.domain.split('.')[0]
 
-        if self.hostname in LOCALHOST_ALIASES:
+        if self.hostname in constants.LOCALHOST_ALIASES:
             self.address = f'{HOSTNAME}:{self.port}'
         else:
             self.address = f'{self.hostname}:{self.port}'
@@ -664,7 +650,7 @@ class Peer(object):
 
 
 def run_forever(
-        *, host=None, port=PORT, auth_hostname=False, auth_login=False,
+        *, host=None, port=constants.PORT, auth_hostname=False, auth_login=False,
         auth_password=None, database=None, disable_tls=False, cert_file=None,
         key_file=None, key_file_password=None, log_level='INFO', log_file=None):
     """Start the event loop for the Network :class:`.Manager`.
@@ -901,14 +887,14 @@ def filter_run_forever_kwargs(**kwargs):
 
 
 def _create_manager_and_loop(
-        *, host=None, port=PORT, auth_hostname=False, auth_login=False,
+        *, host=None, port=constants.PORT, auth_hostname=False, auth_login=False,
         auth_password=None, database=None, disable_tls=False, cert_file=None,
         key_file=None, key_file_password=None, log_level='INFO', log_file=None):
 
     # set up logging -- FileHandler and StreamHandler
     if log_file is None:
         now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        log_file = os.path.join(HOME_DIR, 'logs', f'manager-{now}.log')
+        log_file = os.path.join(constants.HOME_DIR, 'logs', f'manager-{now}.log')
     ensure_root_path(log_file)
 
     # set the root logger level to DEBUG and make sure that it has no handlers
@@ -967,8 +953,8 @@ def _create_manager_and_loop(
                 key_file = cryptography.get_default_key_path()
                 cert_file = cryptography.get_default_cert_path()
             else:
-                key_file = os.path.join(KEY_DIR, f'{host}.key')
-                cert_file = os.path.join(CERT_DIR, f'{host}.crt')
+                key_file = os.path.join(constants.KEY_DIR, f'{host}.key')
+                cert_file = os.path.join(constants.CERT_DIR, f'{host}.crt')
 
             if not os.path.isfile(key_file):
                 cryptography.generate_key(path=key_file, password=key_file_password)
@@ -995,7 +981,7 @@ def _create_manager_and_loop(
         if not os.path.isfile(database):
             ensure_root_path(database)
     else:
-        database = DATABASE
+        database = constants.DATABASE
 
     # load the connections table
     conn_table = ConnectionsTable(database=database)
@@ -1080,7 +1066,7 @@ def _create_manager_and_loop(
 
     state = 'ENABLED' if context else 'DISABLED'
     logger.info('%s %s:%d (TLS %s)',
-                NETWORK_MANAGER_RUNNING_PREFIX,
+                constants.NETWORK_MANAGER_RUNNING_PREFIX,
                 host or HOSTNAME,
                 port,
                 state)

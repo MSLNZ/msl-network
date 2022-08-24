@@ -8,11 +8,9 @@ To see the help documentation, run the following command in a terminal::
 """
 import os
 
+from .cryptography import get_metadata_as_string
+from .cryptography import load_certificate
 from .utils import ensure_root_path
-from .cryptography import (
-    get_metadata_as_string,
-    load_certificate,
-)
 
 HELP = 'Dumps the details of a PEM certificate.'
 

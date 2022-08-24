@@ -1,10 +1,10 @@
 """
 Common functions used by MSL-Network.
 """
-import re
-import os
 import ast
 import logging
+import os
+import re
 
 from .constants import DISCONNECT_REQUEST
 

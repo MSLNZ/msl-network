@@ -1,13 +1,12 @@
 import json
-import time
 import socket
 import threading
+import time
 
 import conftest
-
+from msl.examples.network import Echo
 from msl.network import connect
 from msl.network.constants import NOTIFICATION_UID
-from msl.examples.network import Echo
 
 TERMINATION = b'\r\n'
 

@@ -4,10 +4,9 @@ import tempfile
 import pytest
 
 import conftest
-
 from msl.network import cli
-from msl.network.database import UsersTable
 from msl.network.constants import DATABASE
+from msl.network.database import UsersTable
 
 
 def process(command):

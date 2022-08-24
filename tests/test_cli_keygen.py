@@ -4,10 +4,8 @@ import tempfile
 import pytest
 
 from msl.network import cli
-from msl.network.cryptography import (
-    get_default_key_path,
-    load_key,
-)
+from msl.network.cryptography import get_default_key_path
+from msl.network.cryptography import load_key
 
 
 def process(command):

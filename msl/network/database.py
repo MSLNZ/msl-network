@@ -9,14 +9,10 @@ from cryptography.exceptions import InvalidKey
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-from .constants import (
-    DATABASE,
-    LOCALHOST_ALIASES,
-)
-from .utils import (
-    logger,
-    _is_username_invalid_regex,
-)
+from .constants import DATABASE
+from .constants import LOCALHOST_ALIASES
+from .utils import _is_username_invalid_regex
+from .utils import logger
 
 
 class Database(object):

@@ -16,20 +16,18 @@ on a Raspberry Pi from another computer.
 
 .. _SSH: https://www.ssh.com/academy/ssh
 """
+import getpass
+import socket
 import sys
 import time
-import socket
-import getpass
 import warnings
 
 import paramiko
 from cryptography.utils import CryptographyDeprecationWarning
 
 from .constants import NETWORK_MANAGER_RUNNING_PREFIX
-from .json import (
-    serialize,
-    deserialize,
-)
+from .json import deserialize
+from .json import serialize
 
 
 def parse_console_script_kwargs():

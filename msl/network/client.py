@@ -3,22 +3,18 @@ Use the :func:`connect` function to connect to a Network
 :class:`~msl.network.manager.Manager` as a :class:`Client`.
 """
 import asyncio
-from concurrent.futures import Future
 import platform
-from time import (
-    perf_counter,
-    sleep,
-)
 import threading
 import uuid
+from concurrent.futures import Future
+from time import perf_counter
+from time import sleep
 
-from .constants import (
-    DISCONNECT_REQUEST,
-    NOTIFICATION_UID,
-    PORT,
-    SHUTDOWN_MANAGER,
-    SHUTDOWN_SERVICE,
-)
+from .constants import DISCONNECT_REQUEST
+from .constants import NOTIFICATION_UID
+from .constants import PORT
+from .constants import SHUTDOWN_MANAGER
+from .constants import SHUTDOWN_SERVICE
 from .json import deserialize
 from .network import Device
 from .service import filter_service_start_kwargs

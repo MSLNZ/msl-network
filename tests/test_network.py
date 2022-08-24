@@ -1,7 +1,7 @@
 import logging
 
-from msl.network.utils import logger
 from msl.network.network import Network
+from msl.network.utils import logger
 
 original = logger.level
 

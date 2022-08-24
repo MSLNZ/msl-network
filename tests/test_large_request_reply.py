@@ -1,12 +1,11 @@
-import sys
 import concurrent.futures
+import sys
 
 import pytest
 
 import conftest
-
-from msl.network import connect
 from msl.examples.network import Echo
+from msl.network import connect
 
 skipif_32bit = pytest.mark.skipif(
     sys.maxsize < 2**32,

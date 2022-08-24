@@ -1,8 +1,9 @@
 import os
 
+import pytest
+
 from msl.network import json
 
-import pytest
 try:
     import orjson
 except ImportError:  # 32-bit wheels for orjson are not available on PyPI

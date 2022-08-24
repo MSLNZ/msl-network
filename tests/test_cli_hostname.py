@@ -3,10 +3,9 @@ import os
 import pytest
 
 import conftest
-
 from msl.network import cli
-from msl.network.database import HostnamesTable
 from msl.network.constants import DATABASE, LOCALHOST_ALIASES
+from msl.network.database import HostnamesTable
 
 
 def process(command):

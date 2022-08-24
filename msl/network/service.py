@@ -4,18 +4,14 @@ Base class for all Services.
 import inspect
 import platform
 
-from .json import (
-    deserialize,
-    serialize
-)
-from .constants import (
-    PORT,
-    SHUTDOWN_SERVICE,
-    DISCONNECT_REQUEST,
-    NOTIFICATION_UID,
-)
-from .utils import logger
+from .constants import DISCONNECT_REQUEST
+from .constants import NOTIFICATION_UID
+from .constants import PORT
+from .constants import SHUTDOWN_SERVICE
+from .json import deserialize
+from .json import serialize
 from .network import Device
+from .utils import logger
 
 
 class Service(Device):

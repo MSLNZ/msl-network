@@ -1,9 +1,8 @@
 import time
 
 import conftest
-
-from msl.network import connect, LinkedClient
 from msl.examples.network import Heartbeat, Echo
+from msl.network import connect, LinkedClient
 
 
 def test_client_linkedclient_handlers():

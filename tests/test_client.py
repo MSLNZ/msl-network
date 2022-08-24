@@ -1,13 +1,12 @@
-import re
 import platform
+import re
 
 import pytest
 
 import conftest
-
+from msl.examples.network import BasicMath, MyArray, Echo
 from msl.network import connect
 from msl.network.constants import HOSTNAME, LOCALHOST_ALIASES
-from msl.examples.network import BasicMath, MyArray, Echo
 
 
 def test_admin_requests():

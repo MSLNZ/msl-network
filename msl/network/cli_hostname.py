@@ -7,8 +7,8 @@ To see the help documentation, run the following command in a terminal::
 
 """
 from .constants import DATABASE
-from .utils import ensure_root_path
 from .database import HostnamesTable
+from .utils import ensure_root_path
 
 HELP = 'Add/remove hostname(s) into/from the table in the database.'
 
