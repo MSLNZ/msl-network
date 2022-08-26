@@ -3,6 +3,7 @@ Base class for all Services.
 """
 import inspect
 import platform
+from concurrent.futures import ThreadPoolExecutor
 
 from .constants import DISCONNECT_REQUEST
 from .constants import NOTIFICATION_UID
@@ -60,6 +61,8 @@ class Service(Device):
                 self.ignore_attributes(ignore_attributes)
             else:
                 self.ignore_attributes(*ignore_attributes)
+
+        self._executor = ThreadPoolExecutor(thread_name_prefix=f'{self.name}')
 
     @property
     def max_clients(self):
@@ -289,7 +292,7 @@ class Service(Device):
             if callable(attr):
                 # execute the request in a separate thread
                 future = self._loop.run_in_executor(
-                    None, self._execute_request, attr, request)
+                    self._executor, self._execute_request, attr, request)
                 self._futures.append(future)
                 future.add_done_callback(self._remove_future)
             else:
