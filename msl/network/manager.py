@@ -574,9 +574,11 @@ class Manager(Network):
         try:
             network_names = self.service_links[service]
         except KeyError:
-            msg = f'{service!r} service does not exist, cannot unlink {writer_name} from it'
-            logger.info(msg)
-            await self._write_error(KeyError(msg), requester=writer_name, uid=uid, writer=writer)
+            # From the Client's point of view, it does not need to receive an
+            # exception that the Service has already been disconnected.
+            # Send a reply that unlinking was successful.
+            logger.info(f'cannot unlink {writer_name} from {service!r} since {service!r} does not exist')
+            await self._write_result(True, requester=writer_name, uid=uid, writer=writer)
         else:
             try:
                 network_names.remove(writer_name)
