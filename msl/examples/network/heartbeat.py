@@ -41,23 +41,23 @@ class Heartbeat(Service):
         self._counter = 0
         self._alive = True
 
-    def kill(self):
+    def kill(self) -> None:
         """Stop emitting the heartbeat."""
         self._alive = False
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset the heartbeat counter."""
         self._counter = 0
 
-    def set_heart_rate(self, beats_per_second: int):
+    def set_heart_rate(self, beats_per_second: int) -> None:
         """Change the rate that the value of the counter is emitted."""
         self._sleep = 1.0 / float(beats_per_second)
 
-    def shutdown_handler(self):
+    def shutdown_handler(self) -> None:
         """Called when the connection to the Manager is closed."""
         self._alive = False
 
-    async def emit(self):
+    async def emit(self) -> None:
         """This coroutine is also run in the event loop."""
         while self._alive:
             self.emit_notification(self._counter)
