@@ -27,6 +27,12 @@ class Service(Device):
         .. versionadded:: 0.5
             The `ignore_attributes` keyword argument.
 
+        .. versionadded:: 1.0
+            If a method of the Service returns an object that is not natively
+            JSON serializable, then the returned object can have a callable
+            ``to_json()`` method and the value returned by ``to_json()`` will be
+            used in the response to the :class:`~msl.network.client.Client`.
+
         Parameters
         ----------
         name : :class:`str`, optional

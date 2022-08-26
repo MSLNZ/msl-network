@@ -183,13 +183,6 @@ If the :class:`~msl.network.service.Service` successfully executed the request t
       "uid": string (the unique identifier of the request)
     }
 
-.. tip::
-
-    If the ``result`` object that a :class:`~msl.network.service.Service` returns
-    as a response is not natively JSON_ serializable, then the ``result`` object can
-    implement a callable ``to_json()`` method and the value returned by ``to_json()``
-    will be used as the ``result`` instead.
-
 A :class:`~msl.network.service.Service` can also emit a notification to all
 :class:`~msl.network.client.Client`\'s that are :class:`~msl.network.client.Link`\ed with the
 :class:`~msl.network.service.Service`. A :class:`~msl.network.service.Service` must
