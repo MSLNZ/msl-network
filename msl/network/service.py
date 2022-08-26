@@ -4,6 +4,7 @@ Base class for all Services.
 import inspect
 import platform
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 from .constants import DISCONNECT_REQUEST
 from .constants import NOTIFICATION_UID
@@ -51,9 +52,10 @@ class Service(Device):
             self._max_clients = int(max_clients)
 
         self._ignore_attributes = [
-            'add_tasks', 'address_manager', 'emit_notification', 'identity',
-            'ignore_attributes', 'max_clients', 'name', 'port',
-            'shutdown_handler', 'start',
+            'add_tasks', 'address_manager', 'emit_notification',
+            'emit_notification_threadsafe', 'identity', 'ignore_attributes',
+            'loop_thread_id', 'max_clients', 'name', 'port',
+            'shutdown_handler', 'start'
         ]
 
         if ignore_attributes is not None:
@@ -86,6 +88,7 @@ class Service(Device):
 
         See Also
         --------
+        :meth:`.emit_notification_threadsafe`
         :meth:`~msl.network.client.Link.notification_handler`
         """
         notification = {
@@ -95,6 +98,31 @@ class Service(Device):
             'uid': NOTIFICATION_UID
         }
         self._queue.put_nowait((NOTIFICATION_UID, notification))
+
+    def emit_notification_threadsafe(self, *args, **kwargs):
+        """A thread-safe implementation of :meth:`.emit_notification`.
+
+        When a :class:`Service` handles a request, it does so in a separate
+        thread than the event loop is running in. Therefore, if a method of
+        the :class:`Service` class wants to emit a notification while it is
+        handling a request then it must emit the notification in a
+        thread-safe manner.
+
+        .. versionadded:: 1.0
+
+        Parameters
+        ----------
+        args
+            The arguments to emit.
+        kwargs
+            The keyword arguments to emit.
+
+        See Also
+        --------
+        :meth:`.emit_notification`
+        :meth:`~msl.network.client.Link.notification_handler`
+        """
+        self._loop.call_soon_threadsafe(partial(self.emit_notification, *args, **kwargs))
 
     def ignore_attributes(self, *names):
         """Ignore attributes from being added to the

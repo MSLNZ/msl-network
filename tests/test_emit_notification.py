@@ -1,8 +1,12 @@
+import threading
 import time
 
 import conftest
-from msl.examples.network import Heartbeat, Echo
-from msl.network import connect, LinkedClient
+from msl.examples.network import Echo
+from msl.examples.network import Heartbeat
+from msl.network import LinkedClient
+from msl.network import Service
+from msl.network import connect
 
 
 def test_client_linkedclient_handlers():
@@ -64,4 +68,50 @@ def test_client_linkedclient_handlers():
     lc_hb.unlink()
     link_echo.disconnect()  # disconnect is an alias for unlink
     lc_echo.disconnect()
+    manager.shutdown(connection=cxn)
+
+
+def test_threadsafe():
+
+    class ThreadIDs(Service):
+
+        def get_thread_ids(self):
+            for i in range(10):
+                self.emit_notification_threadsafe(i, index=i+10)
+            return {
+                'loop_thread_id': self.loop_thread_id,
+                'current_thread_id': threading.get_ident(),
+                'main_thread_id': threading.main_thread().ident,
+                'asyncio_thread_id': self._loop._thread_id,
+            }
+
+    def handler(*args, **kwargs):
+        assert len(args) == 1
+        assert len(kwargs) == 1
+        arguments.append(args[0])
+        keywords.append(kwargs['index'])
+
+    arguments = []
+    keywords = []
+
+    manager = conftest.Manager(ThreadIDs)
+
+    cxn = connect(**manager.kwargs)
+    ids = cxn.link('ThreadIDs')
+    ids.notification_handler = handler
+
+    assert cxn.loop_thread_id is not None
+    assert cxn.loop_thread_id != threading.get_ident()
+    assert cxn.loop_thread_id != threading.main_thread().ident
+    assert cxn.loop_thread_id == cxn._loop._thread_id
+
+    t = ids.get_thread_ids()
+    assert t['loop_thread_id'] != t['main_thread_id']
+    assert t['loop_thread_id'] != t['current_thread_id']
+    assert t['loop_thread_id'] == t['asyncio_thread_id']
+    assert t['main_thread_id'] == threading.get_ident()
+
+    assert arguments == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    assert keywords == [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+
     manager.shutdown(connection=cxn)

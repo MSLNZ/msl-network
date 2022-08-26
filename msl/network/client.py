@@ -648,6 +648,7 @@ class Link(object):
         See Also
         --------
         :meth:`~msl.network.service.Service.emit_notification`
+        :meth:`~msl.network.service.Service.emit_notification_threadsafe`
         """
         pass
 

@@ -6,6 +6,7 @@ import asyncio
 import getpass
 import socket
 import sys
+import threading
 import traceback
 from typing import Union
 
@@ -297,12 +298,23 @@ class Device(Network):
         self._queue = None
         self._tasks = []
         self._username = None
+        self._loop_thread_id = None
 
     @property
     def address_manager(self):
         """:class:`str`: The address of the :class:`~msl.network.manager.Manager`
         that this device is connected to."""
         return self._address_manager
+
+    @property
+    def loop_thread_id(self):
+        """Identifier of the thread running the event loop.
+
+        Returns :data:`None` if the event loop is not running.
+
+        .. versionadded:: 1.0
+        """
+        return self._loop_thread_id
 
     @property
     def name(self):
@@ -447,6 +459,8 @@ class Device(Network):
         # since self._create_connection creates a new event loop
         self._queue = asyncio.Queue()
 
+        self._loop_thread_id = threading.get_ident()
+
         try:
             self._loop.run_until_complete(self._gather())
         except KeyboardInterrupt:
@@ -469,6 +483,7 @@ class Device(Network):
                     await asyncio.sleep(0.01)
                 self._loop.run_until_complete(wait_closed())
             self._loop.close()
+            self._loop_thread_id = None
             try:
                 logger.info('disconnected from Manager[%s]', self._address_manager)
             except (NameError, ValueError):

@@ -7,6 +7,10 @@ Version 1.0.0.dev0 (in development)
 
 - Added
 
+  * the :attr:`~msl.network.network.Device.loop_thread_id` property for a
+    :class:`~msl.network.service.Service` and a :class:`~msl.network.client.Client`
+  * the :meth:`~msl.network.service.Service.emit_notification_threadsafe` method
+    for a :class:`~msl.network.service.Service`
   * ability to specify the `host` to use when starting a :class:`~msl.network.manager.Manager`
   * support for Python 3.9 and 3.10
   * :func:`~msl.network.network.Network.set_logging_level` to be able to set the
