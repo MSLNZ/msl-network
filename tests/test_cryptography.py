@@ -61,12 +61,12 @@ def test_defaults():
 
 @pytest.mark.parametrize(
     'kwargs',
-    [{'password': None, 'size': 2048, 'algorithm': 'SHA1', 'years_valid': None},
+    [{'password': None, 'size': 2048, 'algorithm': 'SHA3_224', 'years_valid': None},
      {'password': 'pass', 'size': 1024, 'algorithm': 'SHA224', 'years_valid': 1},
      {'password': 'ss', 'size': 2048, 'algorithm': 'SHA256', 'years_valid': 2},
      {'password': None, 'size': 1024, 'algorithm': 'SHA384', 'years_valid': 3},
      {'password': None, 'size': 4096, 'algorithm': 'SHA512', 'years_valid': 4},
-     {'password': None, 'size': 2048, 'algorithm': 'MD5', 'years_valid': 5}]
+     {'password': None, 'size': 2048, 'algorithm': 'SHA3_384', 'years_valid': 5}]
 )
 def test_rsa(kwargs):
     key_file, cert_file = remove_files()
@@ -99,10 +99,10 @@ def test_rsa(kwargs):
 
 @pytest.mark.parametrize(
     'kwargs',
-    [{'password': None, 'size': 1024, 'algorithm': 'SHA1', 'years_valid': None},
+    [{'password': None, 'size': 1024, 'algorithm': 'SHA384', 'years_valid': None},
      {'password': 'pass', 'size': 2048, 'algorithm': 'SHA224', 'years_valid': 1},
      {'password': 'word', 'size': 3072, 'algorithm': 'SHA256', 'years_valid': 2},
-     {'password': None, 'size': 4096, 'algorithm': 'SHA1', 'years_valid': 3}]
+     {'password': None, 'size': 4096, 'algorithm': 'SHA512', 'years_valid': 3}]
 )
 def test_dsa(kwargs):
     key_file, cert_file = remove_files()
@@ -134,12 +134,12 @@ def test_dsa(kwargs):
 
 @pytest.mark.parametrize(
     'kwargs',
-    [{'password': None, 'algorithm': 'SHA1', 'years_valid': None, 'curve': 'secp192r1'},
+    [{'password': None, 'algorithm': 'SHA3_224', 'years_valid': None, 'curve': 'secp192r1'},
      {'password': 'pass', 'algorithm': 'SHA224', 'years_valid': 1, 'curve': 'secp224r1'},
      {'password': 'ss', 'algorithm': 'SHA256', 'years_valid': 2, 'curve': 'secp256r1'},
      {'password': None, 'algorithm': 'SHA384', 'years_valid': 3, 'curve': 'secp384r1'},
      {'password': 'hi', 'algorithm': 'SHA512', 'years_valid': 4, 'curve': 'secp521r1'},
-     {'password': None, 'algorithm': 'SHA1', 'years_valid': 5, 'curve': 'secp256k1'},
+     {'password': None, 'algorithm': 'SHA3_512', 'years_valid': 5, 'curve': 'secp256k1'},
      {'password': 'word', 'algorithm': 'SHA224', 'years_valid': 6, 'curve': 'sect163k1'},
      {'password': None, 'algorithm': 'SHA256', 'years_valid': 7, 'curve': 'sect409k1'},
      {'password': None, 'algorithm': 'SHA384', 'years_valid': 8, 'curve': 'sect283r1'},
