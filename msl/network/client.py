@@ -736,6 +736,9 @@ class LinkedClient(object):
         kwargs
             Keyword arguments that are passed to :func:`.connect`.
         """
+        # define these before calling super()
+        self._client = None
+        self._link = None
         super(LinkedClient, self).__init__()
         kwargs.setdefault('name', self.__class__.__name__)
         kwargs.setdefault('timeout', 10)
@@ -746,7 +749,6 @@ class LinkedClient(object):
         # for the Client to link with the Service. We consider the `timeout` kwarg
         # to be the total time to connect to the Manager and link with the Service.
         t0 = perf_counter()
-        self._link = None
         self._client = connect(**self._kwargs)
 
         while True:
