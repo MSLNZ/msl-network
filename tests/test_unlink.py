@@ -164,7 +164,7 @@ def test_unlink_linkedclient_max10():
     # this LinkedClient was already unlinked but calling disconnect should not raise an error
     linked_clients[0].disconnect()
 
-    # once the ShutdownableEcho shuts down the Manager also automatically shuts down
+    # once the ShutdownableEcho shuts down, the Manager also automatically shuts down
     # since the ShutdownableEcho was started using the run_services() function
     for client in linked_clients[2:]:
         client.disconnect()  # can still disconnect
@@ -174,5 +174,5 @@ def test_unlink_linkedclient_max10():
         client.disconnect()
 
     # the `run_services` function will block the unittests forever if a
-    # LinkedClient does not shutdown ShutdownableEcho
+    # LinkedClient does not shut down ShutdownableEcho
     run_thread.join()
