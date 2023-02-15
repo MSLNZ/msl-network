@@ -384,7 +384,7 @@ class Client(Device):
             Network :class:`~msl.network.manager.Manager`.
         """
         if not isinstance(link, Link):
-            raise TypeError('Must pass in a Link object')
+            raise TypeError(f'Must pass in a Link object, received {type(link)}')
         logger.debug('preparing to unlink %r', link)
         success = self._new_request('Manager', 'unlink',
                                     link.service_name, timeout=timeout)
