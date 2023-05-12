@@ -555,6 +555,68 @@ class Link(object):
         self._request = client._new_request  # noqa
         logger.debug('linked with %s[%s]', service, identity['address'])
 
+    def acquire_lock(self, shared=False, timeout=None):
+        """Acquire a lock with the linked :class:`~msl.network.service.Service`.
+
+        When a lock is acquired, no more :class:`.Client`\\s are allowed to
+        link with the :class:`~msl.network.service.Service` until all locks
+        have been released.
+
+        .. versionadded:: 1.0
+
+        Parameters
+        ----------
+        shared : :class:`bool`, optional
+            Whether the lock is exclusive or shared. An exclusive lock can only
+            be acquired if a single :class:`.Client` is linked with the
+            :class:`~msl.network.service.Service`. A shared lock allows for
+            multiple simultaneous links, however, once any of the linked
+            :class:`.Client`\\s requests a lock the lock is shared amongst the
+            currently-linked :class:`.Client`\\s and no new :class:`.Client`\\s
+            can link with the :class:`~msl.network.service.Service` until all
+            locks have been released.
+        timeout : :class:`int` or :class:`float`, optional
+            The maximum number of seconds to wait for the reply from the
+            Network :class:`~msl.network.manager.Manager`.
+
+        Returns
+        -------
+        :class:`list` of :class:`str`
+            The names of the :class:`.Client`\\s that are linked with the
+            :class:`~msl.network.service.Service` while the lock is active.
+            For an exclusive lock, only a single link is allowed so the list
+            contains a single item that is the name of the :class:`.Client`
+            that requested the lock.
+
+        Raises
+        ------
+        RuntimeError
+            If a lock cannot be acquired.
+        """
+        return self._request('Manager', 'acquire_lock', self._service_name,
+                             shared=shared, timeout=timeout)
+
+    def release_lock(self, timeout=None):
+        """Release a lock with the linked :class:`~msl.network.service.Service`.
+
+        .. versionadded:: 1.0
+
+        Parameters
+        ----------
+        timeout : :class:`int` or :class:`float`, optional
+            The maximum number of seconds to wait for the reply from the
+            Network :class:`~msl.network.manager.Manager`.
+
+        Returns
+        -------
+        :class:`list` of :class:`str`
+            The names of the :class:`.Client`\\s that still have a lock with
+            the :class:`~msl.network.service.Service` after this lock has
+            been released. An emtpy list means that there are no active locks.
+        """
+        return self._request('Manager', 'release_lock', self._service_name,
+                             timeout=timeout)
+
     @property
     def service_address(self):
         """:class:`str`: The address of the :class:`~msl.network.service.Service`
@@ -768,6 +830,11 @@ class LinkedClient(object):
         self._service_name = self._link.service_name
         self._service_os = self._link.service_os
 
+    def acquire_lock(self, shared=False, timeout=None):
+        """See :obj:`.Link.acquire_lock` for more details."""
+        self._check_link('acquire_lock')
+        return self._link.acquire_lock(shared=shared, timeout=timeout)
+
     def admin_request(self, attrib, *args, **kwargs):
         """See :obj:`.Client.admin_request` for more details."""
         self._check_client()
@@ -873,6 +940,11 @@ class LinkedClient(object):
     def port(self):
         """See :obj:`~msl.network.network.Device.name` for more details."""
         return self._port
+
+    def release_lock(self, timeout=None):
+        """See :obj:`.Link.release_lock` for more details."""
+        self._check_link('release_lock')
+        return self._link.release_lock(timeout=timeout)
 
     @property
     def service_address(self):

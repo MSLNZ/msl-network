@@ -55,6 +55,7 @@ class Manager(Network):
         self.services = dict()  # keys: Service name, values: the identity dictionary
         self.service_writers = dict()  # keys: Service name, values: StreamWriter of the Service
         self.service_links = dict()  # keys: Service name, values: set() of network name's of the linked Clients
+        self.service_locks = dict()  # keys: Service name, values: set() of network name's of the locked Clients
         self.client_writers = dict()  # keys: Client network name, values: StreamWriter of the Client
 
         self._identity = {
@@ -69,6 +70,50 @@ class Manager(Network):
             'clients': self.clients,
             'services': self.services,
         }
+
+    async def acquire_lock(self, writer, uid, service, shared):
+        """A request from a :class:`~msl.network.client.Client` to lock
+        a :class:`~msl.network.service.Service`.
+
+        .. versionadded:: 1.0
+
+        Parameters
+        ----------
+        writer : :class:`asyncio.StreamWriter`
+            The stream writer of the :class:`~msl.network.client.Client`.
+        uid : :class:`str`
+            The unique identifier of the request.
+        service : :class:`str`
+            The name of the :class:`~msl.network.service.Service` that the
+            :class:`~msl.network.client.Client` wants to acquire a lock with.
+        shared : :class:`bool`
+            Whether the lock is exclusive or shared.
+        """
+        writer_name = writer.peer.network_name  # noqa
+        try:
+            locks = self.service_locks[service]
+            links = self.service_links[service]
+        except KeyError:
+            msg = f'{service!r} service does not exist, {writer_name} cannot acquire a lock'
+            logger.info(msg)
+            await self._write_error(KeyError(msg), requester=writer_name, uid=uid, writer=writer)
+        else:
+            if writer_name not in links:
+                msg = f'{writer_name} cannot acquire a lock because it is not linked with the {service!r} service'
+                logger.info(msg)
+                await self._write_error(PermissionError(msg), requester=writer_name, uid=uid, writer=writer)
+            elif (not shared) and (len(links) > 1):
+                msg = f'{writer_name} cannot acquire an exclusive lock, ' \
+                      f'there are {len(links)} links with the {service!r} service'
+                logger.info(msg)
+                join = '\n  '.join(sorted(links))
+                msg += f'\nThe linked Clients are:\n  {join}'
+                await self._write_error(PermissionError(msg), requester=writer_name, uid=uid, writer=writer)
+            else:
+                action = 're-locked' if writer_name in locks else 'locked'
+                locks.add(writer_name)
+                logger.info('%s %s %r [%d lock(s), %d link(s)]', writer_name, action, service, len(locks), len(links))
+                await self._write_result(list(links), requester=writer_name, uid=uid, writer=writer)
 
     async def new_connection(self, reader, writer):
         """Receive a new connection request.
@@ -270,6 +315,7 @@ class Manager(Network):
                 }
                 self.service_writers[identity['name']] = writer
                 self.service_links[identity['name']] = set()
+                self.service_locks[identity['name']] = set()
                 logger.info('%s is a new Service connection', reader.peer.network_name)  # noqa
             else:
                 raise TypeError(f'Unknown connection type {typ!r}. Must be "client" or "service"')
@@ -387,6 +433,18 @@ class Manager(Network):
                     except Exception as e:
                         logger.error('%s: %s', e.__class__.__name__, e)
                         await self._write_error(e, requester=reader_name, uid=data.get('uid', ''), writer=writer)
+                elif data['attribute'] == 'acquire_lock':
+                    try:
+                        await self.acquire_lock(writer, data.get('uid', ''), data['args'][0], data['kwargs']['shared'])
+                    except Exception as e:
+                        logger.error('%s: %s', e.__class__.__name__, e)
+                        await self._write_error(e, requester=reader_name, uid=data.get('uid', ''), writer=writer)
+                elif data['attribute'] == 'release_lock':
+                    try:
+                        await self.release_lock(writer, data.get('uid', ''), data['args'][0])
+                    except Exception as e:
+                        logger.error('%s: %s', e.__class__.__name__, e)
+                        await self._write_error(e, requester=reader_name, uid=data.get('uid', ''), writer=writer)
                 else:
                     # the peer needs administrative rights to send any other request to the Manager
                     logger.info('received an admin request %r from %s', data['attribute'], reader_name)
@@ -438,6 +496,38 @@ class Manager(Network):
                     logger.info('%s KeyError: %s', self, msg)
                     await self._write_error(KeyError(msg), requester=reader_name, writer=writer)
 
+    async def release_lock(self, writer, uid, service):
+        """A request from a :class:`~msl.network.client.Client` to unlock
+        a :class:`~msl.network.service.Service`.
+
+        .. versionadded:: 1.0
+
+        Parameters
+        ----------
+        writer : :class:`asyncio.StreamWriter`
+            The stream writer of the :class:`~msl.network.client.Client`.
+        uid : :class:`str`
+            The unique identifier of the request.
+        service : :class:`str`
+            The name of the :class:`~msl.network.service.Service` that the
+            :class:`~msl.network.client.Client` wants to release a lock with.
+        """
+        writer_name = writer.peer.network_name  # noqa
+        try:
+            locks = self.service_locks[service]
+        except KeyError:
+            msg = f'{service!r} service does not exist, {writer_name} cannot release the lock'
+            logger.info(msg)
+            await self._write_error(KeyError(msg), requester=writer_name, uid=uid, writer=writer)
+        else:
+            try:
+                locks.remove(writer_name)
+                logger.info('%s unlocked %r [%d lock(s)]', writer_name, service, len(locks))
+            except KeyError:
+                logger.info('%s does not have a lock on %r [%d lock(s)]', writer_name, service, len(locks))
+            finally:
+                await self._write_result(list(locks), requester=writer_name, uid=uid, writer=writer)
+
     async def remove_peer(self, id_type, writer):
         """Remove this peer from the registry of connected peers.
 
@@ -469,6 +559,7 @@ class Manager(Network):
                 if self.services[service]['address'] == writer.peer.address:  # noqa
                     try:
                         del self.service_links[service]
+                        del self.service_locks[service]
                         del self.services[service]
                         del self.service_writers[service]
                         logger.info('%s service has been removed from the registry', name)
@@ -543,15 +634,19 @@ class Manager(Network):
                 # a Client wants to re-link with the same Service
                 logger.info('re-linked %s with %r', writer_name, service)
                 await self._write_result(identity, requester=writer_name, uid=uid, writer=writer)
+            elif self.service_locks[service]:
+                msg = f'{service!r} service is locked'
+                logger.info('%s, cannot link with %s', msg, writer_name)
+                await self._write_error(PermissionError(msg), requester=writer_name, uid=uid, writer=writer)
             elif identity['max_clients'] <= 0 or len(self.service_links[service]) < identity['max_clients']:
                 self.service_links[service].add(writer_name)
-                logger.info('linked %s with %r', writer_name, service)
+                logger.info('linked %s with %r [%d link(s)]', writer_name, service, len(self.service_links[service]))
                 await self._write_result(identity, requester=writer_name, uid=uid, writer=writer)
             else:
-                join = '\n  '.join(self.service_links[service])
-                msg = f'The maximum number of Clients are already linked with {service!r}\n' \
-                      f'The linked Clients are:\n  {join}'
+                msg = f'The maximum number of Clients are already linked with {service!r}'
                 logger.info(msg)
+                join = '\n  '.join(sorted(self.service_links[service]))
+                msg += f'\nThe linked Clients are:\n  {join}'
                 await self._write_error(PermissionError(msg), requester=writer_name, uid=uid, writer=writer)
 
     async def unlink(self, writer, uid, service):
@@ -572,7 +667,7 @@ class Manager(Network):
         """
         writer_name = writer.peer.network_name  # noqa
         try:
-            network_names = self.service_links[service]
+            links = self.service_links[service]
         except KeyError:
             # From the Client's point of view, it does not need to receive an
             # exception that the Service has already been disconnected.
@@ -581,12 +676,18 @@ class Manager(Network):
             await self._write_result(True, requester=writer_name, uid=uid, writer=writer)
         else:
             try:
-                network_names.remove(writer_name)
+                links.remove(writer_name)
             except KeyError:
                 msg = f'cannot unlink {writer_name}, it was not linked with {service!r}'
                 logger.info(msg)
                 await self._write_error(KeyError(msg), requester=writer_name, uid=uid, writer=writer)
             else:
+                try:
+                    self.service_locks[service].remove(writer_name)
+                    logger.info('automatically unlocked %s from %r', writer_name, service)
+                except KeyError:
+                    pass
+
                 logger.info('unlinked %s from %r', writer_name, service)
                 await self._write_result(True, requester=writer_name, uid=uid, writer=writer)
 
