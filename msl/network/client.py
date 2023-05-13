@@ -874,7 +874,8 @@ class LinkedClient(object):
 
     def is_connected(self):
         """See :obj:`.Client.is_connected` for more details."""
-        self._check_client()
+        if self._client is None:
+            return False
         return self._client.is_connected()
 
     def notification_handler(self, *args, **kwargs):
