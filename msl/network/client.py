@@ -636,6 +636,16 @@ class Link(object):
         return self._service_identity['language']
 
     @property
+    def service_max_clients(self):
+        """:class:`int`: The maximum number of :class:`~msl.network.client.Client`\\s
+        that can be linked with this Service. A value :math:`\\leq` 0
+        means that there is no limit.
+
+        .. versionadded:: 1.0
+        """
+        return self._service_identity['max_clients']
+
+    @property
     def service_name(self):
         """:class:`str`: The name of the :class:`~msl.network.service.Service`
         that this object is linked with."""
@@ -829,6 +839,7 @@ class LinkedClient(object):
         self._service_language = self._link.service_language
         self._service_name = self._link.service_name
         self._service_os = self._link.service_os
+        self._service_max_clients = self._link.service_max_clients
 
     def acquire_lock(self, shared=False, timeout=None):
         """See :obj:`.Link.acquire_lock` for more details."""
@@ -960,6 +971,11 @@ class LinkedClient(object):
     def service_language(self):
         """See :obj:`.Link.service_language` for more details."""
         return self._service_language
+
+    @property
+    def service_max_clients(self):
+        """See :obj:`.Link.service_max_clients` for more details."""
+        return self._service_max_clients
 
     @property
     def service_name(self):
