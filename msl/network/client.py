@@ -562,6 +562,10 @@ class Link(object):
         link with the :class:`~msl.network.service.Service` until all locks
         have been released.
 
+        If :attr:`.service_max_clients` returns a value of 1, then there is no
+        need to acquire a lock since only a single :class:`.Client` can link
+        with the :class:`~msl.network.service.Service` at a time.
+
         .. versionadded:: 1.0
 
         Parameters
@@ -638,8 +642,8 @@ class Link(object):
     @property
     def service_max_clients(self):
         """:class:`int`: The maximum number of :class:`~msl.network.client.Client`\\s
-        that can be linked with this Service. A value :math:`\\leq` 0
-        means that there is no limit.
+        that can be linked with this :class:`~msl.network.service.Service`.
+        A value :math:`\\leq` 0 means that there is no limit.
 
         .. versionadded:: 1.0
         """
@@ -949,7 +953,7 @@ class LinkedClient(object):
 
     @property
     def port(self):
-        """See :obj:`~msl.network.network.Device.name` for more details."""
+        """See :obj:`~msl.network.network.Device.port` for more details."""
         return self._port
 
     def release_lock(self, timeout=None):
