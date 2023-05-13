@@ -14,7 +14,7 @@ Version 1.0.0.dev0 (in development)
   * the :meth:`~msl.network.service.Service.emit_notification_threadsafe` method
     for a :class:`~msl.network.service.Service`
   * ability to specify the `host` to use when starting a :class:`~msl.network.manager.Manager`
-  * support for Python 3.9 and 3.10
+  * support for Python 3.9, 3.10 and 3.11
   * :func:`~msl.network.network.Network.set_logging_level` to be able to set the
     logging level at runtime
   * ability to add tasks to the event loop via the
