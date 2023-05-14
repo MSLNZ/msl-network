@@ -835,6 +835,10 @@ class LinkedClient(object):
             sleep(0.5)
 
         self._link = self._client.link(service_name)
+
+        # Define these private attributes to allow the values to be accessible
+        # even if the Link is broken or the Client is disconnected (in such cases
+        # self._client and self._link become None)
         self._address_manager = self._client.address_manager
         self._name = self._client.name
         self._port = self._client.port
