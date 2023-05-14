@@ -642,7 +642,7 @@ class Link(object):
     @property
     def service_max_clients(self):
         """:class:`int`: The maximum number of :class:`~msl.network.client.Client`\\s
-        that can be linked with this :class:`~msl.network.service.Service`.
+        that can be linked with the :class:`~msl.network.service.Service`.
         A value :math:`\\leq` 0 means that there is no limit.
 
         .. versionadded:: 1.0
