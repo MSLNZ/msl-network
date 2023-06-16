@@ -9,6 +9,9 @@ Version 1.0.0.dev0 (in development)
 
   * a :class:`~msl.network.client.Link` can create an exclusive or shared lock
     with a :class:`~msl.network.service.Service`
+  * add :attr:`~msl.network.client.Link.service_max_clients` property to a
+    :class:`~msl.network.client.Link` and
+    :class:`~msl.network.client.LinkedClient`
   * the :attr:`~msl.network.network.Device.loop_thread_id` property for a
     :class:`~msl.network.service.Service` and a :class:`~msl.network.client.Client`
   * the :meth:`~msl.network.service.Service.emit_notification_threadsafe` method
