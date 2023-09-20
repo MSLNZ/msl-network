@@ -237,14 +237,7 @@ class Network(object):
             'result': result,
             'uid': uid
         }
-        try:
-            await self._write(data, writer=writer)
-        except TypeError as error:
-            try:
-                data['result'] = result.to_json()
-                await self._write(data, writer=writer)
-            except AttributeError:
-                raise error from None
+        await self._write(data, writer=writer)
 
     async def _write_error(self, error, *, requester=None, uid='', writer=None,
                            **ignored):  # noqa

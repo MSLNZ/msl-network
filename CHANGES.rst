@@ -5,6 +5,14 @@ Release Notes
 Version 1.0.1 (in development)
 ==============================
 
+- Added
+
+  * `loads_kwargs` and `dumps_kwargs` keyword arguments to :func:`~msl.network.json.use`
+
+- Fixed
+
+  * the ``to_json()`` method was not reliably called for an object, which resulted
+    in the object not being JSON serializable
 
 Version 1.0.0 (2023-06-16)
 ==========================

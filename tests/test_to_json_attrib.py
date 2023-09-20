@@ -44,6 +44,9 @@ def test_to_json_attrib():
         def has_to_json_attrib(self):
             return ComplexSerializable(1-1j)
 
+        def nested(self):
+            return [1, 2.1, True, {'c:': ComplexSerializable(0.5+8.2j)}]
+
         def shutdown_service(self):
             pass
 
@@ -69,6 +72,7 @@ def test_to_json_attrib():
         link.no_to_json_attrib()
 
     assert link.has_to_json_attrib() == {'real': 1.0, 'imag': -1.0}
+    assert link.nested() == [1, 2.1, True, {'c:': {'real': 0.5, 'imag': 8.2}}]
 
     link.shutdown_service()
     link.disconnect()

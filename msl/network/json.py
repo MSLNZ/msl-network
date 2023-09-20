@@ -42,22 +42,31 @@ class Package(Enum):
     ORJSON = 'OR'  #: orjson_
 
 
-def use(value):
+def use(backend, *, loads_kwargs=None, dumps_kwargs=None):
     """Set which JSON backend to use.
 
     .. versionadded:: 1.0
 
+    .. versionchanged:: 1.1
+        Added the `loads_kwargs` and `dumps_kwargs` keyword arguments.
+
     Parameters
     ----------
-    value : :class:`.Package` or :class:`str`
+    backend : :class:`.Package` or :class:`str`
         An enum value or member name (case-insensitive).
+    loads_kwargs : :class:`dict`, optional
+        Keyword arguments to use for the `loads` function of the backend.
+        If not specified, default options are used.
+    dumps_kwargs : :class:`dict`, optional
+        Keyword arguments to use for the `dumps` function of the backend.
+        If not specified, default options are used.
 
     Examples
     --------
     .. invisible-code-block: pycon
 
        >>> from msl.network import json
-       >>> original = json.backend.enum
+       >>> original = json._backend.enum
 
     >>> from msl.network import json
     >>> json.use(json.Package.UJSON)
@@ -68,7 +77,11 @@ def use(value):
        >>> json.use(original)
 
     """
-    backend.use(value)
+    _backend.use(backend)
+    if loads_kwargs is not None:
+        _backend.loads_kwargs = loads_kwargs
+    if dumps_kwargs is not None:
+        _backend.dumps_kwargs = dumps_kwargs
 
 
 def serialize(obj):
@@ -84,7 +97,7 @@ def serialize(obj):
     :class:`str`
         The JSON-formatted string.
     """
-    out = backend.dumps(obj, **backend.kwargs_dumps)
+    out = _backend.dumps(obj, **_backend.dumps_kwargs)
     if isinstance(out, bytes):
         return out.decode()
     return out
@@ -104,8 +117,19 @@ def deserialize(s):
     """
     if isinstance(s, (bytes, bytearray)):
         s = s.decode()
-    obj = backend.loads(s, **backend.kwargs_loads)
+    obj = _backend.loads(s, **_backend.loads_kwargs)
     return obj
+
+
+def _default(obj):
+    """Used as a callable function for the dumps() function."""
+    try:
+        return obj.to_json()
+    except AttributeError:
+        pass
+
+    raise TypeError(f'Object of type {obj.__class__.__name__} '
+                    f'is not JSON serializable')
 
 
 class _Backend(object):
@@ -115,8 +139,8 @@ class _Backend(object):
         self.dumps = None
         self.enum = None
         self.name = ''
-        self.kwargs_loads = {}
-        self.kwargs_dumps = {}
+        self.loads_kwargs = {}
+        self.dumps_kwargs = {}
         self.use(value)
 
     def use(self, value):
@@ -128,20 +152,24 @@ class _Backend(object):
             self.dumps = json.dumps
             self.enum = Package.BUILTIN
             self.name = 'json'
-            self.kwargs_loads = {}
-            self.kwargs_dumps = {'ensure_ascii': False}
+            self.loads_kwargs = {}
+            self.dumps_kwargs = {
+                'ensure_ascii': False,
+                'default': _default,
+            }
         elif value == Package.UJSON:
             import ujson
             self.loads = ujson.loads
             self.dumps = ujson.dumps
             self.enum = Package.UJSON
             self.name = 'ujson'
-            self.kwargs_loads = {}
-            self.kwargs_dumps = {
+            self.loads_kwargs = {}
+            self.dumps_kwargs = {
                 'ensure_ascii': False,
                 'encode_html_chars': False,
                 'escape_forward_slashes': False,
                 'indent': 0,
+                'default': _default,
             }
         elif value == Package.SIMPLEJSON:
             import simplejson
@@ -149,20 +177,24 @@ class _Backend(object):
             self.dumps = simplejson.dumps
             self.enum = Package.SIMPLEJSON
             self.name = 'simplejson'
-            self.kwargs_loads = {}
-            self.kwargs_dumps = {'ensure_ascii': False}
+            self.loads_kwargs = {}
+            self.dumps_kwargs = {
+                'ensure_ascii': False,
+                'default': _default,
+            }
         elif value == Package.RAPIDJSON:
             import rapidjson
             self.loads = rapidjson.loads
             self.dumps = rapidjson.dumps
             self.enum = Package.RAPIDJSON
             self.name = 'rapidjson'
-            self.kwargs_loads = {
+            self.loads_kwargs = {
                 'number_mode': rapidjson.NM_NATIVE
             }
-            self.kwargs_dumps = {
+            self.dumps_kwargs = {
                 'ensure_ascii': False,
-                'number_mode': rapidjson.NM_NATIVE
+                'number_mode': rapidjson.NM_NATIVE,
+                'default': _default,
             }
         elif value == Package.ORJSON:
             import orjson
@@ -170,11 +202,11 @@ class _Backend(object):
             self.dumps = orjson.dumps
             self.enum = Package.ORJSON
             self.name = 'orjson'
-            self.kwargs_loads = {}
-            self.kwargs_dumps = {}
+            self.loads_kwargs = {}
+            self.dumps_kwargs = {'default': _default}
         else:
             assert False, f'Unhandled JSON backend {value!r}'
 
 
 # initialize the default backend
-backend = _Backend(os.getenv('MSL_NETWORK_JSON', default='BUILTIN'))
+_backend = _Backend(os.getenv('MSL_NETWORK_JSON', default='BUILTIN'))
