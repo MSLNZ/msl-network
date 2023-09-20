@@ -157,7 +157,10 @@ if sys.maxsize > 2**32:
     # 32-bit wheels for orjson are not available on PyPI
     tests_require.append('orjson')
 
-docs_require = ['sphinx', 'sphinx-rtd-theme']
+docs_require = [
+    'sphinx>2',  # >2 required for ReadTheDocs
+    'sphinx-rtd-theme>0.5',  # >0.5 required for ReadTheDocs
+]
 
 testing = {'test', 'tests', 'pytest'}.intersection(sys.argv)
 
