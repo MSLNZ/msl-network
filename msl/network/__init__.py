@@ -17,7 +17,7 @@ from .service import filter_service_start_kwargs
 
 __author__ = 'Measurement Standards Laboratory of New Zealand'
 __copyright__ = '\xa9 2017 - 2023, ' + __author__
-__version__ = '1.0.1.dev0'
+__version__ = '1.1.0.dev0'
 
 _v = re.search(r'(\d+)\.(\d+)\.(\d+)[.-]?(.*)', __version__).groups()
 
