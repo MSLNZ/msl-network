@@ -9,35 +9,35 @@ env:
 jobs:
   test:
     name: Test
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}-latest
     timeout-minutes: 20
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
-        os: [windows-latest, ubuntu-20.04, macos-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        os: [windows, ubuntu, macos]
         architecture: [x64]
         json: [BUILTIN]
         include:
           - python-version: "3.x"
-            os: ubuntu-20.04
+            os: ubuntu
             architecture: x64
             json: UJSON
           - python-version: "3.x"
-            os: ubuntu-20.04
+            os: ubuntu
             architecture: x64
             json: ORJSON
           - python-version: "3.x"
-            os: ubuntu-20.04
+            os: ubuntu
             architecture: x64
             json: SIMPLEJSON
           - python-version: "3.x"
-            os: ubuntu-20.04
+            os: ubuntu
             architecture: x64
             json: RAPIDJSON
           - python-version: "3.x"
-            os: windows-latest
+            os: windows
             architecture: x86
             json: BUILTIN
 

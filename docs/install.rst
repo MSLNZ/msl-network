@@ -17,17 +17,14 @@ Alternatively, using the `MSL Package Manager`_ run:
 
 Compatibility
 -------------
-MSL-Network uses coroutines with the ``async`` and ``await`` syntax that were added in
-PEP492_ and is compatible with Python 3.6+.
-
 The :class:`~msl.network.client.Client` and :class:`~msl.network.service.Service` classes can be
-implemented in any programming language (and also in previous versions of Python). See the
+implemented in any programming language (and also in unsupported Python versions). See the
 :ref:`json-formats` section for how the Network :class:`~msl.network.manager.Manager` exchanges
 information between a :class:`~msl.network.client.Client` and a :class:`~msl.network.service.Service`.
 
 Dependencies
 ------------
-* Python 3.6+
+* Python 3.8+
 * cryptography_
 * paramiko_
 
@@ -42,7 +39,6 @@ To use one of these external JSON_ packages, rather than Python's builtin :mod:`
 read the documentation of :class:`msl.network.json.Package`.
 
 .. _MSL Package Manager: https://msl-package-manager.readthedocs.io/en/stable/
-.. _PEP492: https://www.python.org/dev/peps/pep-0492/
 .. _cryptography: https://cryptography.io/en/stable/
 .. _JSON: https://www.json.org/
 .. _UltraJSON: https://pypi.python.org/pypi/ujson/

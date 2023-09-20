@@ -466,15 +466,7 @@ class Device(Network):
             self._reader.feed_eof()
             self._loop.run_until_complete(self._queue.join())
             self._writer.close()
-            try:
-                self._loop.run_until_complete(self._writer.wait_closed())
-            except AttributeError:
-                # TODO StreamWriter.wait_closed() was added in Python 3.7
-                #  This try-except block can be simplified when dropping
-                #  support for Python 3.6
-                async def wait_closed():
-                    await asyncio.sleep(0.01)
-                self._loop.run_until_complete(wait_closed())
+            self._loop.run_until_complete(self._writer.wait_closed())
             self._loop.close()
             self._loop_thread_id = None
             try:

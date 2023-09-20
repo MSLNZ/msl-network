@@ -14,6 +14,10 @@ Version 1.0.1 (in development)
   * the ``to_json()`` method was not reliably called for an object, which resulted
     in the object not being JSON serializable
 
+- Removed
+
+  * Support for Python 3.6 and 3.7
+
 Version 1.0.0 (2023-06-16)
 ==========================
 
