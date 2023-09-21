@@ -28,6 +28,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
+    'sphinx_rtd_theme',
 ]
 
 # autodoc options
