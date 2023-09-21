@@ -98,7 +98,7 @@ def test_wrong_certificate():
     assert cryptography.generate_certificate(path=cert, key_path=key) == cert
     kwargs = manager.kwargs.copy()
     kwargs['cert_file'] = cert
-    with pytest.raises((ConnectionError, AssertionError)) as e:
+    with pytest.raises(ConnectionError) as e:
         connect(**kwargs)
     msg = str(e.value)
     assert 'Perhaps the Network Manager is using a new certificate' in msg

@@ -413,7 +413,7 @@ class Device(Network):
                 msg = 'Cannot connect to {host}:{port}'.format(**kwargs)
             elif isinstance(error, (ConnectionRefusedError, socket.gaierror)):
                 msg += '\nCannot connect to {host}:{port}'.format(**kwargs)
-            elif 'mismatch' in msg or "doesn't match" in msg:
+            elif ('name mismatch' in msg) or ('address mismatch' in msg):
                 msg += '\nTo disable hostname checking set assert_hostname=False\n' \
                        'Make sure you trust the connection to {host}:{port} ' \
                        'if you decide to do this.'.format(**kwargs)
