@@ -12,7 +12,7 @@ from msl.network import cryptography
 
 # ignore "RuntimeError: Event loop is closed"
 # PytestUnraisableExceptionWarning: Exception ignored in: <function StreamWriter.__del__ ...>
-filterwarnings_event_loop_closed = pytest.mark.filterwarnings('ignore:StreamWriter.__del__')
+filterwarnings = pytest.mark.filterwarnings('ignore:.*StreamWriter.__del__.*:pytest.PytestUnraisableExceptionWarning')
 
 
 def test_no_manager_no_certificate_localhost():
@@ -55,7 +55,7 @@ def test_no_manager_no_timeout_remotehost():
         connect(host=host, disable_tls=True, timeout=None)
 
 
-@filterwarnings_event_loop_closed
+@filterwarnings
 def test_no_certificate_tls_disabled():
     manager = conftest.Manager(disable_tls=True)
     os.remove(manager.cert_file)
@@ -68,7 +68,7 @@ def test_no_certificate_tls_disabled():
     manager.shutdown()
 
 
-@filterwarnings_event_loop_closed
+@filterwarnings
 def test_no_certificate():
     # calling connect() will automatically get the certificate from the server
     manager = conftest.Manager(disable_tls=False)
@@ -86,7 +86,7 @@ def test_no_certificate():
     manager.shutdown(connection=cxn)
 
 
-@filterwarnings_event_loop_closed
+@filterwarnings
 def test_wrong_port():
     manager = conftest.Manager()
     kwargs = manager.kwargs.copy()
@@ -97,7 +97,7 @@ def test_wrong_port():
     manager.shutdown()
 
 
-@filterwarnings_event_loop_closed
+@filterwarnings
 def test_wrong_certificate():
     manager = conftest.Manager()
     key = os.path.join(tempfile.gettempdir(), '.msl', 'wrong-certificate.key')
@@ -117,7 +117,7 @@ def test_wrong_certificate():
     manager.shutdown()
 
 
-@filterwarnings_event_loop_closed
+@filterwarnings
 def test_tls_disabled():
     manager = conftest.Manager(disable_tls=False)
     kwargs = manager.kwargs.copy()
@@ -127,7 +127,7 @@ def test_tls_disabled():
     manager.shutdown()
 
 
-@filterwarnings_event_loop_closed
+@filterwarnings
 def test_tls_enabled():
     manager = conftest.Manager(disable_tls=True)
     kwargs = manager.kwargs.copy()
@@ -137,7 +137,7 @@ def test_tls_enabled():
     manager.shutdown()
 
 
-@filterwarnings_event_loop_closed
+@filterwarnings
 @pytest.mark.parametrize(
     'host',
     {constants.HOSTNAME, 'localhost', '127.0.0.1', *constants.IPV4_ADDRESSES}
@@ -155,7 +155,7 @@ def test_hostname_mismatch(host):
     manager.shutdown(connection=cxn)
 
 
-@filterwarnings_event_loop_closed
+@filterwarnings
 def test_invalid_manager_password():
     manager = conftest.Manager(password_manager='asdvgbaw4bn')
     kwargs = manager.kwargs.copy()
@@ -165,7 +165,7 @@ def test_invalid_manager_password():
     manager.shutdown()
 
 
-@filterwarnings_event_loop_closed
+@filterwarnings
 def test_invalid_username():
     manager = conftest.Manager()
     kwargs = manager.kwargs.copy()
@@ -175,7 +175,7 @@ def test_invalid_username():
     manager.shutdown()
 
 
-@filterwarnings_event_loop_closed
+@filterwarnings
 def test_invalid_password():
     manager = conftest.Manager()
     kwargs = manager.kwargs.copy()
