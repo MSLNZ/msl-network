@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 import shutil
@@ -11,30 +10,20 @@ from threading import Thread
 
 # create MSL_NETWORK_HOME before importing msl.network
 root_dir = os.path.join(tempfile.gettempdir(), '.msl')
-if os.path.isdir(root_dir):
-    shutil.rmtree(root_dir)
+shutil.rmtree(root_dir, ignore_errors=True)
 home = os.path.join(root_dir, 'network')
 os.makedirs(home)
 os.environ['MSL_NETWORK_HOME'] = home
 
 from msl.network import connect
-from msl.network import constants
 from msl.network import cryptography
 from msl.network import UsersTable
 
 # suppress all logging messages from being displayed
 logging.basicConfig(level=logging.CRITICAL+10)
 
-# For Python 3.8 on Windows the default event loop became ProactorEventLoop.
-# This caused the tests to hang when calling loop.close() for a Client
-# and a Service since the IocpProactor.close() method would get stuck
-# in the "while self._cache:" block. Therefore, use the SelectorEventLoop
-# if running the tests on Windows with Python 3.8+.
-if constants.IS_WINDOWS and sys.version_info[:2] >= (3, 8):
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-
-class Manager(object):
+class Manager:
 
     key_file = cryptography.get_default_key_path()
     cert_file = cryptography.get_default_cert_path()
