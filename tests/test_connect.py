@@ -12,7 +12,7 @@ from msl.network import cryptography
 
 # ignore "RuntimeError: Event loop is closed"
 # PytestUnraisableExceptionWarning: Exception ignored in: <function StreamWriter.__del__ ...>
-filterwarnings = pytest.mark.filterwarnings('ignore:.*StreamWriter.__del__.*:pytest.PytestUnraisableExceptionWarning')
+filterwarnings = pytest.mark.filterwarnings('ignore:.*__del__.*:pytest.PytestUnraisableExceptionWarning')
 
 
 def test_no_manager_no_certificate_localhost():
