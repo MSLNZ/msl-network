@@ -7,6 +7,7 @@ Version 1.1.0 (in development)
 
 - Added
 
+  * the :meth:`Service.request <msl.network.service.Service.request>` property
   * `loads_kwargs` and `dumps_kwargs` keyword arguments to :func:`~msl.network.json.use`
 
 - Fixed

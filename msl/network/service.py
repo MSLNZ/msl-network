@@ -51,6 +51,7 @@ class Service(Device):
         """
         super(Service, self).__init__(name=name)
         self._futures = []
+        self._request = {}
 
         if max_clients is None or max_clients <= 0:
             self._max_clients = -1
@@ -61,7 +62,7 @@ class Service(Device):
             'add_tasks', 'address_manager', 'emit_notification',
             'emit_notification_threadsafe', 'identity', 'ignore_attributes',
             'loop_thread_id', 'max_clients', 'name', 'port',
-            'shutdown_handler', 'start'
+            'shutdown_handler', 'start', 'request',
         ]
 
         if ignore_attributes is not None:
@@ -190,6 +191,33 @@ class Service(Device):
         self._tasks.append(self._send_responses())
         self._run_until_complete()
 
+    @property
+    def request(self):
+        """:class:`dict`: Returns the latest request.
+
+        This property is meant to be used by a subclass that may want to know
+        the information about the request while processing it.
+
+        Since a request is executed in a separate thread and this property
+        returns the *latest* request, the subclass should immediately extract
+        the necessary information from the request before the :class:`Service`
+        receives a new request.
+
+        The key-value pairs in the request are::
+
+            {
+              'args': list,
+              'attribute': str,
+              'kwargs': dict,
+              'service': str (the name of this Service),
+              'uid': str,
+              'requester': str,
+            }
+
+        .. versionadded:: 1.1
+        """
+        return self._request
+
     def _execute_request(self, attr, request):
         # Executes a request in a separate thread
         try:
@@ -309,6 +337,8 @@ class Service(Device):
                 self._queue.put_nowait((request, e))
                 logger.error('%s: %s', e.__class__.__name__, e)
                 continue
+
+            self._request = request
 
             if attribute == SHUTDOWN_SERVICE:
                 response = attr(*request['args'], **request['kwargs'])
