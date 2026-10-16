@@ -1,124 +1,330 @@
-import platform
-import re
+# cSpell: ignore Unraisable
+from __future__ import annotations
+
+import inspect
+import logging
+import sys
+import time
+import typing
+from concurrent import futures
+from threading import Thread
+from time import sleep
 
 import pytest
+import zmq
 
-import conftest
-from msl.examples.network import BasicMath, MyArray, Echo
-from msl.network import connect
-from msl.network.constants import HOSTNAME, LOCALHOST_ALIASES
+from msl.network import AuthCurve, AuthPlain, Client, Flag, Service, connect
+from msl.network.message import Reply, Request
 
-
-def test_admin_requests():
-    manager = conftest.Manager()
-
-    cxn = connect(**manager.kwargs)
-
-    assert cxn.admin_request('port') == manager.port
-    assert cxn.admin_request('password') is None
-    assert cxn.admin_request('login')
-    assert cxn.admin_request('hostnames') is None
-
-    assert cxn.admin_request('users_table.is_user_registered', manager.admin_username) is True
-    assert cxn.admin_request('users_table.is_password_valid', manager.admin_username, manager.admin_password) is True
-    assert cxn.admin_request('users_table.is_admin', manager.admin_username) is True
-    assert cxn.admin_request('users_table.is_user_registered', 'no one special') is False
-
-    conns = cxn.admin_request('connections_table.connections')
-    assert len(conns) == 2
-    assert conns[0][4] == cxn.port
-    assert conns[0][5] == 'new connection request'
-    assert conns[1][4] == cxn.port
-    assert conns[1][5] == 'connected as a client'
-
-    hostnames = cxn.admin_request('hostnames_table.hostnames')
-    for alias in LOCALHOST_ALIASES:
-        assert alias in hostnames
-
-    with pytest.raises(ValueError, match=r'Cannot make asynchronous requests'):
-        cxn.admin_request('users_table.usernames', asynchronous=True)
-
-    manager.shutdown(connection=cxn)
+if typing.TYPE_CHECKING:
+    from conftest import Broker
 
 
-def test_manager_identity():
-    manager = conftest.Manager(BasicMath, MyArray, Echo)
+@pytest.mark.filterwarnings("error")
+def test_del_is_clean(capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture) -> None:
+    # If Client.__del__ issues a pytest.PytestUnraisableExceptionWarning, this test fails
+    _ = Client(port=17777)
 
-    cxn = connect(name='A.B.C', **manager.kwargs)
+    with Client(port=17778) as _:
+        pass
 
-    os = f'{platform.system()} {platform.release()} {platform.machine()}'
-    language = 'Python ' + platform.python_version()
+    c = Client(port=17779)
+    c.__del__()
+    c.__del__()
 
-    identities = cxn.identities()
-    assert identities['hostname'] == HOSTNAME
-    assert identities['port'] == manager.port
-    assert identities['attributes'] == {
-        'identity': '() -> dict',
-        'link': '(service: str) -> bool'
-    }
-    assert identities['language'] == language
-    assert identities['os'] == os
-    assert f'A.B.C[{HOSTNAME}:{cxn.port}]' in identities['clients']
-    assert 'BasicMath' in identities['services']
-    assert 'Echo' in identities['services']
-    assert 'MyArray' in identities['services']
-
-    identities = cxn.identities(as_string=True)
-    expected = fr'''Manager\[{HOSTNAME}:\d+]
-  attributes:
-    identity\(\) -> dict
-    link\(service: str\) -> bool
-  language: {language}
-  os: {os}
-Clients \[1]:
-  A.B.C\[{HOSTNAME}:\d+]
-    language: {language}
-    os: {os}
-Services \[3]:
-  BasicMath\[{HOSTNAME}:\d+]
-    attributes:
-      add\(x:\s?Union\[int, float], y:\s?Union\[int, float]\) -> Union\[int, float]
-      divide\(x:\s?Union\[int, float], y:\s?Union\[int, float]\) -> Union\[int, float]
-      ensure_positive\(x:\s?Union\[int, float]\) -> bool
-      euler\(\) -> 2.718281828459045
-      multiply\(x:\s?Union\[int, float], y:\s?Union\[int, float]\) -> Union\[int, float]
-      pi\(\) -> 3.141592653589793
-      power\(x:\s?Union\[int, float], n=2\) -> Union\[int, float]
-      set_logging_level\(level:\s?Union\[str, int]\) -> bool
-      subtract\(x:\s?Union\[int, float], y:\s?Union\[int, float]\) -> Union\[int, float]
-    language: {language}
-    max_clients: -1
-    os: {os}
-  Echo\[{HOSTNAME}:\d+]
-    attributes:
-      echo\(\*args, \*\*kwargs\)
-      set_logging_level\(level:\s?Union\[str, int]\) -> bool
-    language: {language}
-    max_clients: -1
-    os: {os}
-  MyArray\[{HOSTNAME}:\d+]
-    attributes:
-      linspace\(start:\s?Union\[int, float], stop:\s?Union\[int, float], n=100\) -> List\[float]
-      scalar_multiply\(scalar:\s?Union\[int, float], data:\s?List\[float]\) -> List\[float]
-      set_logging_level\(level:\s?Union\[str, int]\) -> bool
-    language: {language}
-    max_clients: -1
-    os: {os}
-'''.splitlines()
-
-    id_lines = identities.splitlines()
-    assert len(id_lines) == len(expected)
-
-    for pattern, string in zip(expected, id_lines):
-        assert re.match(pattern, string)
-
-    manager.shutdown(connection=cxn)
+    assert not caplog.records
+    out, err = capsys.readouterr()
+    assert not out
+    assert not err
 
 
-def test_not_json_serializable():
-    manager = conftest.Manager(Echo)
-    cxn = connect(**manager.kwargs)
-    e = cxn.link('Echo')
-    with pytest.raises(TypeError, match=r'not JSON serializable'):
-        e.echo(1 + 4j)
-    manager.shutdown(connection=cxn)
+def test_disconnect_multiple_times(capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("DEBUG")
+    c = Client(port=9301)
+    time.sleep(0.1)  # allow time for Client to be connected before Interrupt is triggered
+
+    assert c._async_client is not None  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
+    interrupter_name = c._async_client.interrupter.name  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
+
+    for _ in range(5):
+        c.disconnect()
+
+    # the order of ZMQ event-monitoring messages are unpredictable so ignore them
+    r = [r.message for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0] == f"{interrupter_name} created"
+    assert r[1] == f"{c} connecting..."
+    assert r[2] == f"{interrupter_name} triggered"
+    assert r[3] == f"{interrupter_name} terminated"
+    assert r[4] == f"{c} disconnected"
+
+    out, err = capsys.readouterr()
+    assert not out
+    assert not err
+
+
+def test_connect_function() -> None:
+    s1 = inspect.signature(connect)
+    s2 = inspect.signature(Client)
+    assert s1.parameters == s2.parameters
+
+    c = connect(port=39710)
+    assert isinstance(c, Client)
+    c.disconnect()
+
+
+def test_link_string_representation() -> None:
+    with Client(port=8715) as c:
+        link = c.link("Missing")
+        assert str(link) == "Link[Missing]"
+        assert repr(link) == "Link[Missing]"
+
+
+def test_services_timeout() -> None:
+    c = Client(port=14909)
+    with pytest.raises((TimeoutError, futures.TimeoutError)):
+        _ = c.services(timeout=0.05)
+    c.disconnect()
+
+
+def test_flag_at() -> None:
+    c = Client(flag=Flag.PICKLE, port=52742)
+    link = c.link("Any")
+    assert c.flag == Flag.PICKLE
+
+    with c.flag_at(Flag.JSON):
+        assert c.flag == Flag.JSON  # type: ignore[comparison-overlap]
+        _ = link.do_something(sync=False)  # type: ignore[unreachable]
+
+    with link.flag_at(Flag.BZIP2 | Flag.JSON):
+        assert c.flag == Flag.BZIP2 | Flag.JSON
+        _ = link.do_something(sync=False)
+
+    assert c.flag == Flag.PICKLE
+    _ = link.do_something(sync=False)
+
+    c.disconnect()
+
+
+def test_timeout_at() -> None:
+    c = Client(port=52792)
+    link = c.link("Any")
+
+    assert link.timeout is None
+    with link.timeout_at(10):
+        assert link.timeout == 10
+    assert link.timeout is None  # type: ignore[unreachable]
+
+    link.timeout = 9.5
+    with link.timeout_at(None):
+        assert link.timeout is None
+    assert link.timeout == 9.5
+
+    c.disconnect()
+
+
+def test_request_after_disconnect() -> None:
+    c = Client(port=26419)
+    c.disconnect()
+    with pytest.raises(RuntimeError, match=r"Event loop not running, cannot send request"):
+        _ = c.services()
+
+
+def test_string_representation() -> None:
+    class Custom(Client):
+        pass
+
+    c = Custom(port=17590, flag=Flag.JSON | Flag.XZ)
+    _id = c._id  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
+    assert str(c) == f"Custom[{_id}]"
+    assert repr(c) == f"Custom(host='127.0.0.1', port=17590, flag='XZ|JSON', id='{_id}')"
+    c.disconnect()
+
+
+def test_result_ok_and_error(broker: Broker) -> None:
+    port, *_ = broker.run()
+    client = Client(port=port)
+    assert client.services() == []
+
+    foo = client.link("Foo")
+    assert foo.timeout is None
+    with pytest.raises(RuntimeError, match=r"Service 'Foo' is not available"):
+        _ = foo.bar(sync=False).result()
+
+    assert client.is_connected
+
+    broker.stop()
+    time.sleep(0.1)
+
+    assert not client.is_connected  # should have received ZMQ_EVENT_DISCONNECTED from the broker stopping
+    client.disconnect()  # type: ignore[unreachable]
+
+
+def test_plain_and_curve() -> None:
+    with pytest.raises(ValueError, match=r"Cannot use both PLAIN and CURVE"):
+        _ = Client(curve=AuthCurve(b"a", b"b", b"c"), plain=AuthPlain("a", "b"))
+
+
+def test_plain(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    c = Client(port=29501, plain=AuthPlain("hi", "hello"))
+    assert c._async_client is not None  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
+    interrupter_name = c._async_client.interrupter.name  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
+    link = c.link("Foo")
+    assert link.service_name == "Foo"
+    sub_interrupter = link._link_subscriber.interrupter  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
+    assert sub_interrupter is not None
+    time.sleep(0.1)
+    c.disconnect()
+
+    # the order of ZMQ event-monitoring messages are unpredictable so ignore them
+    r = [r.message for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0] == f"{interrupter_name} created"
+    assert r[1] == "Using PLAIN authentication"
+    assert r[2] == f"{c} connecting..."
+    assert r[3] == f"{sub_interrupter.name} created"
+    assert r[4] == "Using PLAIN authentication for subscriber"
+    assert r[5] == "Link[Foo] publication polling..."
+    assert r[6] == f"{sub_interrupter.name} triggered"
+    assert r[7] == f"{sub_interrupter.name} terminated"
+    assert r[8] == "Link[Foo] stopped publication polling"
+    assert r[9] == "Link[Foo] unlinked"
+    assert r[10] == f"{interrupter_name} triggered"
+    assert r[11] == f"{interrupter_name} terminated"
+    assert r[12] == f"{c} disconnected"
+
+
+def test_curve(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    broker_public, _ = zmq.curve_keypair()
+    client_public, client_secret = zmq.curve_keypair()
+
+    c = Client(
+        port=49162, curve=AuthCurve(public_key=client_public, secret_key=client_secret, broker_key=broker_public)
+    )
+    assert c._async_client is not None  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
+    interrupter_name = c._async_client.interrupter.name  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
+    link = c.link("Any")
+    assert link.service_name == "Any"
+    sub_interrupter = link._link_subscriber.interrupter  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
+    assert sub_interrupter is not None
+    time.sleep(0.1)
+    c.disconnect()
+
+    # the order of ZMQ event-monitoring messages are unpredictable so ignore them
+    r = [r.message for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0] == f"{interrupter_name} created"
+    assert r[1] == "Using CURVE authentication"
+    assert r[2] == f"{c} connecting..."
+    assert r[3] == f"{sub_interrupter.name} created"
+    assert r[4] == "Using CURVE authentication for subscriber"
+    assert r[5] == "Link[Any] publication polling..."
+    assert r[6] == f"{sub_interrupter.name} triggered"
+    assert r[7] == f"{sub_interrupter.name} terminated"
+    assert r[8] == "Link[Any] stopped publication polling"
+    assert r[9] == "Link[Any] unlinked"
+    assert r[10] == f"{interrupter_name} triggered"
+    assert r[11] == f"{interrupter_name} terminated"
+    assert r[12] == f"{c} disconnected"
+
+
+def test_link_echo(broker: Broker) -> None:
+    port, xpub, xsub = broker.run()
+
+    class Echo(Service):
+        def echo(self, *args: typing.Any, **kwargs: typing.Any) -> tuple[tuple[typing.Any, ...], dict[str, typing.Any]]:
+            return args, kwargs
+
+    e = Echo(port=port, xsub_port=xsub)
+    thread = Thread(target=e.connect, daemon=True)
+    thread.start()
+
+    sleep(0.1)
+
+    c = Client(port=port, xpub_port=xpub)
+    link = c.link("Echo")
+
+    assert c.services() == ["Echo"]
+
+    # Synchronous (sync=True by default)
+    reply = link.echo(1, None, b"data", 8.654e3, 3 + 8j, [1, "2"], {"a": 0}, one=1, complexer=8j, whatever="text")
+    assert reply == (
+        (1, None, b"data", 8.654e3, 3 + 8j, [1, "2"], {"a": 0}),
+        {"one": 1, "complexer": 8j, "whatever": "text"},
+    )
+    if sys.version_info >= (3, 11):
+        typing.assert_type(reply, typing.Any)
+
+    # Synchronous (sync=True explicit)
+    reply2 = link.echo(
+        1, None, b"data", 8.654e3, 3 + 8j, [1, "2"], {"a": 0}, one=1, complexer=8j, sync=True, whatever="text"
+    )
+    assert reply2 == (
+        (1, None, b"data", 8.654e3, 3 + 8j, [1, "2"], {"a": 0}),
+        {"one": 1, "complexer": 8j, "whatever": "text"},
+    )
+    if sys.version_info >= (3, 11):
+        typing.assert_type(reply2, typing.Any)
+
+    # Asynchronous (sync=False explicit)
+    future = link.echo(
+        1, None, b"data", 8.654e3, 3 + 8j, [1, "2"], {"a": 0}, one=1, complexer=8j, whatever="text", sync=False
+    )
+    assert future.result() == (
+        (1, None, b"data", 8.654e3, 3 + 8j, [1, "2"], {"a": 0}),
+        {"one": 1, "complexer": 8j, "whatever": "text"},
+    )
+    if sys.version_info >= (3, 11):
+        _ = typing.assert_type(future, futures.Future[typing.Any])
+
+    c.disconnect()
+    e.disconnect()
+    broker.stop()
+    thread.join()
+
+
+def test_reply_unknown_message_id(broker: Broker, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO)
+
+    port, xpub, xsub = broker.run()
+
+    context = zmq.Context()
+    service = context.socket(zmq.DEALER)
+    service.setsockopt(zmq.ROUTING_ID, b"Service[1]")
+    _ = service.connect(f"tcp://localhost:{port}")
+
+    r = Request(id=0, attribute="SERVICE_AVAILABLE", args=["ABC"], kwargs={})
+    _ = service.send_multipart([b"Broker", r.to_bytes(Flag.JSON)])
+
+    c = Client(port=port)
+    assert c.services() == ["ABC"]
+
+    abc = c.link("ABC")
+    fut = abc.anything(sync=False)
+
+    sender_id, message = service.recv_multipart()
+    assert Request.from_bytes(message) == Request(id=2, attribute="anything", args=(), kwargs={})
+
+    reply = Reply(id=0, ok=True, result=b"").to_bytes(Flag.NONE)
+    _ = service.send_multipart([sender_id, reply])
+
+    with pytest.raises((TimeoutError, futures.TimeoutError)):
+        _ = fut.result(timeout=0.1)
+
+    r = Request(id=0, attribute="SERVICE_UNAVAILABLE", args=["ABC"], kwargs={})
+    _ = service.send_multipart([b"Broker", r.to_bytes(Flag.JSON)])
+    time.sleep(0.1)
+    service.close()
+    context.destroy()
+    c.disconnect()
+    broker.stop()
+
+    assert caplog.record_tuples == [
+        ("msl.network", logging.INFO, f"Broker running on 0.0.0.0:{port}"),
+        ("msl.network", logging.INFO, broker.proxy_init_message(port, xpub, xsub)),
+        ("msl.network", logging.INFO, "Registered b'Service[1]' with name 'ABC'"),
+        ("msl.network", logging.ERROR, "Received a reply with an unknown message ID Reply(id=0, ok=True, result=b'')"),
+        ("msl.network", logging.INFO, "Unregistered b'Service[1]' with name 'ABC'"),
+        ("msl.network", logging.INFO, "All Services with name 'ABC' have been unregistered"),
+    ]

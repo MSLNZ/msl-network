@@ -1,0 +1,57 @@
+{
+    "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+    "version": "0.2",
+    "language": "en-GB",
+    "languageId": "python,rust",
+    "useGitignore": true,
+    "dictionaries": [
+        "!aws",
+        "!companies",
+        "!cryptocurrencies",
+        "!web-services"
+    ],
+    "cache": {
+        "cacheFormat": "universal",
+        "cacheLocation": ".cache/.cspellcache",
+        "cacheStrategy": "content",
+        "useCache": true
+    },
+    "ignorePaths": [
+        "cspell.json",
+        "mkdocs.yml",
+        "pyproject.toml",
+        "CHANGELOG.md",
+        "docs/assets/images/network.svg",
+        "languages/rust/Cargo.toml"
+    ],
+    "words": [
+        "appendleft",
+        "asyncio",
+        "bitness",
+        "bufferobjects",
+        "caplog",
+        "capsys",
+        "compcol",
+        "deserialise",
+        "deserialised",
+        "EHOSTUNREACH",
+        "fdel",
+        "gaierror",
+        "gethostname",
+        "inproc",
+        "Ironhouse",
+        "labview",
+        "mdash",
+        "msecs",
+        "POLLIN",
+        "POLLOUT",
+        "PUBLICKEY",
+        "SECRETKEY",
+        "SERVERKEY",
+        "Strawhouse",
+        "tobytes",
+        "urandom",
+        "XPUB",
+        "XSUB"
+    ]
+}

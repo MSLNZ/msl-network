@@ -1,0 +1,407 @@
+"""ZeroMQ broker to route requests, replies and publications."""
+
+from __future__ import annotations
+
+import logging
+from collections import deque
+from contextlib import suppress
+from threading import Thread
+from typing import TYPE_CHECKING
+
+import zmq
+from zmq.asyncio import Context, Poller, Socket
+from zmq.auth.base import Authenticator
+from zmq.utils.monitor import recv_monitor_message
+from zmq.utils.win32 import allow_interrupt
+
+from .interrupter import Interrupter
+from .message import Flag, Reply, Request
+from .utils import DOMAIN, logger
+
+if TYPE_CHECKING:
+    from .utils import Curve
+
+
+class ServiceBalancer:
+    """Evenly distribute requests to available Services that have the same name."""
+
+    def __init__(self) -> None:
+        """Evenly distribute requests to available Services that have the same name."""
+        self._service_ids: deque[bytes] = deque()  # Use a deque for fast pop/append
+        self._unique_set: set[bytes] = set()  # Use a set for fast __contains__
+
+    def __contains__(self, service_id: bytes) -> bool:
+        """Checks if `service_id` is in the balancer."""
+        return service_id in self._unique_set
+
+    def __len__(self) -> int:
+        """Returns the number of Service IDs in the balancer."""
+        return len(self._service_ids)
+
+    def __next__(self) -> bytes:
+        """Get the next Service ID that should get the request."""
+        item = self._service_ids.pop()  # return and remove the rightmost item
+        self._service_ids.appendleft(item)  # add item to the left side
+        return item
+
+    def append(self, service_id: bytes) -> None:
+        """Maybe add `service_id` to the right side of the deque.
+
+        Checks if `service_id` is not already in the deque, since a Service
+        might try to reconnect using the same ID.
+        """
+        if service_id not in self._unique_set:
+            self._service_ids.append(service_id)  # add item to the right side
+            self._unique_set.add(service_id)
+
+    def remove(self, service_id: bytes) -> None:
+        """Remove `service_id` from the balancer."""
+        self._service_ids.remove(service_id)
+        self._unique_set.remove(service_id)
+
+
+class Broker:
+    """ZeroMQ broker to forward requests and replies."""
+
+    def __init__(self) -> None:
+        """ZeroMQ broker to forward requests and replies."""
+        self.auth: Authenticator | None = None
+        self.endpoint: str = ""
+        self.poller_running: bool = False
+        self.proxy_running: bool = False
+        self.proxy_capture_endpoint: str = "inproc://proxy.capture"
+        self.proxy_control_endpoint: str = "inproc://proxy.control"
+        self.xpub_port: int = -1
+        self.xsub_port: int = -1
+
+        # key: service name
+        self.services: dict[str, ServiceBalancer] = {}
+
+        # Type annotations only. Initialized in run() while within asyncio thread.
+        self.interrupter: Interrupter
+        self.context: Context
+        self.router: Socket
+        self.poller: Poller
+
+    def xpub_xsub_proxy(self, *, endpoint: str, curve: Curve | None, plain: bool) -> None:  # noqa: PLR0915
+        """Proxy to forward all published messages to subscribers.
+
+        Args:
+            endpoint: The ZMQ address that the Broker is using.
+            curve: The information required for [CURVE](https://rfc.zeromq.org/spec/25/) authentication.
+            plain: Whether the xpub/xsub socket uses PLAIN authentication.
+        """
+        xpub = self.context.socket(zmq.XPUB)
+        xsub = self.context.socket(zmq.XSUB)
+        capture = self.context.socket(zmq.PAIR)
+        control = self.context.socket(zmq.REP)  # using PAIR caused tests to hang on macos GHA
+
+        xpub.setsockopt(zmq.ZAP_DOMAIN, DOMAIN.encode())
+        xpub.setsockopt(zmq.ROUTING_ID, b"XPUB")
+        xsub.setsockopt(zmq.ZAP_DOMAIN, DOMAIN.encode())
+        xsub.setsockopt(zmq.ROUTING_ID, b"XSUB")
+
+        if curve is not None:
+            xpub.setsockopt(zmq.CURVE_PUBLICKEY, curve.public_key)
+            xpub.setsockopt(zmq.CURVE_SECRETKEY, curve.secret_key)
+            xpub.setsockopt(zmq.CURVE_SERVER, 1)
+            xsub.setsockopt(zmq.CURVE_PUBLICKEY, curve.public_key)
+            xsub.setsockopt(zmq.CURVE_SECRETKEY, curve.secret_key)
+            xsub.setsockopt(zmq.CURVE_SERVER, 1)
+            logger.debug("Using CURVE authentication for XPUB/XSUB")
+        elif plain:
+            xpub.setsockopt(zmq.PLAIN_SERVER, 1)
+            xsub.setsockopt(zmq.PLAIN_SERVER, 1)
+            logger.debug("Using PLAIN authentication for XPUB/XSUB")
+
+        addr, port = endpoint.rsplit(":", maxsplit=1)
+        xpub_port = int(port) + 1  # Link connects via SUBscribe: SUB -> XPUB
+        xsub_port = int(port) + 2  # Service connects via PUBlish: PUB -> XSUB
+
+        using_default_ports = True
+
+        try:
+            _ = xpub.bind(f"{addr}:{xpub_port}")
+        except zmq.ZMQError:
+            using_default_ports = False
+            xpub_port = xpub.bind_to_random_port(addr)
+
+        try:
+            _ = xsub.bind(f"{addr}:{xsub_port}")
+        except zmq.ZMQError:
+            using_default_ports = False
+            xsub_port = xsub.bind_to_random_port(addr)
+
+        _ = capture.bind(self.proxy_capture_endpoint)
+        _ = control.bind(self.proxy_control_endpoint)
+
+        self.xpub_port = xpub_port
+        self.xsub_port = xsub_port
+
+        note: str = "" if using_default_ports else " [ATTENTION! using non-default ports]"
+        logger.info("XPUB/XSUB bound to ports %d/%d%s", xpub_port, xsub_port, note)
+        self.proxy_running = True
+        try:
+            _ = zmq.proxy_steerable(xsub, xpub, capture, control)
+        except zmq.ZMQError:
+            pass
+        finally:
+            self.proxy_running = False
+            xpub.close(linger=0)
+            xsub.close(linger=0)
+            capture.close(linger=0)
+            control.close(linger=0)
+            logger.debug("XPUB/XSUB terminated")
+
+    def remove_service(self, service_id: bytes, service_name: str, balancer: ServiceBalancer) -> None:
+        """Service is no longer available, remove it."""
+        logger.info("Unregistered %r with name %r", service_id, service_name)
+        balancer.remove(service_id)
+        if len(balancer) == 0:
+            del self.services[service_name]
+            logger.info("All Services with name %r have been unregistered", service_name)
+
+    def destroy(self) -> None:
+        """Close all sockets and destroy the context."""
+        if self.context.closed:
+            return
+
+        if self.auth is not None:
+            self.poller.unregister(self.auth.zap_socket)  # pyright: ignore[reportUnknownMemberType]
+            self.auth.log.setLevel(logging.WARNING)
+            self.auth.stop()
+            self.auth = None
+
+        self.poller.unregister(self.router)
+        self.poller.unregister(self.interrupter.receiver)
+        self.interrupter.close()
+        self.router.close(linger=0)
+        self.context.destroy(linger=0)
+        logger.debug("Broker terminated")
+
+    async def request_for_broker(self, sender_id: bytes, message: bytes) -> None:
+        """Process a request that is destined for the Broker.
+
+        Args:
+            sender_id: Either starts with `Client` or `Service`.
+            message: The message for the Broker.
+        """
+        request = Request.from_bytes(message)
+        attribute = request.attribute
+        if attribute == "SERVICES":
+            reply = Reply(id=request.id, ok=True, result=list(self.services)).to_bytes(Flag.JSON)
+            _ = await self.router.send_multipart((sender_id, b"Broker", reply))  # pyright: ignore[reportUnknownMemberType]
+        elif attribute == "SERVICE_AVAILABLE":
+            service_name = request.args[0]
+            logger.info("Registered %r with name %r", sender_id, service_name)
+            if service_name not in self.services:
+                self.services[service_name] = ServiceBalancer()
+            self.services[service_name].append(sender_id)
+        elif attribute == "SERVICE_UNAVAILABLE":
+            service_name = request.args[0]
+            balancer = self.services.get(service_name)
+            if balancer is not None:
+                self.remove_service(sender_id, service_name, balancer)
+        elif sender_id.startswith(b"Client"):
+            reply = Reply(
+                id=request.id,
+                ok=False,
+                result=f"Unsupported broker request: {attribute!r}",
+            ).to_bytes(Flag.JSON)
+            _ = await self.router.send_multipart((sender_id, b"Broker", reply))  # pyright: ignore[reportUnknownMemberType]
+        else:
+            logger.error("Unsupported broker request %r from %r", attribute, sender_id)
+
+    async def request_for_service(self, sender_id: bytes, service_name: bytes, message: bytes) -> None:
+        """Send a request from a Client to any Service that is handling requests for the *service*.
+
+        Args:
+            sender_id: Client ID.
+            service_name: The name of the service.
+            message: Original client message.
+        """
+        balancer = self.services.get(service_name.decode())
+        if balancer is None:
+            await self.send_service_unavailable(sender_id, service_name, message)
+            return
+
+        service_id = next(balancer)
+        try:
+            _ = await self.router.send_multipart((service_id, sender_id, message))  # pyright: ignore[reportUnknownMemberType]
+        except zmq.ZMQError as e:
+            if e.errno == zmq.EHOSTUNREACH:
+                self.remove_service(service_id, service_name.decode(), balancer)
+                await self.send_service_unavailable(sender_id, service_name, message)
+            else:
+                logger.exception(e)
+
+    async def run(  # noqa: C901, PLR0912, PLR0913, PLR0915
+        self,
+        *,
+        addresses: dict[str, str] | None = None,
+        curve: Curve | None = None,
+        monitor: bool = False,
+        host: str = "*",
+        plain: dict[str, str] | None = None,
+        port: int = 0,
+        zap_debug: bool = False,
+    ) -> None:
+        """Run the broker.
+
+        Args:
+            addresses: A hostname/address to IPv4 address mapping of devices that are allowed to connect to the broker.
+                If not specified, all devices can connect to proceed to PLAIN or CURVE authentication (if used).
+            curve: The information required for [CURVE](https://rfc.zeromq.org/spec/25/) authentication.
+            monitor: Whether to allow ZeroMQ event monitoring (as INFO log messages).
+            host: The network interface to run the Broker on.
+            plain: A username to password mapping to use for [PLAIN](https://rfc.zeromq.org/spec/24/) authentication.
+            port: The port number to run the Broker on. If `0`, use a random port.
+            zap_debug: Whether to allow DEBUG log messages during [ZAP](https://rfc.zeromq.org/spec/27/) authentication.
+        """
+        self.interrupter = Interrupter()
+
+        self.context = Context()
+        self.router = self.context.socket(zmq.ROUTER)
+
+        proxy_capture = self.context.socket(zmq.PAIR)
+        proxy_control = self.context.socket(zmq.REQ)  # using PAIR caused tests to hang on macos GHA
+        _ = proxy_capture.connect(self.proxy_capture_endpoint)
+        _ = proxy_control.connect(self.proxy_control_endpoint)
+
+        self.poller = Poller()
+        self.poller.register(self.router, zmq.POLLIN)
+        self.poller.register(self.interrupter.receiver, zmq.POLLIN)
+        self.poller.register(proxy_capture, zmq.POLLIN)
+
+        self.router.setsockopt(zmq.ZAP_DOMAIN, DOMAIN.encode())
+        self.router.setsockopt(zmq.ROUTING_ID, b"Broker")
+
+        # must configure Authenticator and the ROUTER socket before binding the ROUTER socket
+        if addresses or curve or plain:
+            self.auth = Authenticator(self.context)
+            self.auth.log.setLevel(logging.WARNING)
+            if addresses:
+                self.auth.allow(*addresses.values())
+                logger.info("ZAP allowed devices: %s", ", ".join(addresses))
+
+            if curve:
+                self.auth.configure_curve_callback(domain=DOMAIN, credentials_provider=curve)
+                self.router.setsockopt(zmq.CURVE_PUBLICKEY, curve.public_key)
+                self.router.setsockopt(zmq.CURVE_SECRETKEY, curve.secret_key)
+                self.router.setsockopt(zmq.CURVE_SERVER, 1)
+                n = len(curve.keys)
+                text = {0: "all keys", 1: "1 key"}.get(n, f"{n} keys")
+                logger.info("Using CURVE authentication with %s allowed", text)
+            elif plain:
+                self.auth.configure_plain(domain=DOMAIN, passwords=plain)
+                self.router.setsockopt(zmq.PLAIN_SERVER, 1)
+                s = "" if len(plain) == 1 else "s"
+                logger.info("Using PLAIN authentication for user%s %s", s, ", ".join(plain))
+            else:
+                logger.info("Using NULL authentication")
+
+            self.auth.start()
+            self.poller.register(self.auth.zap_socket, zmq.POLLIN)  # pyright: ignore[reportUnknownMemberType]
+            self.auth.log.setLevel(logging.DEBUG if zap_debug else logging.WARNING)
+
+        # Check for Errno.EHOSTUNREACH when a message cannot be routed (must be set before `bind`)
+        self.router.setsockopt(zmq.ROUTER_MANDATORY, 1)
+
+        try:
+            _ = self.router.bind(f"tcp://{host}:{port}")
+        except zmq.ZMQError as e:
+            logger.error("%s", e)
+            self.destroy()
+            return
+
+        self.endpoint = self.router.getsockopt_string(zmq.LAST_ENDPOINT)
+
+        monitor_socket: Socket | None = None
+        if monitor:
+            monitor_socket = self.router.get_monitor_socket()
+            self.poller.register(monitor_socket, zmq.POLLIN)
+
+        logger.info("Broker running on %s", self.endpoint[6:])
+
+        proxy_thread = Thread(
+            target=self.xpub_xsub_proxy,
+            kwargs={"endpoint": self.endpoint, "curve": curve, "plain": plain is not None},
+            daemon=True,
+        )
+        proxy_thread.start()
+
+        with allow_interrupt(self.interrupter):
+            self.poller_running = True
+            while True:
+                event = dict(await self.poller.poll())
+                if event.get(self.router):
+                    recv = await self.router.recv_multipart()
+                    if len(recv) != 3:  # noqa: PLR2004
+                        logger.error("Expect [sender_id, destination_id, message], got %s", recv)
+                        continue
+                    sender_id, destination_id, message = recv
+                    logger.debug("%s -> %s", sender_id, destination_id)
+                    if destination_id == b"Broker":
+                        await self.request_for_broker(sender_id, message)
+                    elif sender_id.startswith(b"Client"):
+                        try:
+                            await self.request_for_service(sender_id, destination_id, message)
+                        except:  # noqa: E722
+                            logger.exception("Bad client request %r", message)
+                    elif not destination_id:
+                        logger.debug("Undefined destination ID, ignoring message %r", message)
+                    else:
+                        # A reply from a Service to be sent to a Client
+                        # Silently ignore all errors if the Client is no longer available
+                        with suppress(zmq.ZMQError):
+                            _ = await self.router.send_multipart((destination_id, sender_id, message))  # pyright: ignore[reportUnknownMemberType]
+                elif event.get(proxy_capture):
+                    # The multipart message length can be 1 or 2
+                    # [b'\x00ServiceName'] when a subscriber disconnects or unsubscribes from a topic
+                    # [b'\x01ServiceName'] when a subscriber connects or subscribes to a topic
+                    # [b'ServiceName', b'<data>'] when a publisher publishes a message
+                    service_name, *data = await proxy_capture.recv_multipart()
+                    if data:
+                        logger.info("%r published message", service_name)
+                    elif service_name.startswith(b"\x01"):
+                        logger.debug("%r has been subscribed to", service_name[1:])
+                    else:
+                        logger.debug("%r has been unsubscribed from", service_name[1:])
+                elif self.auth is not None and event.get(self.auth.zap_socket):  # pyright: ignore[reportUnknownMemberType]
+                    self.auth.log.debug("ZAP request initiated...")
+                    await self.auth.handle_zap_message(self.auth.zap_socket.recv_multipart())  # pyright: ignore[reportUnknownMemberType]
+                elif monitor_socket is not None and event.get(monitor_socket):
+                    m = await recv_monitor_message(monitor_socket)
+                    logger.info("Monitor %r value=%d", m["event"], m["value"])
+                else:
+                    _ = await proxy_control.send(b"TERMINATE")
+                    _ = await proxy_control.recv()
+                    break  # event must be from self.interrupter.receiver
+
+        self.poller_running = False
+
+        if monitor_socket is not None:
+            self.router.disable_monitor()
+            self.poller.unregister(monitor_socket)
+
+        self.poller.unregister(proxy_capture)
+        proxy_capture.close(linger=0)
+        proxy_control.close(linger=0)
+        proxy_thread.join()
+        self.destroy()
+
+    async def send_service_unavailable(self, sender_id: bytes, service_name: bytes, message: bytes) -> None:
+        """Send a reply that there are no Services available for the specified service.
+
+        Args:
+            sender_id: Client ID.
+            service_name: The name of the service.
+            message: Original client message.
+        """
+        request = Request.from_bytes(message)
+        reply = Reply(
+            id=request.id,
+            ok=False,
+            result=f"Service {service_name.decode()!r} is not available",
+        ).to_bytes(Flag.JSON)
+        _ = await self.router.send_multipart([sender_id, service_name, reply])  # pyright: ignore[reportUnknownMemberType]

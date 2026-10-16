@@ -1,227 +1,337 @@
-import os
-import tempfile
+from __future__ import annotations
 
-from msl.network import utils
-from msl.network.constants import DISCONNECT_REQUEST
+import json
+import logging
+import socket
+from pathlib import Path
 
+import pytest
+from zmq.auth import certs
 
-def test_terminal_parser():
-
-    assert utils.parse_terminal_input('') is None
-    assert utils.parse_terminal_input('    ') is None
-    assert utils.parse_terminal_input('hello') is None
-    assert utils.parse_terminal_input('"hello"') is None
-    assert utils.parse_terminal_input('"hello goodbye') is None
-    assert utils.parse_terminal_input('"hello world today"') is None
-
-    for item in ['hello goodbye', '"hello" goodbye', 'hello "goodbye"', "'hello' goodbye", "hello 'goodbye'"]:
-        d = utils.parse_terminal_input(item)
-        assert d['service'] == 'hello'
-        assert d['attribute'] == 'goodbye'
-        assert isinstance(d['args'], list) and not d['args']
-        assert isinstance(d['kwargs'], dict) and not d['kwargs']
-
-    for item in ['hello GooDbye x=-1 y=4', 'hello GooDbye x =  -1   y =    4']:
-        d = utils.parse_terminal_input(item)
-        assert d['service'] == 'hello'
-        assert d['attribute'] == 'GooDbye'
-        assert isinstance(d['args'], list) and not d['args']
-        assert len(d['kwargs']) == 2
-        assert d['kwargs']['x'] == -1
-        assert d['kwargs']['y'] == 4
-
-    for item in ['hello goodbye x="1 2" y=3', '   "hello"  "goodbye"   x = "1 2"   y   =3   ']:
-        d = utils.parse_terminal_input(item)
-        assert d['service'] == 'hello'
-        assert d['attribute'] == 'goodbye'
-        assert isinstance(d['args'], list) and not d['args']
-        assert len(d['kwargs']) == 2
-        assert d['kwargs']['x'] == '1 2'
-        assert d['kwargs']['y'] == 3
-
-    d = utils.parse_terminal_input('"hello world" goodbye w = .62 x=1 y=-4.2 z="test" ')
-    assert d['service'] == 'hello world'
-    assert d['attribute'] == 'goodbye'
-    assert isinstance(d['args'], list) and not d['args']
-    assert len(d['kwargs']) == 4
-    assert d['kwargs']['w'] == 0.62
-    assert d['kwargs']['x'] == 1
-    assert d['kwargs']['y'] == -4.2
-    assert d['kwargs']['z'] == 'test'
-
-    d = utils.parse_terminal_input('"hello world today" goodbye')
-    assert d['service'] == 'hello world today'
-    assert d['attribute'] == 'goodbye'
-    assert isinstance(d['args'], list) and not d['args']
-    assert isinstance(d['kwargs'], dict) and not d['kwargs']
-
-    d = utils.parse_terminal_input('"hello world today" good_bye x=None y=true z=test w=false')
-    assert d['service'] == 'hello world today'
-    assert d['attribute'] == 'good_bye'
-    assert isinstance(d['args'], list) and not d['args']
-    assert len(d['kwargs']) == 4
-    assert not d['kwargs']['w']
-    assert d['kwargs']['x'] is None
-    assert d['kwargs']['y']
-    assert d['kwargs']['z'] == 'test'
-
-    d = utils.parse_terminal_input('"String Editor" concat s1="first string" x=1  s2=" the second string" ')
-    assert d['service'] == 'String Editor'
-    assert d['attribute'] == 'concat'
-    assert isinstance(d['args'], list) and not d['args']
-    assert len(d['kwargs']) == 3
-    assert d['kwargs']['s1'] == 'first string'
-    assert d['kwargs']['x'] == 1
-    assert d['kwargs']['s2'] == ' the second string'
-
-    d = utils.parse_terminal_input('"String Editor" concat "first string" 1  " the second string" ')
-    assert d['service'] == 'String Editor'
-    assert d['attribute'] == 'concat'
-    assert len(d['args']) == 3
-    assert d['args'][0] == 'first string'
-    assert d['args'][1] == 1
-    assert d['args'][2] == ' the second string'
-    assert isinstance(d['kwargs'], dict) and not d['kwargs']
-
-    d = utils.parse_terminal_input('"String Editor" concat "first string" 1  s1=" the second string" ')
-    assert d['service'] == 'String Editor'
-    assert d['attribute'] == 'concat'
-    assert len(d['args']) == 2
-    assert d['args'][0] == 'first string'
-    assert d['args'][1] == 1
-    assert len(d['kwargs']) == 1
-    assert d['kwargs']['s1'] == ' the second string'
-
-    d = utils.parse_terminal_input('Vector cross_product x=[1,2,3] y=[4,5,6]')
-    assert d['service'] == 'Vector'
-    assert d['attribute'] == 'cross_product'
-    assert isinstance(d['args'], list) and not d['args']
-    assert len(d['kwargs']) == 2
-    assert d['kwargs']['x'] == [1, 2, 3]
-    assert d['kwargs']['y'] == [4, 5, 6]
-
-    d = utils.parse_terminal_input('Math is_null w=none x=None y=NULL z=null')
-    assert d['service'] == 'Math'
-    assert d['attribute'] == 'is_null'
-    assert isinstance(d['args'], list) and not d['args']
-    assert len(d['kwargs']) == 4
-    assert d['kwargs']['w'] is None
-    assert d['kwargs']['x'] is None
-    assert d['kwargs']['y'] is None
-    assert d['kwargs']['z'] is None
-
-    for item in ['link Basic Math', 'linkBasic Math', 'link "Basic Math"', 'link  Basic Math ']:
-        d = utils.parse_terminal_input(item)
-        assert d['service'] is 'Manager'
-        assert d['attribute'] == 'link'
-        assert d['args'][0] == 'Basic Math'
-        assert isinstance(d['kwargs'], dict) and not d['kwargs']
-
-    for item in ['disconnect', DISCONNECT_REQUEST, 'exit', 'EXIT']:
-        d = utils.parse_terminal_input(item)
-        assert d['service'] == 'self'
-        assert d['attribute'] == DISCONNECT_REQUEST
-        assert isinstance(d['args'], list) and not d['args']
-        assert isinstance(d['kwargs'], dict) and not d['kwargs']
-
-    d = utils.parse_terminal_input('client')
-    assert d['type'] == 'client'
-    assert d['name'] == 'Client'
-
-    d = utils.parse_terminal_input('CliEnt')
-    assert d['type'] == 'client'
-    assert d['name'] == 'Client'
-
-    d = utils.parse_terminal_input('Client The Client today')
-    assert d['type'] == 'client'
-    assert d['name'] == 'The Client today'
-
-    d = utils.parse_terminal_input('client "The Client"')
-    assert d['type'] == 'client'
-    assert d['name'] == 'The Client'
-
-    d = utils.parse_terminal_input('ServiceName method 1.1 2.2 "another arg" x  = 3   y="4"')
-    assert d['service'] == 'ServiceName'
-    assert d['attribute'] == 'method'
-    assert len(d['args']) == 3
-    assert len(d['kwargs']) == 2
-    assert d['args'][0] == 1.1
-    assert d['args'][1] == 2.2
-    assert d['args'][2] == 'another arg'
-    assert d['kwargs']['x'] == 3
-    assert d['kwargs']['y'] == '4'
-
-    d = utils.parse_terminal_input('identity')
-    assert d['service'] == 'Manager'
-    assert d['attribute'] == 'identity'
+from msl.network.utils import DOMAIN, USER_DIR, Curve, get_logging_level, load_curves, load_devices, load_plain
 
 
-def test_ensure_root():
-    dirname = os.path.join(tempfile.gettempdir(), 'msl', 'network', 'testing')
-
-    path = dirname + '/filename.txt'
-
-    assert not os.path.isfile(path)
-    assert not os.path.isdir(dirname)
-
-    utils.ensure_root_path(path)
-
-    assert os.path.isdir(dirname)
-    assert not os.path.isfile(path)
-
-    os.removedirs(dirname)
-    assert not os.path.isdir(dirname)
-
-    # these should not raise an error (nor create any directories)
-    utils.ensure_root_path(None)  # noqa
-    utils.ensure_root_path('')
-
-
-def test_is_manager_regex():
-    search = utils._is_manager_regex.search
-    assert search('name') is None
-    assert search('name:') is None
-    assert search('name1') is None
-    assert search('name:1') is None
-    assert search('name12') is None
-    assert search('Manager') is None
-    assert search('Manager:') is None
-    assert search('Manager[name') is None
-    assert search('Manager[name:') is None
-    assert search('Manager[name:1875') is None
-    assert search('Manager[name:1]') is not None
-    assert search('Manager[name:12]') is not None
-    assert search('Manager[name:12345]') is not None
-    assert search('Manager[n.a.m.e:12345]') is not None
-    assert search('Manager[192.168.1.100:12345]') is not None
-    assert search('manager[name:12]') is None
-    assert search('Manager[name:1875] ') is None
+@pytest.mark.parametrize(
+    ("quiet", "verbose", "expected"),
+    [
+        (0, 0, logging.INFO),
+        (1, 0, logging.WARNING),
+        (2, 0, logging.ERROR),
+        (3, 0, logging.CRITICAL),
+        (4, 0, logging.CRITICAL),
+        (10, 0, logging.CRITICAL),
+        (0, 1, logging.DEBUG),
+        (0, 2, logging.DEBUG),
+        (0, 10, logging.DEBUG),
+        (1, 1, logging.INFO),
+        (8, 6, logging.ERROR),
+        (5, 6, logging.DEBUG),
+    ],
+)
+def test_get_logging_level(quiet: int, verbose: int, expected: int) -> None:
+    assert get_logging_level(quiet=quiet, verbose=verbose) == expected
 
 
-def test_numeric_address_regex():
-    # the regex pattern is not meant to be an IPv4 parser
-    search = utils._numeric_address_regex.search
+def test_load_devices_default_home_dir(home_dir: Path) -> None:
+    assert not home_dir.exists()
+    path, hosts = load_devices()
+    assert home_dir.exists()
+    assert path == home_dir / "devices.txt"
+    assert hosts == {"localhost"}
+    assert path.read_text() == "localhost"
 
-    # valid
-    assert search('1.2.3.4') is not None
-    assert search('999.999.999.999') is not None
-    assert search('1.2.3.4.5') is not None
-    assert search('1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa') is not None
-    assert search('1.0.0.127.in-addr.arpa') is not None
-    assert search('1.2.3.4444') is not None
-    assert search('1.2.3.4x') is not None
 
-    # invalid
-    assert search('1.2.3') is None
-    assert search('localhost') is None
-    assert search('en.wikipedia.org') is None
-    assert search('1111.2.3.4') is None
-    assert search('1.2222.3.4') is None
-    assert search('1.2.3333.4') is None
-    assert search('x1.2.3.4') is None
-    assert search('1x.2.3.4') is None
-    assert search('1.x2.3.4') is None
-    assert search('1.2x.3.4') is None
-    assert search('1.2.x3.4') is None
-    assert search('1.2.3x.4') is None
-    assert search('1.2.3.x4') is None
+def test_load_devices(tmp_path: Path) -> None:
+    assert tmp_path.exists()
+    path, hosts = load_devices(tmp_path)
+    assert path == tmp_path / "devices.txt"
+    assert hosts == {"localhost"}
+    assert path.read_text() == "localhost"
+
+    _ = path.write_text("127.0.0.1\n10.11.12.13\nMSL-Device")
+    path2, hosts = load_devices(tmp_path)
+    assert path == path2
+    assert hosts == {"127.0.0.1", "10.11.12.13", "MSL-Device"}
+
+
+def test_curve_callback_invalid_domain() -> None:
+    curve = Curve(keys={b"1", b"2", b"3"})
+    assert not curve.callback(DOMAIN + "X", b"1")
+
+
+def test_curve_callback_keys_empty() -> None:
+    curve = Curve()
+    assert curve.callback(DOMAIN, b"key ignored")
+
+
+def test_curve_callback_invalid_key() -> None:
+    curve = Curve(keys={b"1", b"2", b"3"})
+    assert not curve.callback(DOMAIN, b"4")
+
+
+def test_curve_callback_valid_key() -> None:
+    curve = Curve(keys={b"1", b"2", b"3"})
+    assert curve.callback(DOMAIN, b"2")
+
+
+def test_load_plain_default_path(home_dir: Path) -> None:
+    expected_path = home_dir / "plain.json"
+    assert not expected_path.is_file()
+
+    path, data = load_plain()
+    assert path == expected_path
+    assert data == {}
+
+    assert expected_path.is_file()
+
+    path, data = load_plain()
+    assert path == expected_path
+    assert data == {}
+
+
+def test_load_plain_file_not_found(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    file = Path("missing/file.json")
+    path, data = load_plain(file)
+    assert path == file
+    assert data is None
+
+    # ZMQ event-monitoring messages can appear in this test so ignore them
+    r = [r for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0].levelname == "DEBUG"
+    assert r[0].message == f"Loading PLAIN authentication data from '{file}'"
+    assert r[1].levelname == "ERROR"
+    assert r[1].message == f"File not found: {file}"
+    assert len(r) == 2
+
+
+def test_load_plain_bad_json(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    file = tmp_path / "plain.json"
+    _ = file.write_text("user=pass")
+
+    path, data = load_plain(file)
+    assert path == file
+    assert data is None
+
+    # ZMQ event-monitoring messages can appear in this test so ignore them
+    r = [r for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0].levelname == "DEBUG"
+    assert r[0].message == f"Loading PLAIN authentication data from '{file}'"
+    assert r[1].levelname == "ERROR"
+    assert r[1].message == f"Invalid JSON file for PLAIN authentication: {file}"
+    assert len(r) == 2
+
+
+def test_load_plain_invalid_dict(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    file = tmp_path / "plain.json"
+    _ = file.write_text(json.dumps([("user1", "pw1"), ("user2", "pw2")]))
+
+    path, data = load_plain(file)
+    assert path == file
+    assert data is None
+
+    # ZMQ event-monitoring messages can appear in this test so ignore them
+    r = [r for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0].levelname == "DEBUG"
+    assert r[0].message == f"Loading PLAIN authentication data from '{file}'"
+    assert r[1].levelname == "ERROR"
+    assert r[1].message == 'The PLAIN authentication file must be a {"username": "password"} mapping'
+    assert len(r) == 2
+
+
+def test_load_plain_key_and_value_not_str(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    file = tmp_path / "plain.json"
+    _ = file.write_text(json.dumps({123: "pw1", "user2": 456}))
+
+    path, data = load_plain(file)
+    assert path == file
+    assert data == {"123": "pw1", "user2": "456"}
+
+    # ZMQ event-monitoring messages can appear in this test so ignore them
+    r = [r for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0].levelname == "DEBUG"
+    assert r[0].message == f"Loading PLAIN authentication data from '{file}'"
+    assert len(r) == 1
+
+
+def test_load_curve_default_path(home_dir: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    hostname = socket.gethostname()
+
+    curves_dir = home_dir / "curves"
+    secret_file = home_dir / f"{hostname}.key_secret"
+    public_file = home_dir / f"{hostname}.key"
+
+    assert not home_dir.is_dir()
+    assert not curves_dir.is_dir()
+
+    curve = load_curves()
+    assert home_dir.is_dir()
+    assert curves_dir.is_dir()
+    assert secret_file.is_file()
+    assert public_file.is_file()
+
+    assert curve is not None
+
+    public_key, secret_key = certs.load_certificate(secret_file)  # pyright: ignore[reportUnknownMemberType]
+    assert curve.public_key == public_key
+    assert curve.secret_key == secret_key
+
+    public_key, secret_key = certs.load_certificate(public_file)  # pyright: ignore[reportUnknownMemberType]
+    assert curve.public_key == public_key
+    assert secret_key is None
+
+    assert len(curve.keys) == 0  # assumes there are no *.key files in $HOME/.curve
+
+    assert curve.callback(DOMAIN, b"whatever")
+    assert not curve.callback(DOMAIN + "x", b"whatever")
+
+    user_dir = USER_DIR / ".curve"
+    assert not user_dir.exists()  # assumption for test
+
+    # ZMQ event-monitoring messages can appear in this test so ignore them
+    r = [r for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0].levelname == "INFO"
+    assert r[0].message == "IMPORTANT! Created new CURVE authentication certificates"
+    assert r[1].levelname == "INFO"
+    assert r[1].message == f"IMPORTANT! Copy '{public_file}' to a device that connects as a client or service"
+    assert r[2].levelname == "DEBUG"
+    assert r[2].message == f"Loading CURVE authentication certificates from '{secret_file}'"
+    assert r[3].levelname == "DEBUG"
+    assert r[3].message == f"Loaded 0 CURVE certificates from '{curves_dir}'"
+    assert r[4].levelname == "DEBUG"
+    assert r[4].message == f"Skipping CURVE certificates in '{user_dir}' [directory does not exist]"
+    assert len(r) == 5
+
+    caplog.clear()
+
+    curve = load_curves()
+    assert caplog.record_tuples == [
+        ("msl.network", logging.DEBUG, f"Loading CURVE authentication certificates from '{secret_file}'"),
+        ("msl.network", logging.DEBUG, f"Loaded 0 CURVE certificates from '{curves_dir}'"),
+        ("msl.network", logging.DEBUG, f"Skipping CURVE certificates in '{user_dir}' [directory does not exist]"),
+    ]
+
+
+def test_load_curve_invalid_directory(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    curve = load_curves(Path("missing"))
+    assert curve is None
+
+    # ZMQ event-monitoring messages can appear in this test so ignore them
+    r = [r for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0].levelname == "ERROR"
+    assert r[0].message == "Cannot create broker certificates, the 'missing' directory does not exist"
+    assert len(r) == 1
+
+
+def test_load_curve_non_default_directory_empty(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    hostname = socket.gethostname()
+
+    curves_dir = tmp_path / "curves"
+    secret_file = tmp_path / f"{hostname}.key_secret"
+    public_file = tmp_path / f"{hostname}.key"
+
+    assert not curves_dir.is_dir()
+    assert not secret_file.is_file()
+    assert not public_file.is_file()
+
+    curve = load_curves(tmp_path)
+
+    assert not curves_dir.is_dir()  # does not get created
+    assert secret_file.is_file()
+    assert public_file.is_file()
+
+    assert curve is not None
+
+    user_dir = USER_DIR / ".curve"
+    assert not user_dir.exists()  # assumption for test
+
+    # ZMQ event-monitoring messages can appear in this test so ignore them
+    r = [r for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0].levelname == "INFO"
+    assert r[0].message == "IMPORTANT! Created new CURVE authentication certificates"
+    assert r[1].levelname == "INFO"
+    assert r[1].message == f"IMPORTANT! Copy '{public_file}' to a device that connects as a client or service"
+    assert r[2].levelname == "DEBUG"
+    assert r[2].message == f"Loading CURVE authentication certificates from '{secret_file}'"
+    assert r[3].levelname == "DEBUG"
+    assert r[3].message == f"Skipping CURVE certificates in '{curves_dir}' [directory does not exist]"
+    assert r[4].levelname == "DEBUG"
+    assert r[4].message == f"Skipping CURVE certificates in '{user_dir}' [directory does not exist]"
+    assert len(r) == 5
+
+
+def test_load_curve_no_public_key(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    secret_file = tmp_path / "new.key_secret"
+    _ = secret_file.write_text("# does not contain a public key\nwhatever\n")
+
+    curve = load_curves(tmp_path)
+    assert curve is None
+
+    # ZMQ event-monitoring messages can appear in this test so ignore them
+    r = [r for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0].levelname == "DEBUG"
+    assert r[0].message == f"Loading CURVE authentication certificates from '{secret_file}'"
+    assert r[1].levelname == "ERROR"
+    assert r[1].message == f"No public key found in {secret_file}"
+    assert len(r) == 2
+
+
+def test_load_curve_no_secret_key(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    secret_file = tmp_path / "new.key_secret"
+    _ = secret_file.write_text("# does not contain a secret key\n  public-key = abcd\n")
+
+    curve = load_curves(tmp_path)
+    assert curve is None
+
+    # ZMQ event-monitoring messages can appear in this test so ignore them
+    r = [r for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0].levelname == "DEBUG"
+    assert r[0].message == f"Loading CURVE authentication certificates from '{secret_file}'"
+    assert r[1].levelname == "ERROR"
+    assert r[1].message == f"No secret key found in '{secret_file}'"
+    assert len(r) == 2
+
+
+def test_load_curve_no_client_public_key(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    curves_dir = tmp_path / "curves"
+    curves_dir.mkdir()
+
+    secret_file = tmp_path / "broker.key_secret"
+    _ = secret_file.write_text("public-key = abc\nsecret-key = def")
+
+    client_file = curves_dir / "client.key"
+    _ = client_file.write_text("# does not contain a public key\nwhatever\n")
+
+    curve = load_curves(tmp_path)
+    assert curve is not None
+
+    user_dir = USER_DIR / ".curve"
+    assert not user_dir.exists()  # assumption for test
+
+    # ZMQ event-monitoring messages can appear in this test so ignore them
+    r = [r for r in caplog.records if not r.message.startswith("Monitor")]
+    assert r[0].levelname == "DEBUG"
+    assert r[0].message == f"Loading CURVE authentication certificates from '{secret_file}'"
+    assert r[1].levelname == "ERROR"
+    assert r[1].message == f"Skipping all CURVE certificates in '{curves_dir}' [No public key found in {client_file}]"
+    assert r[2].levelname == "DEBUG"
+    assert r[2].message == f"Skipping CURVE certificates in '{user_dir}' [directory does not exist]"
+    assert len(r) == 3
