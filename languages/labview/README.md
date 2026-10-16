@@ -2,7 +2,7 @@ LabVIEW implementation of a `Client` and `Service` for [msl-network].
 
 ## Prerequisites
 
-The LabVIEW VIs are compatible with LabVIEW 2023 Q1 and later (because the VIs requires the [virtual environment] feature to be available). Ensure that the bitness of Python corresponds to the bitness of LabVIEW that is installed (i.e., use 32-bit Python if LabVIEW is 32-bit). Follow the [overview] from the LabVIEW website for more information about Python and LabVIEW compatibility. If your version of LabVIEW is from 2022 or earlier, you can install the [labview-zmq] package and implement a `Client` and `Service` to build, transfer and extract ZeroMQ messages.
+The LabVIEW VIs are compatible with LabVIEW 2023 Q1 and later (because the VIs require the [virtual environment] feature to be available). Ensure that the bitness of Python corresponds to the bitness of LabVIEW that is installed (i.e., use 32-bit Python with 32-bit LabVIEW). Follow the [overview] from the LabVIEW website for more information about Python and LabVIEW compatibility. If your version of LabVIEW is from 2022 or earlier, you can install the [labview-zmq] package and implement a `Client` and `Service` to build, transfer and extract ZeroMQ messages.
 
 Create a Python virtual environment (using an appropriate bitness and version of Python),
 
@@ -40,7 +40,7 @@ The `send_requests` (request) and `handle_requests` (reply) files are available 
 
 ### Publish-Subscribe Pattern
 
-The `publish` and `subscribe` files are available to run in both Python and LabVIEW. You can publish values from Python and let LabVIEW subscribe to them (or vice-versa). You may also use the same programming language to publish and subscribe. If you use LabVIEW to both publish and subscribe, make sure to set the name of the *Service* you want to subscribe to (in `subscribe.vi`) to be *LabVIEW* instead of the default value *Python*.
+The `publish` and `subscribe` files are available to run in both Python and LabVIEW. You can publish values from Python and let LabVIEW subscribe to them (or vice-versa). You may also use the same programming language to publish and subscribe. If you use LabVIEW to both publish and subscribe, make sure to set the name of the *Service* that you want to subscribe to (in `subscribe.vi`) to be *LabVIEW* instead of the default value *Python*.
 
 
 [msl-network]: https://mslnz.github.io/msl-network/latest/
