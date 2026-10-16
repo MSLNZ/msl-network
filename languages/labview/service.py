@@ -9,6 +9,32 @@ from typing import Any
 
 from msl.network import Service
 
+
+class LabVIEW(Service):
+    """The methods in this Service must be rewritten for your specific application.
+
+    Every method that your Service implements does the same three things:
+
+    1. Put the name of the task into the queue for the LabVIEW code to `get_task`.
+    2. Put the arguments into the queue for the LabVIEW code to `get_arguments`.
+    3. Wait for the LabVIEW code to set a result (an error or a value).
+    """
+
+    def add(self, x: float, y: float) -> float:
+        """Add two numbers."""
+        put_task("add")
+        put_arguments(x, y)
+        result: float = wait_for_result()
+        return result
+
+    def reverse_string(self, s: str) -> str:
+        """Reverse a string."""
+        put_task("reverse_string")
+        put_arguments(s)
+        result: str = wait_for_result()
+        return result
+
+
 # The following queues and functions are generic and may be used
 # with any LabVIEW Service that you implement
 
@@ -31,7 +57,7 @@ def get_arguments() -> Any:
 
 
 def get_task(timeout: float) -> str:
-    """Get the name of the next task that the LabVIEW code should process.
+    """The LabVIEW code gets the name of the next task to process.
 
     If a Client has not sent a request within `timeout` seconds an empty string
     is returned. This allows for the LabVIEW code to implement a graceful
@@ -39,17 +65,27 @@ def get_task(timeout: float) -> str:
     """
     try:
         name = task.get(timeout=timeout)
-        task.task_done()
     except Empty:
         return ""
     else:
+        task.task_done()
         return name
 
 
 def publish(value: Any) -> None:
-    """Publish a value to all subscribed Client's."""
+    """The LabVIEW code publishes a value to all subscribed Client's."""
     if service is not None:
         service.publish(value)
+
+
+def put_arguments(*args: Any) -> None:
+    """Put the arguments into the queue for the LabVIEW code."""
+    arguments.put_nowait(args)
+
+
+def put_task(name: str) -> None:
+    """Put the name of the task into the queue for the LabVIEW code."""
+    task.put_nowait(name)
 
 
 def set_error(reason: str) -> None:
@@ -69,14 +105,14 @@ def set_value(value: Any) -> None:
 
 
 def start() -> None:
-    """Start the Service (connect to the Broker)."""
+    """The LabVIEW code starts the Service (connect to the Broker)."""
     global service
     service = LabVIEW()
     Thread(target=service.connect, daemon=True).start()
 
 
 def stop() -> None:
-    """Stop the Service (disconnect from the Broker)."""
+    """The LabVIEW code stops the Service (disconnect from the Broker)."""
     global service
     if service is not None:
         with suppress(Exception):
@@ -85,32 +121,12 @@ def stop() -> None:
 
 
 def wait_for_result() -> Any:
-    """Waits for the LabVIEW code to set a result (an error or a value)."""
+    """Wait for the LabVIEW code to set a result (an error or a value)."""
     ok, value = result.get()
     result.task_done()
     if ok:
         return value
+
+    # The Client receives the error message.
+    # The Service continues to run to handle another request.
     raise RuntimeError(value)
-
-
-class LabVIEW(Service):
-    """The methods in this Service must be rewritten for your specific application."""
-
-    def add(self, x: float, y: float) -> float:
-        """Every method that your Service implements does the same three things.
-
-        1. Specifies the name of the task that the LabVIEW code must handle.
-        2. Specifies the arguments that the LabVIEW code can get.
-        3. Waits for the LabVIEW code to set a result (an error or a value).
-        """
-        task.put_nowait("add")
-        arguments.put_nowait((x, y))  # must put a tuple of the arguments
-        result: float = wait_for_result()
-        return result
-
-    def reverse_string(self, s: str) -> str:
-        """Reverse a string."""
-        task.put_nowait("reverse_string")
-        arguments.put_nowait((s,))  # must put a tuple of the arguments
-        result: str = wait_for_result()
-        return result
