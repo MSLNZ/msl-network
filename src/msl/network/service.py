@@ -44,7 +44,7 @@ class Service:
         """Base class for a Service.
 
         Args:
-            name: The name of the Service that a [Client][msl.network.client.Client] would
+            name: The name of the Service that a [Client][msl.network.client.Client] will
                 use to [link][msl.network.client.Client.link] with. If not specified,
                 the class name is used.
             host: The hostname (or IP address) that the [Broker][] is running on.
