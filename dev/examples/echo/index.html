@@ -1261,8 +1261,9 @@
 <p>Open another terminal and start the Echo <a class="autorefs autorefs-internal" href="../../api/service/#service">Service</a> by running the following command.</p>
 <div class="highlight"><pre><span></span><code><span class="go">python -c "from msl.examples.network import run_echo; run_echo()"</span>
 </code></pre></div>
-<p>The source code of the Echo <a class="autorefs autorefs-internal" href="../../api/service/#service">Service</a> is:</p>
-<!-- fmt: off -->
+<details class="example">
+<summary>Expand to show the source code of the Echo <a class="autorefs autorefs-internal" href="../../api/service/#service">Service</a></summary>
+<p><!-- fmt: off -->
 <div class="highlight"><pre><span></span><code><span class="sd">"""Example echo Service.</span>
 
 <span class="sd">Returns the arguments and keyword arguments that were sent from a Client.</span>
@@ -1290,8 +1291,8 @@
     <span class="c1"># Connect the Service to the Broker (runs the event loop "forever")</span>
     <span class="n">echo</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
 </code></pre></div>
-<!-- fmt: on -->
-
+<!-- fmt: on --></p>
+</details>
 <h2 id="echo-client">Run the <code>Client</code><a class="headerlink" href="#echo-client" title="Permanent link">¤</a></h2>
 <p>Connect to the <a class="autorefs autorefs-internal" href="../../#broker">Broker</a> as a <a class="autorefs autorefs-internal" href="../../api/client/#client">Client</a>, <a class="autorefs autorefs-internal" title="            link" href="../../api/client/#msl.network.client.Client.link">link</a> with the Echo <a class="autorefs autorefs-internal" href="../../api/service/#service">Service</a> then send requests.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">msl.network</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>

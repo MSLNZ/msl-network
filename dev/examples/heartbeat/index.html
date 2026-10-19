@@ -1261,8 +1261,9 @@
 <p>Open another terminal and start the Heartbeat <a class="autorefs autorefs-internal" href="../../api/service/#service">Service</a> by running the following command.</p>
 <div class="highlight"><pre><span></span><code><span class="go">python -c "from msl.examples.network import run_heartbeat; run_heartbeat()"</span>
 </code></pre></div>
-<p>The source code of the Heartbeat <a class="autorefs autorefs-internal" href="../../api/service/#service">Service</a> is:</p>
-<!-- fmt: off -->
+<details class="example">
+<summary>Expand to show the source code of the Heartbeat <a class="autorefs autorefs-internal" href="../../api/service/#service">Service</a></summary>
+<p><!-- fmt: off -->
 <div class="highlight"><pre><span></span><code><span class="sd">"""Example Service that publishes data to all subscribed Clients.</span>
 
 <span class="sd">This example also shows how to add a task to the event loop of the Service.</span>
@@ -1308,8 +1309,8 @@
     <span class="c1"># Connect the Service to the Broker (runs the event loop "forever")</span>
     <span class="n">heartbeat</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
 </code></pre></div>
-<!-- fmt: on -->
-
+<!-- fmt: on --></p>
+</details>
 <h2 id="heartbeat-client">Run the <code>Client</code><a class="headerlink" href="#heartbeat-client" title="Permanent link">¤</a></h2>
 <p>Connect to the <a class="autorefs autorefs-internal" href="../../#broker">Broker</a> as a <a class="autorefs autorefs-internal" href="../../api/client/#client">Client</a>, <a class="autorefs autorefs-internal" title="            link" href="../../api/client/#msl.network.client.Client.link">link</a> with the Heartbeat <a class="autorefs autorefs-internal" href="../../api/service/#service">Service</a>, <a class="autorefs autorefs-internal" title="            subscribe" href="../../api/link/#msl.network.client.Link.subscribe">subscribe</a> to publications from the <a class="autorefs autorefs-internal" href="../../api/service/#service">Service</a> and also send requests to the <a class="autorefs autorefs-internal" href="../../api/service/#service">Service</a>.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">msl.network</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
