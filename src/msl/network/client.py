@@ -282,7 +282,8 @@ class Link:
 
         !!! warning
             Your [Service][] subclass cannot have method/attribute names that are the same as those
-            found in the [Link][] class, otherwise a request will not be sent to your [Service][].
+            found in the [Link][] class, otherwise a request will not be sent to your [Service][]
+            because the [Link][] instance will handle the method call.
         """
 
         def wrapper(*args: Any, sync: bool = True, **kwargs: Any) -> Any | Future[Any]:

@@ -3,7 +3,7 @@
 To implement your own Service, just inherit from the [Service][msl.network.service.Service] class, create the methods/attributes that you want your Service to provide and then run your script.
 
 !!! warning
-    Your subclass cannot have method/attribute names that are the same as those found in the [Link][] class, otherwise a request will not be sent to your Service.
+    Your subclass cannot have method/attribute names that are the same as those found in the [Link][] class, otherwise a request will not be sent to your Service because the [Link][] instance will handle the method call.
 
 ```python
 import asyncio
@@ -12,7 +12,7 @@ from msl.network import Service
 
 class Camera(Service):
     def __init__(self) -> None:
-        """A Service that allows for a camera to be controllable via the network."""
+        """Allows for a camera to be controllable via the network."""
         super().__init__()
         self._camera = ...  # (1)!
         self.version: str = "1.3"  # (2)!
