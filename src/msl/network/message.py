@@ -127,7 +127,7 @@ class Flag(IntFlag):
             algorithm.
         PICKLE (int): (De)serialisation using the [pickle][] module.
         JSON (int): (De)serialisation using the builtin [json][] module.
-        ORJSON (int): (De)serialisation into JSON using the [orjson](https://pypi.org/project/orjson/)
+        ORJSON (int): (De)serialisation using the [orjson](https://pypi.org/project/orjson/)
             package. Includes the option `OPT_SERIALIZE_NUMPY` when serialising.
     """
 
