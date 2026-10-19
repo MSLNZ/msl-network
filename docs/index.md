@@ -31,7 +31,7 @@ There are a few runnable [examples][] that are available when `msl-network` is i
 ## Message Format
 A message (a request, reply or publication) is transferred as bytes, but a [Client][] and [Service][] can control how data is serialised into bytes and whether compression is applied before the bytes are transferred. The serialisation and compression algorithms are controlled by the [Flag][] enumeration value. When a [Client][] or [Service][] receives a message, the message is automatically decompressed and deserialised.
 
-The default serialisation method uses the [pickle][] format with no compression. When using the [pickle][] format to serialise data, it is important that you trust the [Client][]s and [Service][]s that you are transferring messages between.
+The default serialisation method uses the [pickle][] format with no compression. When using the [pickle][] format to deserialise data, it is important that you trust the [Client][]s and [Service][]s that you are transferring messages between.
 
 You can also temporarily change the flag value before sending a request (see [here][msl.network.client.Client.flag_at]) or a reply (see [here][msl.network.service.Service.flag_at]).
 
@@ -43,37 +43,37 @@ A [Client][] can send requests either asynchronously or synchronously (the defau
 
     See [here][msl.network.client.Link.__getattr__] for more information about the `sync` keyword argument in the following example script.
 
-```python
-from msl.network import Client
+    ```python
+    from msl.network import Client
 
-with Client() as client:
-    # Create a Link with the Echo service
-    link = client.link("Echo")
+    with Client() as client:
+        # Create a Link with the Echo service
+        link = client.link("Echo")
 
-    # sync=True is the default keyword argument when sending a request
-    print(link.echo(1))
+        # sync=True is the default keyword argument when sending a request
+        print(link.echo(1))
 
-    # or you could specify it explicitly
-    print(link.echo(2, sync=True))
+        # or you could specify it explicitly
+        print(link.echo(2, sync=True))
 
-    # send asynchronous requests
-    future1 = link.echo(3, sync=False)
-    future2 = link.echo(4, sync=False)
-    future3 = link.echo(5, sync=False)
+        # send asynchronous requests
+        future1 = link.echo(3, sync=False)
+        future2 = link.echo(4, sync=False)
+        future3 = link.echo(5, sync=False)
 
-    # do other stuff ...
+        # do other stuff ...
 
-    # get the reply of each request
-    print(future1.result())
-    print(future2.result())
-    print(future3.result())
-```
+        # get the reply of each request
+        print(future1.result())
+        print(future2.result())
+        print(future3.result())
+    ```
 
 ## Service Load Balancing
-While a [Service][] is processing a request, it cannot receive another request. If a [Service][] is continuously busy processing requests you can run multiple instances of the [Service][] and the [Broker][] will evenly distribute requests amongst the [Service][]s. You could run an instance of the [Service][] multiple times on the same computer or you could run the [Service][] on multiple computers (a Broker cannot tell the difference and does not care where a [Service][] is connecting from).
+While a [Service][] is processing a request, it cannot receive another request. If a [Service][] is continuously busy processing requests you can run multiple instances of the [Service][] and the [Broker][] will evenly distribute requests amongst the [Service][]s. You could run an instance of the [Service][] multiple times on the same computer or you could run the [Service][] on multiple computers.
 
 ## Security
-There are five ways in which you can control the security of a device connecting to a [Broker][]. Since security is handled by ZeroMQ sockets, we use the same [mnemonic names](http://hintjens.com/blog:49) commonly used by the ZeroMQ community to illustrate the different ways you can use security in your application. You may also want to read some background information about the [ZeroMQ Authentication Protocol](https://rfc.zeromq.org/spec/27/).
+There are five options for controlling the security of a device connecting to a [Broker][]. Since security is handled by ZeroMQ sockets, we use the same [mnemonic names](http://hintjens.com/blog:49) commonly used by the ZeroMQ community to illustrate the different ways you can use security in your application. You may also want to read some background information about the [ZeroMQ Authentication Protocol](https://rfc.zeromq.org/spec/27/). The following table illustrates which security features are supported in each option.
 
 | | Restrict IP addresses | Username/Password Authentication | CURVE Encryption | [Broker][] Verified | [Client][]/[Service][] Verified |
 | -------------- | :------: | :------: | :------: | :------: | :------: |
