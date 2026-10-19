@@ -17,12 +17,13 @@ Open another terminal and start the Echo [Service][] by running the following co
 python -c "from msl.examples.network import run_echo; run_echo()"
 ```
 
-The source code of the Echo [Service][] is:
-<!-- fmt: off -->
-```python
---8<-- "src/msl/examples/network/echo.py"
-```
-<!-- fmt: on -->
+??? Example "Expand to show the source code of the Echo [Service][]"
+
+    <!-- fmt: off -->
+    ```python
+    --8<-- "src/msl/examples/network/echo.py"
+    ```
+    <!-- fmt: on -->
 
 ## Run the `Client` {: #echo-client }
 Connect to the [Broker][] as a [Client][], [link][msl.network.client.Client.link] with the Echo [Service][] then send requests.

@@ -16,13 +16,12 @@ Open another terminal and start the Heartbeat [Service][] by running the followi
 ```console
 python -c "from msl.examples.network import run_heartbeat; run_heartbeat()"
 ```
-
-The source code of the Heartbeat [Service][] is:
-<!-- fmt: off -->
-```python
---8<-- "src/msl/examples/network/heartbeat.py"
-```
-<!-- fmt: on -->
+??? Example "Expand to show the source code of the Heartbeat [Service][]"
+    <!-- fmt: off -->
+    ```python
+    --8<-- "src/msl/examples/network/heartbeat.py"
+    ```
+    <!-- fmt: on -->
 
 ## Run the `Client` {: #heartbeat-client }
 Connect to the [Broker][] as a [Client][], [link][msl.network.client.Client.link] with the Heartbeat [Service][], [subscribe][msl.network.client.Link.subscribe] to publications from the [Service][] and also send requests to the [Service][].
