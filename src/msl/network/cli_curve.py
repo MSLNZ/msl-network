@@ -62,4 +62,4 @@ def execute(ns: Namespace) -> None:
     else:
         logger.info("Created secret certificate %s", secret_file)
         logger.info("Created public certificate %s", public_file)
-        logger.info("Copy the public certificate to the $HOME/.curve directory on another computer")
+        logger.info("Copy the public certificate to the ~/.curve directory on another computer")

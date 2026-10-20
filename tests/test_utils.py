@@ -188,7 +188,7 @@ def test_load_curve_default_path(home_dir: Path, caplog: pytest.LogCaptureFixtur
     assert curve.public_key == public_key
     assert secret_key is None
 
-    assert len(curve.keys) == 0  # assumes there are no *.key files in $HOME/.curve
+    assert len(curve.keys) == 0  # assumes there are no *.key files in ~/.curve
 
     assert curve.callback(DOMAIN, b"whatever")
     assert not curve.callback(DOMAIN + "x", b"whatever")

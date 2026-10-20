@@ -458,7 +458,7 @@ def test_cli_curve_default_dir(home_dir: Path, caplog: pytest.LogCaptureFixture)
         (
             "msl.network",
             logging.INFO,
-            "Copy the public certificate to the $HOME/.curve directory on another computer",
+            "Copy the public certificate to the ~/.curve directory on another computer",
         ),
     ]
     caplog.clear()
@@ -490,7 +490,7 @@ def test_cli_curve_custom_dir(tmp_path: Path, caplog: pytest.LogCaptureFixture) 
         (
             "msl.network",
             logging.INFO,
-            "Copy the public certificate to the $HOME/.curve directory on another computer",
+            "Copy the public certificate to the ~/.curve directory on another computer",
         ),
     ]
     caplog.clear()
