@@ -391,6 +391,7 @@ def test_broker_port_in_use(caplog: pytest.LogCaptureFixture) -> None:
 
     s = socket.socket()
     s.bind(("0.0.0.0", 0))  # noqa: S104
+    s.listen()
     _, port = s.getsockname()
 
     main("start", "--verbose", "--port", str(port))
@@ -418,6 +419,7 @@ def test_xpub_port_in_use(broker: Broker, caplog: pytest.LogCaptureFixture) -> N
 
     s = socket.socket()
     s.bind(("127.0.0.1", mocked_broker_port + 1))
+    s.listen()
 
     xpub, xsub = broker.run_proxy(mocked_broker_port)
     broker.kill_proxy()
@@ -439,6 +441,7 @@ def test_xsub_port_in_use(broker: Broker, caplog: pytest.LogCaptureFixture) -> N
 
     s = socket.socket()
     s.bind(("127.0.0.1", mocked_broker_port + 2))
+    s.listen()
 
     xpub, xsub = broker.run_proxy(mocked_broker_port)
     broker.kill_proxy()

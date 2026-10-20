@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
 import shutil
+import socket
 import tempfile
 import threading
 from pathlib import Path
@@ -97,23 +97,19 @@ class Broker:
         Returns the port that the Broker can use and XSUB/XPUB are also available.
         """
 
-        async def free(port: int) -> bool:
+        def is_free(port: int) -> bool:
             """Check if a single port is free."""
-            try:
-                _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=0.5)
-                writer.close()
-                await writer.wait_closed()
-            except (asyncio.TimeoutError, OSError):
-                return True
-            else:
-                return False
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # cSpell: ignore REUSEADDR
+                try:
+                    s.bind((host, port))
+                except OSError:
+                    return False
+                else:
+                    return True
 
-        async def check(port: int) -> tuple[bool, bool, bool]:
-            """Find three available, adjacent ports."""
-            return await asyncio.gather(free(port), free(port + 1), free(port + 2))
-
-        for port in range(start, 65535, 3):
-            if all(asyncio.run(check(port))):
+        for port in range(start, 65533, 3):
+            if is_free(port) and is_free(port + 1) and is_free(port + 2):
                 return port
 
         msg = "Cannot find 3 adjacent ports that are available"
