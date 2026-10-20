@@ -16,6 +16,14 @@ class Python(Service):
         """Reverse a string."""
         return s[::-1]
 
+    def scale_array(self, f: float, array: list[float]) -> list[float]:
+        """Scale an array."""
+        if f > 0:
+            return [f * value for value in array]
+
+        msg = "The scaling factor must be > 0"
+        raise ValueError(msg)
+
 
 if __name__ == "__main__":
     python = Python()

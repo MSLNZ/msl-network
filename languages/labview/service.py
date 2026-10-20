@@ -34,6 +34,13 @@ class LabVIEW(Service):
         result: str = wait_for_result()
         return result
 
+    def scale_array(self, f: float, array: list[float]) -> list[float]:
+        """Scale an array."""
+        put_task("scale_array")
+        put_arguments(f, array)
+        result: list[float] = wait_for_result()
+        return result
+
 
 # The following queues and functions are generic and may be used
 # with any LabVIEW Service that you implement
