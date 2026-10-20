@@ -125,7 +125,7 @@ from msl.network import Client
 client = Client()
 ```
 
-Run `msl-network device --help` for more details about managing authorised devices.
+See [msl-network device][msl-network-device] for more details about managing authorised devices.
 
 ### Woodhouse
 No encryption. The [Broker][] requires a valid username and password for a device to connect. In addition, a [Broker][] may also allow connections from only specific devices (see [Strawhouse][]). This security layer is known as the [PLAIN](https://rfc.zeromq.org/spec/27/#the-plain-mechanism) mechanism.
@@ -133,13 +133,13 @@ No encryption. The [Broker][] requires a valid username and password for a devic
 !!! warning
     A username and password is sent in *plain* text through the network. Use this security mechanism only on trusted networks.
 
-Save the usernames and passwords of authorised users to a file,
+On the computer running the [Broker][], add usernames and passwords of authorised users to a file
 ```console
 msl-network plain add --username me --password secret
 msl-network plain add --username you --password danger
 ```
 
-and start a [Broker][] with the usernames and passwords read from a file.
+and start a [Broker][] with the usernames and passwords read from the file.
 ```console
 msl-network start --auth-plain
 ```
@@ -152,39 +152,42 @@ from msl.network import AuthPlain, Client
 # Either specify the values directly in your code
 auth = AuthPlain(username="me", password="secret")
 
-# or you can load the values from a file
+# Or you can load the values from a file
 auth = AuthPlain.load("~/auth.txt")
 
 client = Client(plain=auth)
 ```
 
-Run `msl-network plain --help` for more details about managing usernames and passwords.
+See [msl-network plain][msl-network-plain] for more details about managing usernames and passwords and [AuthPlain][msl.network.auth.AuthPlain] for loading PLAIN credentials.
 
 ### Stonehouse
 Messages are encrypted with [elliptic-curve](https://rfc.zeromq.org/spec/26/) cryptography. A [Client][]/[Service][] verifies the public certificate of a [Broker][] (one-way verification). In addition, a [Broker][] may also allow connections from only specific devices (see [Strawhouse][]). This security layer is known as the [CURVE](https://rfc.zeromq.org/spec/27/#the-curve-mechanism) mechanism.
 
-Create CURVE certificates on the computer running the [Broker][],
+Create CURVE certificates on the computer running the [Broker][] and also on the computer connecting as a [Client][]/[Service][].
 ```console
 msl-network curve
 ```
 
-and start a [Broker][] with the certificates loaded.
+Start a [Broker][] with its CURVE certificate loaded.
 ```console
 msl-network start --auth-curve
 ```
 
-Copy the [Broker][]'s public certificate to a computer connecting as a [Client][]/[Service][] and specify the `curve` parameter when creating an instance of a [Client][]/[Service][].
+Copy the [Broker][]'s public CURVE certificate to a computer connecting as a [Client][]/[Service][] and specify the `curve` parameter when creating an instance of a [Client][]/[Service][].
 
 ```python
 from msl.network import AuthCurve, Client
 
-# Load the public CURVE certificate of the Broker
+# Load the public CURVE certificate of the Broker.
+#
+# The private certificate of the Client is automatically
+# loaded from the file created by running `msl-network curve`
 auth = AuthCurve.load("~/.curve/broker.key")
 
 client = Client(curve=auth)
 ```
 
-Run `msl-network curve --help` for more details about creating CURVE certificates.
+See [msl-network curve][msl-network-curve] for more details about creating CURVE certificates and [AuthCurve][msl.network.auth.AuthCurve] for loading CURVE certificates.
 
 ### Ironhouse
 Messages are encrypted with [elliptic-curve](https://rfc.zeromq.org/spec/26/) cryptography. The [Broker][] verifies the public certificate of a [Client][]/[Service][] and a [Client][]/[Service][] verifies the public certificate of the [Broker][] (two-way verification). In addition, a [Broker][] may also allow connections from only specific devices (see [Strawhouse][]). This security layer is (also) known as the [CURVE](https://rfc.zeromq.org/spec/27/#the-curve-mechanism) mechanism.
@@ -194,20 +197,23 @@ Create CURVE certificates on the computer running the [Broker][] and also on the
 msl-network curve
 ```
 
-Copy a [Client][]/[Service][]'s public certificate to the `~/.curve` directory on the computer running the [Broker][] and start a [Broker][] with the certificates loaded.
+Copy a [Client][]/[Service][]'s public CURVE certificate to the `~/.curve` directory on the computer running the [Broker][] and start a [Broker][] with the certificates loaded.
 ```console
 msl-network start --auth-curve
 ```
 
-Copy the [Broker][]'s public certificate to a computer connecting as a [Client][]/[Service][] and specify the `curve` parameter when creating an instance of a [Client][]/[Service][].
+Copy the [Broker][]'s public CURVE certificate to a computer connecting as a [Client][]/[Service][] and specify the `curve` parameter when creating an instance of a [Client][]/[Service][].
 
 ```python
 from msl.network import AuthCurve, Client
 
-# Load the public CURVE certificate of the Broker
+# Load the public CURVE certificate of the Broker.
+#
+# The private certificate of the Client is automatically
+# loaded from the file created by running `msl-network curve`
 auth = AuthCurve.load("~/.curve/broker.key")
 
 client = Client(curve=auth)
 ```
 
-Run `msl-network curve --help` for more details about creating CURVE certificates.
+See [msl-network curve][msl-network-curve] for more details about creating CURVE certificates and [AuthCurve][msl.network.auth.AuthCurve] for loading CURVE certificates.
