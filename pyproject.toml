@@ -4,7 +4,7 @@ dynamic = ["version"]
 dependencies = [
     "pyzmq",
 ]
-description = "Concurrent and asynchronous network I/O"
+description = "Transfer messages across a network"
 license = {file = "LICENSE.txt"}
 authors =[
     {name = "Measurement Standards Laboratory of New Zealand", email = "info@measurement.govt.nz"},
