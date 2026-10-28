@@ -1,5 +1,5 @@
 site_name: MSL-Network
-site_description: Read and write data files
+site_description: Transfer messages across a network
 copyright: Copyright &copy; 2017 - 2026 Measurement Standards Laboratory of New Zealand
 repo_url: https://github.com/MSLNZ/msl-network/
 site_url: https://github.com/MSLNZ/msl-network/
