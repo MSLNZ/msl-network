@@ -7,12 +7,10 @@
 ***Added:***
 
 - support for Python 3.12, 3.13, 3.14 and 3.15
-- the `Service.request` property
-- `loads_kwargs` and `dumps_kwargs` keyword arguments to `msl.network.json.use`
 
-***Fixed:***
+***Changed:***
 
-- the `to_json()` method was not reliably called for an object, which resulted in the object not being JSON serialisable
+- use [ZeroMQ](https://zeromq.org/) sockets to transfer messages
 
 ***Removed:***
 
