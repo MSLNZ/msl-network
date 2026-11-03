@@ -1366,12 +1366,10 @@
 <p><strong><em>Added:</em></strong></p>
 <ul>
 <li>support for Python 3.12, 3.13, 3.14 and 3.15</li>
-<li>the <code>Service.request</code> property</li>
-<li><code>loads_kwargs</code> and <code>dumps_kwargs</code> keyword arguments to <code>msl.network.json.use</code></li>
 </ul>
-<p><strong><em>Fixed:</em></strong></p>
+<p><strong><em>Changed:</em></strong></p>
 <ul>
-<li>the <code>to_json()</code> method was not reliably called for an object, which resulted in the object not being JSON serialisable</li>
+<li>use <a href="https://zeromq.org/">ZeroMQ</a> sockets to transfer messages</li>
 </ul>
 <p><strong><em>Removed:</em></strong></p>
 <ul>
